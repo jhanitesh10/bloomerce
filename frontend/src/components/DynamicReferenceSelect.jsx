@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { refApi } from '../api';
 import { Plus, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export default function DynamicReferenceSelect({ 
-  label, 
-  referenceType, 
-  value, 
-  onChange, 
-  placeholder = "Select option..." 
+export default function DynamicReferenceSelect({
+  label,
+  referenceType,
+  value,
+  onChange,
+  placeholder = "Select option..."
 }) {
   const [options, setOptions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -15,9 +16,7 @@ export default function DynamicReferenceSelect({
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    loadOptions();
-  }, [referenceType]);
+  useEffect(() => { loadOptions(); }, [referenceType]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -60,10 +59,10 @@ export default function DynamicReferenceSelect({
     }
   };
 
-  const filteredOptions = options.filter(opt => 
+  const filteredOptions = options.filter(opt =>
     opt.label.toLowerCase().includes(search.toLowerCase())
   );
-  
+
   const showCreateOption = search.trim() && !options.some(
     opt => opt.label.toLowerCase() === search.trim().toLowerCase()
   );
@@ -71,63 +70,71 @@ export default function DynamicReferenceSelect({
   const selectedOption = options.find(opt => opt.id === value);
 
   return (
-    <div className="component-dropdown" ref={dropdownRef}>
-      <label className="form-label">{label}</label>
-      <div 
-        className="form-select flex-row-between"
+    <div className="relative w-full" ref={dropdownRef}>
+      {label && (
+        <label className="block text-xs font-medium text-[var(--color-foreground)] mb-1.5">{label}</label>
+      )}
+
+      {/* Trigger */}
+      <div
+        className="flex items-center justify-between w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm cursor-pointer transition-all hover:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-ring)] focus-within:border-transparent"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="truncate">
-          {selectedOption ? selectedOption.label : <span className="opacity-50">{placeholder}</span>}
+        <span className={cn("truncate", !selectedOption && "text-[var(--color-muted-foreground)]")}>
+          {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronsUpDown size={16} className="opacity-50" />
+        <ChevronsUpDown size={15} className="text-[var(--color-muted-foreground)] flex-shrink-0 ml-1" />
       </div>
 
+      {/* Dropdown */}
       {isOpen && (
-        <div className="dropdown-menu">
-          <div className="dropdown-search-wrapper">
-            <input 
-              type="text" 
-              className="form-input text-sm"
-              placeholder="Search or add new..."
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-lg overflow-hidden flex flex-col">
+          {/* Search */}
+          <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-muted)]">
+            <input
+              type="text"
+              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-[var(--color-ring)] transition-all placeholder:text-[var(--color-muted-foreground)] text-[var(--color-foreground)]"
+              placeholder="Search or add new…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClick={(e) => e.stopPropagation()}
               autoFocus
             />
           </div>
-          
-          <div className="dropdown-options">
-            {loading && <div className="p-sm text-center opacity-50">Loading...</div>}
+
+          {/* Options */}
+          <div className="max-h-48 overflow-y-auto">
+            {loading && (
+              <div className="py-4 text-center text-xs text-[var(--color-muted-foreground)]">Loading…</div>
+            )}
 
             {!loading && filteredOptions.length === 0 && !showCreateOption && (
-              <div className="p-sm text-center opacity-50">No options found.</div>
+              <div className="py-4 text-center text-xs text-[var(--color-muted-foreground)]">No options found.</div>
             )}
 
             {!loading && filteredOptions.map(opt => (
-              <div 
+              <div
                 key={opt.id}
-                className="dropdown-item flex-row-between"
-                onClick={() => {
-                  onChange(opt.id);
-                  setIsOpen(false);
-                  setSearch("");
-                }}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors",
+                  value === opt.id
+                    ? "bg-[var(--color-primary)]/8 text-[var(--color-primary)]"
+                    : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                )}
+                onClick={() => { onChange(opt.id); setIsOpen(false); setSearch(""); }}
               >
                 <span className="truncate">{opt.label}</span>
-                {value === opt.id && <Check size={14} className="color-success" />}
+                {value === opt.id && <Check size={13} className="text-[var(--color-primary)] flex-shrink-0" />}
               </div>
             ))}
 
             {showCreateOption && !loading && (
-              <div 
-                className="dropdown-item flex-row-start color-primary create-new"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCreate();
-                }}
+              <div
+                className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-[var(--color-primary)] hover:bg-[var(--color-primary)]/8 border-t border-[var(--color-border)] font-medium transition-colors"
+                onClick={(e) => { e.stopPropagation(); handleCreate(); }}
               >
-                <Plus size={14} /> <span>Add new "{search}"</span>
+                <Plus size={13} />
+                <span>Add "{search}"</span>
               </div>
             )}
           </div>
