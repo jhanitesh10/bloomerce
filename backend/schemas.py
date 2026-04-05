@@ -43,6 +43,7 @@ class SkuMasterBase(BaseModel):
     key_ingredients: Optional[str] = None
     ingredients: Optional[str] = None
     catalog_url: Optional[str] = None
+    primary_image_url: Optional[str] = None
     sku_code: Optional[str] = None
     barcode: Optional[str] = None
 

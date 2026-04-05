@@ -45,6 +45,7 @@ class SkuMaster(Base):
     key_ingredients = Column(Text, nullable=True)
     ingredients = Column(Text, nullable=True)
     catalog_url = Column(String(500), nullable=True)
+    primary_image_url = Column(String(500), nullable=True)
     sku_code = Column(String(100), unique=True, index=True)
     barcode = Column(String(100), unique=True, index=True)
 
