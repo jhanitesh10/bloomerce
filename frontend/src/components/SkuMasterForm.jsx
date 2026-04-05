@@ -116,6 +116,26 @@ const TABS = [
   { id: 'tax',            label: 'Tax & Compliance',  icon: Info },
 ];
 
+// Map every field to the tab it lives on
+const TAB_FIELDS = {
+  identity:       ['product_name', 'sku_code', 'barcode', 'brand_reference_id', 'product_component_group_code', 'primary_image_url'],
+  content:        ['description', 'key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords', 'catalog_url'],
+  classification: ['category_reference_id', 'sub_category_reference_id', 'status_reference_id'],
+  pricing:        ['mrp', 'purchase_cost', 'net_content_value', 'net_content_unit', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'],
+  bundling:       ['product_type', 'bundle_type', 'pack_type'],
+  tax:            ['tax_rule_code', 'tax_percent'],
+};
+
+// Given current errors object, return set of tab IDs that have at least one error
+function getTabsWithErrors(errors) {
+  const errorFields = new Set(Object.keys(errors).filter(k => errors[k]));
+  const tabs = new Set();
+  for (const [tabId, fields] of Object.entries(TAB_FIELDS)) {
+    if (fields.some(f => errorFields.has(f))) tabs.add(tabId);
+  }
+  return tabs;
+}
+
 // -----------------------------------------------------------------
 // Main Form
 // -----------------------------------------------------------------
@@ -196,8 +216,10 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
-      // scroll to first error
-      document.querySelector('.sf-input-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Jump to the first tab that has an error
+      const errTabs = getTabsWithErrors(errs);
+      const firstErrTab = TABS.find(t => errTabs.has(t.id));
+      if (firstErrTab) setActiveTab(firstErrTab.id);
       return;
     }
 
@@ -276,17 +298,21 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
 
         {/* ── Tab bar ───────────────────────────────────── */}
         <div className="drawer-tabs">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              className={`drawer-tab ${activeTab === t.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(t.id)}
-            >
-              <t.icon size={13} />
-              {t.label}
-            </button>
-          ))}
+          {TABS.map(t => {
+            const hasErr = getTabsWithErrors(errors).has(t.id);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                className={`drawer-tab ${activeTab === t.id ? 'active' : ''} ${hasErr ? 'has-error' : ''}`}
+                onClick={() => setActiveTab(t.id)}
+              >
+                <t.icon size={13} />
+                {t.label}
+                {hasErr && <span className="tab-error-dot" aria-label="has errors" />}
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Scrollable body ───────────────────────────── */}
