@@ -474,3 +474,74 @@
 [data-theme="dark"] .drawer-notes-panel .auto-textarea::placeholder { color: #d97706; opacity: 0.5; }
 .drawer-notes-panel .auto-textarea:focus { outline: none; }
 
+/* =================================================================
+   UNSAVED CHANGES CONFIRM DIALOG
+   ================================================================= */
+
+/* Frosted overlay inside the drawer panel */
+.discard-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+.discard-dialog {
+  background: var(--header-bg);
+  border-radius: 14px;
+  padding: 1.75rem 2rem;
+  width: 320px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  text-align: center;
+  animation: dialogPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialogPop {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.discard-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 0.375rem;
+}
+
+.discard-body {
+  font-size: 0.875rem;
+  color: var(--secondary);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.discard-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.discard-actions .btn {
+  flex: 1;
+}
+
+/* Danger outline button variant */
+.btn-danger-outline {
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  background: transparent;
+}
+
+.btn-danger-outline:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .btn-danger-outline { border-color: rgba(220,38,38,0.4); color: #f87171; }
+[data-theme="dark"] .btn-danger-outline:hover { background: rgba(220,38,38,0.15); border-color: #dc2626; }
+

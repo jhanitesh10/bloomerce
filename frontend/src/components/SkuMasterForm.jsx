@@ -195,6 +195,37 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('identity');
   const [notesOpen, setNotesOpen] = useState(() => Boolean(initialData?.remark));
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  // Snapshot of last-saved values — starts as initialData, updated after each save
+  // NOTE: useRef does NOT support lazy initializers like useState does; the argument
+  // is stored as-is in .current. We must invoke the factory immediately.
+  const savedSnapshot = useRef((() => {
+    const base = { ...EMPTY };
+    if (initialData) {
+      for (const k of Object.keys(EMPTY)) {
+        const v = initialData[k];
+        base[k] = v != null ? v : EMPTY[k];
+      }
+    }
+    return base;
+  })());
+
+  // Compare based on strings to prevent number/string mismatch false-positives
+  const isDirty = Object.keys(EMPTY).some(k => {
+    let a = form[k];
+    let b = savedSnapshot.current[k];
+    a = (a === '' || a === null || a === undefined) ? null : String(a);
+    b = (b === '' || b === null || b === undefined) ? null : String(b);
+    return a !== b;
+  });
+
+  const handleClose = () => {
+    if (isDirty) { setConfirmClose(true); return; }
+    onClose();
+  };
+
+  const handleDiscard = () => { setConfirmClose(false); onClose(); };
 
   const set = (name, value) => setForm(p => ({ ...p, [name]: value }));
 
@@ -211,12 +242,13 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
     return errs;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Shared save function — called by both form submit and dialog Save button
+  const saveForm = async (opts = {}) => {
+    if (opts.fromDialog) setConfirmClose(false); // Hide the popup to show validation/saving states on main form
+
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
-      // Jump to the first tab that has an error
       const errTabs = getTabsWithErrors(errs);
       const firstErrTab = TABS.find(t => errTabs.has(t.id));
       if (firstErrTab) setActiveTab(firstErrTab.id);
@@ -226,7 +258,6 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
     setSaving(true);
     try {
       const payload = { ...form };
-      // convert empty strings to null for numeric fields
       ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight',
         'finished_product_weight', 'net_content_value', 'tax_percent'].forEach(k => {
         payload[k] = payload[k] === '' ? null : Number(payload[k]) || null;
@@ -237,6 +268,8 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
       } else {
         await skuApi.create(payload);
       }
+      // Update snapshot so isDirty becomes false after save
+      savedSnapshot.current = { ...form };
       onSaved();
     } catch (err) {
       alert(`Save failed: ${err.response?.data?.detail || err.message}`);
@@ -245,18 +278,46 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
     }
   };
 
+  const handleSubmit = (e) => { e.preventDefault(); saveForm(); };
+
   const isEdit = Boolean(initialData?.id);
   const title = isEdit ? 'Edit Product' : 'Add New Product';
 
   return (
     <>
-      <div className="drawer-backdrop" onClick={onClose} />
+      <div className="drawer-backdrop" onClick={handleClose} />
       <div className="drawer-panel">
+
+        {/* ── Unsaved changes confirm dialog ───────────── */}
+        {confirmClose && (
+          <div className="discard-overlay">
+            <div className="discard-dialog">
+              <p className="discard-title">Unsaved changes</p>
+              <p className="discard-body">You have changes that haven't been saved yet.</p>
+              <div className="discard-actions">
+                <button type="button" className="btn btn-danger-outline" onClick={handleDiscard}>
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    saveForm({ fromDialog: true });
+                  }}
+                >
+                  {saving ? <span className="spinner" /> : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Sticky header ─────────────────────────────── */}
         <div className="drawer-header">
           <div className="drawer-header-left">
-            <button className="drawer-close" onClick={onClose} type="button">
+            <button className="drawer-close" onClick={handleClose} type="button">
               <X size={20} />
             </button>
             <div>
@@ -276,7 +337,7 @@ export default function SkuMasterForm({ initialData, onClose, onSaved }) {
               <span>Notes</span>
               {form.remark && !notesOpen && <span className="notes-dot" />}
             </button>
-            <button className="btn btn-secondary" onClick={onClose} type="button" disabled={saving}>Cancel</button>
+            <button className="btn btn-secondary" onClick={handleClose} type="button" disabled={saving}>Cancel</button>
             <button className="btn btn-primary" type="submit" form="skuForm" disabled={saving}>
               {saving ? <span className="spinner" /> : <><Save size={15} /> {isEdit ? 'Save Changes' : 'Create Product'}</>}
             </button>
