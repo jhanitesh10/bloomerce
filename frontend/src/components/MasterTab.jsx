@@ -336,18 +336,13 @@ export default function MasterTab() {
             <thead>
               {/* ── Row 1: base cols (rowSpan=2) + group parent headers ── */}
               <tr>
-                {BASE_COLS.map(col => (
-                  <th key={col.id} rowSpan={2}
-                    className={cn("px-4 border-b-2 border-[var(--color-border)] bg-[var(--color-muted)] whitespace-nowrap select-none align-bottom pb-2",
-                      col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
-                    style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky?col.stickyLeft:undefined}}>
-                    <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[11px] font-semibold tracking-widest uppercase text-[var(--color-muted-foreground)]",col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
-                      {col.label}
-                      {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
-                      {col.sortable&&sortCol!==col.id&&<ArrowUpDown size={10} className="inline ml-1 opacity-20"/>}
-                    </span>
-                  </th>
-                ))}
+                <th colSpan={BASE_COLS.length}
+                  className="px-3 pt-2 pb-1 text-center border-b border-b-transparent sticky z-30 bg-[var(--color-muted)] shadow-[inset_-1px_0_0_var(--color-border)]"
+                  style={{ left: 0, minWidth: BASE_COLS.reduce((sum, c) => sum + (c.width || 0), 0) }}>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-[11px] font-bold tracking-wider uppercase">Identity</span>
+                  </div>
+                </th>
 
                 {GROUPS.map(g => {
                   const expanded = expandedGroups.has(g.id);
@@ -373,6 +368,19 @@ export default function MasterTab() {
 
               {/* ── Row 2: group sub-column names ── */}
               <tr>
+                {BASE_COLS.map((col, idx) => (
+                  <th key={col.id}
+                    className={cn("px-4 py-2 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
+                      col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
+                    style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky?col.stickyLeft:undefined}}>
+                    <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[11px] font-semibold tracking-wide uppercase text-[var(--color-muted-foreground)]", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
+                      {col.label}
+                      {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
+                      {col.sortable&&sortCol!==col.id&&<ArrowUpDown size={10} className="inline ml-1 opacity-20"/>}
+                    </span>
+                  </th>
+                ))}
+
                 {GROUPS.map(g => {
                   const expanded  = expandedGroups.has(g.id);
                   const shownCols = expanded ? g.cols : [g.cols[0]];
