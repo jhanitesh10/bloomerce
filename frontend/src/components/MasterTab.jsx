@@ -520,7 +520,11 @@ export default function MasterTab() {
                     </th>
                   );
                 })}
+
+                {/* Placeholder for Sticky Notes in Group Row */}
+                <th className="sticky top-0 right-0 z-30 bg-[var(--color-muted)] border-b border-l border-[var(--color-border)] shadow-[inset_1px_0_0_var(--color-border)]" />
               </tr>
+
 
               {/* ── Row 2: group sub-column names ── */}
               <tr>
@@ -554,8 +558,18 @@ export default function MasterTab() {
                     </th>
                   ));
                 })}
+
+
+                {/* Content for Sticky Notes in Sub-column Row */}
+                <th className="sticky top-0 right-0 z-30 p-3 bg-[var(--color-muted)] border-b-2 border-l border-[var(--color-border)] shadow-[inset_1px_0_0_var(--color-border)]">
+                   <div className="flex items-center justify-center gap-1.5 opacity-60">
+                     <StickyNote size={13} className="text-[var(--color-muted-foreground)]" />
+                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">Notes</span>
+                   </div>
+                </th>
               </tr>
             </thead>
+
 
             <tbody>
               {loading ? (
