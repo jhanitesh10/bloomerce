@@ -1,8 +1,9 @@
 import {
   Plus, Search, Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   ArrowUpDown, LayoutGrid, Rocket, FileEdit, Download, Upload,
-  SquarePen, Check, X, Filter, Maximize2, Minimize2
+  SquarePen, Check, X, Filter, Maximize2, Minimize2, StickyNote, Send, Trash2
 } from 'lucide-react';
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import SkuMasterForm from './SkuMasterForm';
 import InlineCellEditor from './InlineCellEditor';
@@ -28,6 +29,9 @@ const BASE_COLS = [
   { id: 'product_name',       label: 'Product',  width: 260, sortable: true,  sticky: true, stickyLeft: 112 },
   { id: 'barcode',            label: 'Barcode',  width: 130, isMono: true,    sticky: true, stickyLeft: 372 },
 ];
+
+const REMARKS_COL = { id: 'remark', label: 'Notes', width: 62, align: 'center', sticky: true, isRight: true };
+
 
 // ── Column groups (collapsed → only first col shown) ──────────────────────────
 const GROUPS = [
@@ -96,7 +100,7 @@ const GC = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const NON_INLINE = new Set(['primary_image_url', 'net_content', 'content_trigger', 'catalog_url']);
+const NON_INLINE = new Set(['primary_image_url', 'net_content', 'content_trigger', 'catalog_url', 'remark']);
 const REF_MAP    = { brand_reference_id:'BRAND', category_reference_id:'CATEGORY', sub_category_reference_id:'SUB_CATEGORY', status_reference_id:'STATUS' };
 const FILTER_TABS = [
   { key: 'all',            icon: LayoutGrid, label: (c, t) => `All (${t})` },
@@ -104,6 +108,100 @@ const FILTER_TABS = [
   { key: 'in development', icon: Rocket,     label: c => `New Launches (${c['in development'] || c['development'] || 0})` },
 ];
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+// ── Note Popover Component ──────────────────────────────────────────────────
+function NotePopover({ sku, onSave, onClose, onDraftChange }) {
+  const [val, setVal] = useState(sku.remark || '');
+  const [saving, setSaving] = useState(false);
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+       textareaRef.current.focus();
+       // Place cursor at end
+       textareaRef.current.setSelectionRange(val.length, val.length);
+    }
+    onDraftChange(val); // Initialize draft
+  }, []);
+
+  const handleChange = (newVal) => {
+    setVal(newVal);
+    onDraftChange(newVal);
+  };
+
+  const handleSave = async (e) => {
+    e?.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    await onSave(val);
+    setSaving(false);
+  };
+
+
+  return (
+    <div 
+      className="note-popover absolute bottom-full right-0 mb-2 w-64 bg-white rounded-2xl shadow-2xl border border-[var(--color-border)] p-4 z-[100] animate-[scale-in_0.15s_ease-out] text-left"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between mb-3 border-b border-[var(--color-border)] pb-2 -mx-1">
+        <div className="flex items-center gap-1.5 px-1">
+           <div className="w-1.5 h-4 bg-[var(--color-primary)] rounded-full" />
+           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-foreground)]">SKU Notes</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {val && (
+            <button 
+              onClick={() => setVal('')} 
+              className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md transition-all text-[var(--color-muted-foreground)] flex items-center gap-1 px-2"
+              title="Clear text"
+            >
+              <Trash2 size={13} />
+              <span className="text-[10px] font-bold uppercase tracking-tighter">Clear</span>
+            </button>
+          )}
+          <button onClick={onClose} className="p-1 px-2 hover:bg-slate-100 rounded-md transition-colors text-[var(--color-muted-foreground)]">
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+
+      
+      <textarea
+        ref={textareaRef}
+        value={val}
+        onChange={e => handleChange(e.target.value)}
+        placeholder="Add product remarks or comments here..."
+
+        className="w-full h-24 p-3 text-xs rounded-xl border border-[var(--color-border)] bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all resize-none text-[var(--color-foreground)] leading-relaxed"
+        onKeyDown={e => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSave();
+          if (e.key === 'Escape') onClose();
+        }}
+      />
+      
+      <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
+        <span className="text-[10px] text-[var(--color-muted-foreground)] italic whitespace-nowrap opacity-70">
+          Ctrl + Enter to save
+        </span>
+        <div className="flex-1" />
+        <Button 
+          size="sm" 
+          onClick={handleSave} 
+          disabled={saving}
+          className="h-8 px-4 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-[11px] font-bold flex items-center justify-center gap-2 shadow-md shadow-[var(--color-primary)]/20 min-w-[120px]"
+        >
+          {saving ? <span className="w-3 h-3 border-2 border-white border-t-transparent animate-spin rounded-full" /> : <Send size={12} />}
+          <span>{sku.remark ? 'Update & Close' : 'Add Note & Close'}</span>
+        </Button>
+      </div>
+
+      
+      {/* Tiny arrow pointing to the icon */}
+      <div className="absolute top-full right-5 w-3 h-3 bg-white border-r border-b border-[var(--color-border)] rotate-45 -translate-y-[6px]" />
+    </div>
+  );
+}
+
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function MasterTab() {
@@ -124,16 +222,44 @@ export default function MasterTab() {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [inlineEdit,     setInlineEdit]     = useState(null); // { skuId, colId }
   const [selectedCell,   setSelectedCell]   = useState(null); // { skuId, colId }
+  const [activeNoteSkuId, setActiveNoteSkuId] = useState(null);
+  const noteDraftRef   = useRef('');
   const savingRef      = useRef(false);
 
+
+
+  // ── Auto-save helper for Notes ──────────────────────────────────────────────
+  const handleNoteClose = async () => {
+    if (!activeNoteSkuId) return;
+    const sku = skus.find(s => s.id === activeNoteSkuId);
+    const draft = noteDraftRef.current;
+    
+    // Only save if changed
+    if (sku && draft !== (sku.remark || '')) {
+      await saveInlineEdit(activeNoteSkuId, 'remark', draft);
+    }
+    setActiveNoteSkuId(null);
+  };
+
+  // ── Global Event Listeners ──────────────────────────────────────────────────
   useEffect(() => { loadAll(); }, []);
   
-  // Clear selection if user clicks entirely outside the table
+  // Handle clicking outside of cells, editors or notes
   useEffect(() => {
-    const handleGlobalClick = (e) => { if (!e.target.closest('td')) setSelectedCell(null); };
+    const handleGlobalClick = (e) => { 
+      // Deselect cell if click is outside any td
+      if (!e.target.closest('td')) setSelectedCell(null); 
+      
+      // Auto-save and close Note if click is outside the popover/trigger
+      if (activeNoteSkuId && !e.target.closest('.note-popover') && !e.target.closest('.note-trigger')) {
+        handleNoteClose();
+      }
+    };
     document.addEventListener('mousedown', handleGlobalClick);
     return () => document.removeEventListener('mousedown', handleGlobalClick);
-  }, []);
+  }, [activeNoteSkuId, skus]);
+
+
 
   const loadAll = async () => {
     setLoading(true);
@@ -171,8 +297,10 @@ export default function MasterTab() {
       const expanded = expandedGroups.has(g.id);
       cols.push(...(expanded ? g.cols : [g.cols[0]]));
     }
+    cols.push(REMARKS_COL);
     return cols;
   }, [expandedGroups]);
+
 
   const filtered = useMemo(() => skus.filter(s => {
     const q = search.toLowerCase();
@@ -238,7 +366,35 @@ export default function MasterTab() {
       case 'net_content':  return <span className="text-sm text-[var(--color-muted-foreground)]">{sku.net_content_value ? `${sku.net_content_value} ${sku.net_content_unit||''}` : '—'}</span>;
       case 'tax_percent':  return <span className="text-sm text-[var(--color-muted-foreground)]">{val!=null ? `${val}%` : '—'}</span>;
       case 'catalog_url':  return val ? <a href={val} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} className="text-xs text-[var(--color-primary)] underline underline-offset-2 truncate block">Link ↗</a> : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>;
+      case 'remark': return (
+        <div className="relative flex items-center justify-center">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setActiveNoteSkuId(prev => prev === sku.id ? null : sku.id); }}
+            className={cn(
+              "note-trigger p-2 rounded-lg transition-all mx-auto relative group-hover:scale-110",
+
+              val ? "text-[var(--color-primary)] bg-[var(--color-primary)]/10" : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+            )}
+            title={val || "Add Note"}
+          >
+            <StickyNote size={15} fill={val ? "currentColor" : "none"} fillOpacity={0.2} />
+            {val && <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full border border-white" />}
+          </button>
+          
+          {activeNoteSkuId === sku.id && (
+            <NotePopover 
+              sku={sku} 
+              onSave={(v) => saveInlineEdit(sku.id, 'remark', v).then(() => setActiveNoteSkuId(null))}
+              onClose={handleNoteClose}
+              onDraftChange={(v) => { noteDraftRef.current = v; }}
+            />
+          )}
+
+        </div>
+      );
+
       default:
+
         if (val==null||val==='') return <span className="text-sm text-[var(--color-muted-foreground)]">—</span>;
         if (col.isNum)    return <span className="font-semibold text-sm tabular-nums">₹{Number(val).toLocaleString('en-IN')}</span>;
         if (col.isMono)   return <span className="font-mono text-xs text-[var(--color-muted-foreground)]">{val}</span>;
@@ -418,6 +574,7 @@ export default function MasterTab() {
                       const gc         = grp ? GC[grp.color] : null;
                       // First col of a group gets a left border
                       const isFirstGroupCol = grp && GROUPS.find(g=>g.id===grp.id)?.cols[0]?.id===col.id;
+                      const isNoteActive = activeNoteSkuId === sku.id;
                       return (
                         <td key={`${sku.id}-${col.id}`}
                           onClick={isActive ? undefined : () => setSelectedCell({skuId: sku.id, colId: col.id})}
@@ -426,22 +583,28 @@ export default function MasterTab() {
                             "border-b border-[var(--color-border)] transition-all relative group/cell",
                             isActive ? "p-0 z-30" : "px-4 py-3 cursor-default",
                             isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-20 bg-[var(--color-primary)]/10 shadow-sm",
-                            col.sticky && "sticky z-10 bg-[var(--color-card)] shadow-[inset_-1px_0_0_transparent]",
+                            col.sticky && "sticky z-10 bg-[var(--color-card)]",
+                            col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent]",
+                            col.sticky && col.isRight && "right-0 shadow-[inset_1px_0_0_var(--color-border)]",
+                            /* Ensure open popover is above everything */
+                            isNoteActive && col.id === 'remark' && "z-[50] overflow-visible",
                             /* Ensure base columns have a right border when scrolling */
-                            col.sticky && (col.id === 'barcode' ? "!shadow-[inset_-1px_0_0_var(--color-border)]" : ""),
+                            col.sticky && !col.isRight && (col.id === 'barcode' ? "!shadow-[inset_-1px_0_0_var(--color-border)]" : ""),
                             gc && !isActive && !isSelected && gc.td,
                             isFirstGroupCol && "border-l border-[var(--color-border)]",
                           )}
                           style={{
                             width: col.width, minWidth: col.width,
                             maxWidth: isActive ? undefined : col.width,
-                            left: col.sticky ? col.stickyLeft : undefined,
+                            left: col.sticky && !col.isRight ? col.stickyLeft : undefined,
+                            right: col.sticky && col.isRight ? 0 : undefined,
                             textAlign: col.align||'left',
-                            overflow: isActive ? 'visible' : 'hidden',
+                            overflow: (isActive || isNoteActive) ? 'visible' : 'hidden',
                             textOverflow: 'ellipsis', whiteSpace: isActive ? 'normal' : 'nowrap',
                           }}>
                           {renderCell(col, sku, openFullEdit)}
                         </td>
+
                       );
                     })}
                   </tr>
