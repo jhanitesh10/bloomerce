@@ -440,7 +440,7 @@ export default function MasterTab() {
       );
       case 'product_name': return (
         <div className="flex flex-col gap-1 min-w-0">
-          <span className="font-medium text-[var(--color-foreground)]/75 text-[13px] leading-relaxed whitespace-normal break-words line-clamp-3" title={val}>
+          <span className="font-medium text-[var(--color-foreground)]/85 text-[13.5px] leading-snug whitespace-normal break-words line-clamp-2" title={val}>
             {val || <span className="text-[var(--color-muted-foreground)] font-normal italic text-[11px]">Unnamed Product</span>}
           </span>
         </div>
