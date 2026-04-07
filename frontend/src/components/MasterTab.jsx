@@ -260,7 +260,38 @@ export default function MasterTab() {
 
 
 
-  // ── Auto-save helper for Notes ──────────────────────────────────────────────
+  // ── Component Helpers ───────────────────────────────────────────────────────
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [skuData, brands, cats, statuses] = await Promise.all([
+        skuApi.getAll(),
+        refApi.getAll('BRAND'),
+        refApi.getAll('CATEGORY'),
+        refApi.getAll('STATUS')
+      ]);
+      let subcats = [];
+      try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
+      const toMap = arr => arr.reduce((a, r) => ({ ...a, [r.id]: r.label }), {});
+      setSkus(skuData || []);
+      setReferences({ BRAND: toMap(brands), CATEGORY: toMap(cats), STATUS: toMap(statuses), SUB_CATEGORY: toMap(subcats) });
+      setRefLists({ BRAND: brands, CATEGORY: cats, STATUS: statuses, SUB_CATEGORY: subcats });
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  }, []);
+
+  const saveInlineEdit = useCallback(async (skuId, colId, value) => {
+    if (savingRef.current) return; savingRef.current = true;
+    const parsed = value === '' ? null : value;
+    setInlineEdit(null);
+    if (parsed !== undefined) {
+      setSkus(prev => prev.map(s => s.id === skuId ? { ...s, [colId]: parsed } : s));
+      try { await skuApi.update(skuId, { [colId]: parsed }); }
+      catch (err) { console.error('Save failed:', err); loadAll(); }
+    }
+    savingRef.current = false;
+  }, [loadAll]);
+
   const handleNoteClose = useCallback(async () => {
     if (!activeNoteSkuId) return;
     const sku = skus.find(s => s.id === activeNoteSkuId);
@@ -273,8 +304,12 @@ export default function MasterTab() {
     setActiveNoteSkuId(null);
   }, [activeNoteSkuId, skus, saveInlineEdit]);
 
+  const toggleGroup      = useCallback(gid => setExpandedGroups(prev => { const n = new Set(prev); n.has(gid) ? n.delete(gid) : n.add(gid); return n; }), []);
+  const startInlineEdit   = useCallback((sku, colId) => { if (NON_INLINE.has(colId)) return; savingRef.current = false; setInlineEdit({ skuId: sku.id, colId }); }, []);
+  const cancelInlineEdit  = useCallback(() => { savingRef.current = false; setInlineEdit(null); }, []);
+
   // ── Global Event Listeners ──────────────────────────────────────────────────
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(); }, [loadAll]);
   
   // Handle clicking outside of cells, editors or notes
   useEffect(() => {
@@ -289,38 +324,7 @@ export default function MasterTab() {
     };
     document.addEventListener('mousedown', handleGlobalClick);
     return () => document.removeEventListener('mousedown', handleGlobalClick);
-  }, [activeNoteSkuId, skus, handleNoteClose]);
-
-
-
-  const loadAll = async () => {
-    setLoading(true);
-    try {
-      const [skuData, brands, cats, statuses] = await Promise.all([skuApi.getAll(), refApi.getAll('BRAND'), refApi.getAll('CATEGORY'), refApi.getAll('STATUS')]);
-      let subcats = [];
-      try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
-      const toMap = arr => arr.reduce((a, r) => ({ ...a, [r.id]: r.label }), {});
-      setSkus(skuData);
-      setReferences({ BRAND: toMap(brands), CATEGORY: toMap(cats), STATUS: toMap(statuses), SUB_CATEGORY: toMap(subcats) });
-      setRefLists({ BRAND: brands, CATEGORY: cats, STATUS: statuses, SUB_CATEGORY: subcats });
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
-
-  const toggleGroup    = useCallback(gid => setExpandedGroups(prev => { const n = new Set(prev); n.has(gid) ? n.delete(gid) : n.add(gid); return n; }), []);
-  const startInlineEdit = useCallback((sku, colId) => { if (NON_INLINE.has(colId)) return; savingRef.current = false; setInlineEdit({ skuId: sku.id, colId }); }, []);
-  const cancelInlineEdit = useCallback(() => { savingRef.current = false; setInlineEdit(null); }, []);
-  const saveInlineEdit   = useCallback(async (skuId, colId, value) => {
-    if (savingRef.current) return; savingRef.current = true;
-    const parsed = value === '' ? null : value;
-    setInlineEdit(null);
-    if (parsed !== undefined) {
-      setSkus(prev => prev.map(s => s.id === skuId ? { ...s, [colId]: parsed } : s));
-      try { await skuApi.update(skuId, { [colId]: parsed }); }
-      catch (err) { console.error('Save failed:', err); loadAll(); }
-    }
-    savingRef.current = false;
-  }, []);
+  }, [activeNoteSkuId, handleNoteClose]);
 
   // Flatten visible columns for data rows
   const visibleCols = useMemo(() => {
