@@ -382,7 +382,26 @@ export default function MasterTab() {
 
   const totalPages    = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated     = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const handleSort    = colId => { const c = [...BASE_COLS, ...GROUPS.flatMap(g => g.cols)].find(col => col.id === colId); if (!c?.sortable) return; sortCol === colId ? setSortDir(d => d==='asc'?'desc':'asc') : (setSortCol(colId), setSortDir('asc')); setPage(1); };
+  const handleSort = useCallback((colId) => {
+    // If colId is an event or not a string, we toggle existing sort direction
+    if (!colId || typeof colId !== 'string') {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+      setPage(1);
+      return;
+    }
+    
+    const allCols = [...BASE_COLS, ...GROUPS.flatMap(g => g.cols)];
+    const c = allCols.find(col => col.id === colId);
+    if (!c?.sortable) return;
+    
+    if (sortCol === colId) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(colId);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }, [sortCol]);
   const statusCounts  = useMemo(() => skus.reduce((acc, s) => { const l = references.STATUS[s.status_reference_id]?.toLowerCase()||'unknown'; acc[l]=(acc[l]||0)+1; return acc; }, {}), [skus, references]);
   const pageNums      = Array.from({ length: totalPages }, (_, i) => i+1).filter(n => n===1||n===totalPages||Math.abs(n-page)<=1).reduce((acc,n,i,arr)=>{if(i>0&&n-arr[i-1]>1)acc.push('…');acc.push(n);return acc;},[]);
 
@@ -549,8 +568,21 @@ export default function MasterTab() {
             <span className="font-bold">Filter</span>
             {isFilterActive && <span className="ml-0.5 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
           </Button>
-          <Button variant="secondary" size="sm" className="h-[32px] gap-1.5 px-3 text-slate-500 hover:text-slate-700"><ArrowUpDown size={13}/> <span className="font-bold">Sort</span></Button>
+          {(search || isFilterActive || statusFilter !== 'all') && (
+            <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
+              <div className="w-px h-4 bg-slate-200 mx-1" />
+              <button 
+                onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
+                className="flex items-center gap-1.5 px-3 h-[32px] text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                title="Clear all search and filters"
+              >
+                <RefreshCcw size={12} />
+                Clear
+              </button>
+            </div>
+          )}
         </div>
+
 
 
         {/* Right: Expand / Collapse All */}
@@ -562,14 +594,13 @@ export default function MasterTab() {
           >
             <Maximize2 size={13}/> Expand All
           </button>
-            <button 
-              onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
-              className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-xs font-bold shadow-lg shadow-[var(--color-primary)]/20 hover:scale-105 active:scale-95 transition-all"
-            >
-              <RefreshCcw size={14} />
-              Clear all search & filters
-            </button>
-
+          <button 
+            onClick={() => setExpandedGroups(new Set())} 
+            disabled={isAllCollapsed} 
+            className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
+          >
+            <Minimize2 size={13}/> Collapse All
+          </button>
         </div>
       </div>
 
@@ -616,7 +647,7 @@ export default function MasterTab() {
 
               {/* ── Row 2: group sub-column names ── */}
               <tr>
-                {BASE_COLS.map((col, idx) => (
+                {BASE_COLS.map((col) => (
                   <th key={col.id}
                     className={cn("px-4 py-2 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
                       col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
@@ -663,12 +694,33 @@ export default function MasterTab() {
               {loading ? (
                 <tr><td colSpan={visibleCols.length} className="py-20 text-center text-sm text-[var(--color-muted-foreground)]">Loading products…</td></tr>
               ) : paginated.length===0 ? (
-                <tr><td colSpan={visibleCols.length} className="py-20 text-center text-sm text-[var(--color-muted-foreground)]">No products found.</td></tr>
+                <tr>
+                  <td colSpan={visibleCols.length} className="py-24 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
+                        <Search size={24} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">No products found</p>
+                        <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or search terms to find what you're looking for.</p>
+                      </div>
+                      <Button 
+                        variant="default"
+                        size="sm"
+                        onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
+                        className="mt-2 h-9 px-5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-bold text-xs gap-2 shadow-lg shadow-[var(--color-primary)]/20"
+                      >
+                        <RefreshCcw size={14} />
+                        Clear all filters
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
               ) : paginated.map(sku => {
                 const openFullEdit = () => { setEditingSku(sku); setIsFormOpen(true); };
                 return (
                   <tr key={sku.id} className="group bg-[var(--color-card)] hover:bg-[var(--color-muted)]/30 transition-colors">
-                    {visibleCols.map((col, colIdx) => {
+                    {visibleCols.map((col) => {
                       const isActive   = inlineEdit?.skuId===sku.id && inlineEdit?.colId===col.id;
                       const isSelected = selectedCell?.skuId===sku.id && selectedCell?.colId===col.id && !isActive;
                       const canInline  = !col.noInline && !NON_INLINE.has(col.id) && col.id!=='primary_image_url';
