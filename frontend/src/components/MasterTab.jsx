@@ -439,9 +439,10 @@ export default function MasterTab() {
         </div>
       );
       case 'product_name': return (
-        <div className="flex flex-col gap-0.5 min-w-0">
-          <span className="font-semibold text-[var(--color-foreground)] text-sm leading-tight truncate block">{val || <span className="text-[var(--color-muted-foreground)] font-normal italic text-xs">Unnamed</span>}</span>
-          {sku.sku_code && <span className="font-mono text-[10px] text-[var(--color-muted-foreground)] bg-[var(--color-muted)] rounded px-1.5 py-0.5 w-fit leading-none">{sku.sku_code}</span>}
+        <div className="flex flex-col gap-1 min-w-0">
+          <span className="font-medium text-[var(--color-foreground)]/75 text-[13px] leading-relaxed whitespace-normal break-words line-clamp-3" title={val}>
+            {val || <span className="text-[var(--color-muted-foreground)] font-normal italic text-[11px]">Unnamed Product</span>}
+          </span>
         </div>
       );
       case 'status_reference_id': { const lbl = references.STATUS[val]; return lbl ? <StatusBadge label={lbl}/> : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>; }
@@ -494,7 +495,13 @@ export default function MasterTab() {
         if (val==null||val==='') return <span className="text-sm text-[var(--color-muted-foreground)]">—</span>;
         if (col.isNum)    return <span className="font-semibold text-sm tabular-nums">₹{Number(val).toLocaleString('en-IN')}</span>;
         if (col.isMono)   return <span className="font-mono text-xs text-[var(--color-muted-foreground)]">{val}</span>;
-        if (col.isContent) return <span className="text-xs text-[var(--color-muted-foreground)] line-clamp-2" title={val}>{val}</span>;
+        if (col.isContent) return (
+          <div className="group/large-text relative max-w-full">
+            <span className="text-[10.5px] text-[var(--color-muted-foreground)]/60 line-clamp-3 leading-relaxed cursor-help hover:text-[var(--color-foreground)] transition-colors" title={val}>
+              {val}
+            </span>
+          </div>
+        );
         return <span className="text-sm text-[var(--color-muted-foreground)]">{val}</span>;
     }
   };
@@ -649,10 +656,10 @@ export default function MasterTab() {
               <tr>
                 {BASE_COLS.map((col) => (
                   <th key={col.id}
-                    className={cn("px-4 py-2 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
+                    className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
                       col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
                     style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky?col.stickyLeft:undefined}}>
-                    <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[11px] font-semibold tracking-wide uppercase text-[var(--color-muted-foreground)]", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
+                    <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
                       {col.label}
                       {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
                       {col.sortable&&sortCol!==col.id&&<ArrowUpDown size={10} className="inline ml-1 opacity-20"/>}
@@ -666,10 +673,10 @@ export default function MasterTab() {
                   const gc        = GC[g.color];
                   return shownCols.map((col, idx) => (
                     <th key={col.id}
-                      className={cn("px-4 py-2 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)]",
+                      className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)]",
                         idx===0 && "border-l border-[var(--color-border)]", gc.row2)}
                       style={{width:col.width, minWidth:col.width, textAlign:col.align||'left'}}>
-                      <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[11px] font-semibold tracking-wide uppercase text-[var(--color-muted-foreground)]", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
+                      <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
                         {col.label}
                         {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
                         {col.sortable&&sortCol!==col.id&&<ArrowUpDown size={10} className="inline ml-1 opacity-20"/>}
@@ -735,7 +742,7 @@ export default function MasterTab() {
                           onDoubleClick={isActive || !canInline ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
                           className={cn(
                             "border-b border-[var(--color-border)] transition-all relative group/cell",
-                            isActive ? "p-0 z-30" : "px-4 py-3 cursor-default",
+                            isActive ? "p-0 z-30" : "px-4 py-3 cursor-default align-top",
                             isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-20 bg-[var(--color-primary)]/10 shadow-sm",
                             col.sticky && "sticky z-10 bg-[var(--color-card)]",
                             col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent]",
@@ -754,7 +761,7 @@ export default function MasterTab() {
                             right: col.sticky && col.isRight ? 0 : undefined,
                             textAlign: col.align||'left',
                             overflow: (isActive || isNoteActive) ? 'visible' : 'hidden',
-                            textOverflow: 'ellipsis', whiteSpace: isActive ? 'normal' : 'nowrap',
+                            textOverflow: 'ellipsis', whiteSpace: (isActive || col.id === 'product_name' || col.isContent) ? 'normal' : 'nowrap',
                           }}>
                           {renderCell(col, sku, openFullEdit)}
                         </td>
