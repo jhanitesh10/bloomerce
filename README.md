@@ -17,3 +17,4 @@ This is a clean boilerplate project using:
 1. Navigate to `frontend/`
 2. Install: `npm install`
 3. Run: `npm run dev` (starts on port 5173)
+# boomerce
