@@ -144,22 +144,24 @@ export default function ExportSlideOver({ onClose, skus = [], filtered = [], pag
     <>
       <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm animate-[fade-in_0.2s_ease]" onClick={onClose} />
       
-      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
+      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
-              <X size={18} />
-            </button>
-            <div>
-              <h2 className="text-base font-semibold text-[var(--color-foreground)] leading-tight">Export to CSV</h2>
-              <span className="text-xs text-[var(--color-muted-foreground)]">Select and map columns for your download</span>
+        <div className="flex flex-col border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
+                <X size={18} />
+              </button>
+              <div>
+                <h2 className="text-base font-semibold text-[var(--color-foreground)] leading-tight">Export to CSV</h2>
+                <span className="text-[10px] text-[var(--color-muted-foreground)] hidden sm:inline">Select and map columns for your download</span>
+              </div>
             </div>
+            <Button onClick={handleExport} className="gap-2 shrink-0 h-9">
+              <Download size={14} /> <span className="hidden sm:inline">Download {targetData.length} SKUs</span><span className="sm:hidden">Export</span>
+            </Button>
           </div>
-          <Button onClick={handleExport} className="gap-2 shrink-0">
-            <Download size={14} /> Download {targetData.length} SKUs
-          </Button>
         </div>
 
         {/* Body */}
@@ -167,7 +169,7 @@ export default function ExportSlideOver({ onClose, skus = [], filtered = [], pag
           
           <div className="px-6 py-4">
             <h3 className="text-sm font-semibold mb-3">1. Select Scope</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { id: 'current_page', label: 'Current Page', count: paginated.length, desc: 'Visible on screen' },
                 { id: 'filtered', label: 'Filtered Results', count: filtered.length, desc: 'Current search/filter' },
@@ -250,19 +252,21 @@ export default function ExportSlideOver({ onClose, skus = [], filtered = [], pag
                       {isExpanded && (
                         <div className="bg-[var(--color-background)]">
                           {group.fields.map(field => (
-                            <div key={field} className="grid grid-cols-12 gap-4 px-4 py-2 hover:bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] items-center transition-colors">
-                              <div className="col-span-1 flex justify-center">
+                            <div key={field} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-4 px-4 py-3 sm:py-2 hover:bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] sm:items-center transition-colors">
+                              <div className="sm:col-span-1 flex items-center gap-3">
                                 <input 
                                   type="checkbox"
                                   checked={config[field]?.selected || false}
                                   onChange={(e) => updateField(field, { selected: e.target.checked })}
-                                  className="w-3.5 h-3.5 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                  className="w-4 h-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                                 />
+                                <span className="sm:hidden text-xs font-bold text-[var(--color-foreground)]">{FIELD_LABELS[field] || field}</span>
                               </div>
-                              <div className="col-span-5 text-xs text-[var(--color-foreground)] font-medium">
+                              <div className="hidden sm:block sm:col-span-5 text-xs text-[var(--color-foreground)] font-medium">
                                 {FIELD_LABELS[field] || field}
                               </div>
-                              <div className="col-span-6">
+                              <div className="sm:col-span-6 flex flex-col gap-1">
+                                <span className="sm:hidden text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase tracking-wider">Column Label in CSV</span>
                                 <input 
                                   type="text"
                                   value={config[field]?.outputName || ''}

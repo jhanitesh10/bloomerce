@@ -217,7 +217,7 @@ function Field({ label, required, children, hint, error }) {
 
 function FieldRow({ children, cols = 2 }) {
   return (
-    <div className={cn("grid gap-4", cols === 2 ? "grid-cols-2" : "grid-cols-1")}>
+    <div className={cn("grid gap-4", cols === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
       {children}
     </div>
   );
@@ -394,7 +394,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       />
 
       {/* Slide-over Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full max-w-2xl bg-[var(--color-card)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
+      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:max-w-2xl bg-[var(--color-card)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
 
         {/* ── Unsaved-changes dialog ────────────────────────────── */}
         {confirmClose && (
@@ -417,56 +417,39 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
         )}
 
         {/* ── Header ───────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
-            >
-              <X size={18} />
-            </button>
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">{title}</h2>
-              {isEdit && <span className="text-xs text-[var(--color-muted-foreground)] font-mono">{initialData.sku_code}</span>}
+        <div className="flex flex-col border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
+          <div className="flex items-center justify-between px-5 py-3.5">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">{title}</h2>
+                {isEdit && <span className="text-[10px] text-[var(--color-muted-foreground)] font-mono">{initialData.sku_code}</span>}
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            {/* Notes toggle */}
-            <button
-              type="button"
-              onClick={() => setNotesOpen(o => !o)}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-                notesOpen
-                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                  : "text-[var(--color-muted-foreground)] border-[var(--color-border)] hover:bg-[var(--color-muted)]",
-                form.remark && !notesOpen && "border-amber-300 text-amber-600 bg-amber-50/60"
-              )}
-              title={notesOpen ? 'Close notes' : 'Internal notes'}
-            >
-              <StickyNote size={13} />
-              <span>Notes</span>
-              {form.remark && !notesOpen && (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-              )}
-            </button>
-
-            <Button variant="secondary" size="sm" onClick={handleClose} disabled={saving}>Cancel</Button>
-            <Button
-              size="sm"
-              type="submit"
-              form="skuForm"
-              disabled={saving}
-              className="gap-1.5"
-            >
-              {saving ? (
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              ) : (
-                <><Save size={13} /> {isEdit ? 'Save Changes' : 'Create Product'}</>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={handleClose} disabled={saving} className="hidden sm:inline-flex">Cancel</Button>
+              <Button
+                size="sm"
+                type="submit"
+                form="skuForm"
+                disabled={saving}
+                className="gap-1.5 h-9"
+              >
+                {saving ? (
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <><Save size={13} /> <span className="hidden sm:inline">{isEdit ? 'Save Changes' : 'Create Product'}</span><span className="sm:hidden">Save</span></>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 

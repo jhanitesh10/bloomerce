@@ -214,8 +214,68 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
 }
 
 
+// ── SkuCard for Mobile View ────────────────────────────────────────────────
+function SkuCard({ sku, references, onEdit, onNote }) {
+  const brand = references.BRAND[sku.brand_reference_id] || '—';
+  const statusLbl = references.STATUS[sku.status_reference_id];
+  
+  return (
+    <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 group animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex items-start gap-4">
+        {/* thumbnail */}
+        <div className="w-16 h-16 rounded-xl overflow-hidden border border-[var(--color-border)] flex-shrink-0 bg-[var(--color-muted)]">
+          {sku.primary_image_url ? (
+            <img src={sku.primary_image_url} alt="product" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[var(--color-muted-foreground)]">
+              <ImageIcon size={20} />
+            </div>
+          )}
+        </div>
+        
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-bold text-[14px] text-[var(--color-foreground)] leading-tight line-clamp-2">{sku.product_name}</h3>
+            <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-[var(--color-sidebar-accent)] text-[var(--color-muted-foreground)] transition-colors">
+              <SquarePen size={16} />
+            </button>
+          </div>
+          <p className="text-[11px] font-mono text-[var(--color-muted-foreground)] mt-1">{sku.sku_code || sku.barcode || 'NO SKU CODE'}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[11px] font-bold text-[var(--color-primary)]/80 uppercase tracking-tighter">{brand}</span>
+            <div className="w-1 h-1 rounded-full bg-[var(--color-border)]" />
+            <span className="text-[11px] font-bold text-[var(--color-muted-foreground)] uppercase tracking-tighter">₹{Number(sku.mrp || 0).toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="h-px bg-[var(--color-border)] opacity-50 my-1" />
+      
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+           {statusLbl && <StatusBadge label={statusLbl} />}
+           {sku.remark && (
+             <div className="flex items-center gap-1 text-[var(--color-primary)] text-[10px] font-bold bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">
+               <StickyNote size={10} fill="currentColor" fillOpacity={0.2} />
+               <span>Note</span>
+             </div>
+           )}
+        </div>
+        <button 
+          onClick={onNote}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] text-[11px] font-bold text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] transition-colors active:scale-95"
+        >
+          <StickyNote size={13} />
+          <span>{sku.remark ? 'View Note' : 'Add Note'}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function MasterTab() {
+export default function MasterTab({ isMobile }) {
   const [skus,           setSkus]           = useState([]);
   const [references,     setReferences]     = useState({ BRAND:{}, CATEGORY:{}, STATUS:{}, SUB_CATEGORY:{}, BUNDLE_TYPE:{}, PACK_TYPE:{} });
   const [refLists,       setRefLists]       = useState({ BRAND:[], CATEGORY:[], STATUS:[], SUB_CATEGORY:[], BUNDLE_TYPE:[], PACK_TYPE:[] });
@@ -547,25 +607,28 @@ export default function MasterTab() {
   return (
     <div className="flex flex-col gap-5">
       {/* ── Top Header & Global Actions ── */}
-      <div className="flex items-center justify-between">
+      <div className={cn("flex justify-between gap-4", isMobile ? "flex-col items-start" : "items-center")}>
         <div>
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Prompt Master</h2>
           <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Click any cell to edit inline · Hover image to open full form</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 h-[34px]" onClick={()=>setIsImportOpen(true)}><Upload size={14}/> Import</Button>
-          <Button variant="outline" size="sm" className="gap-1.5 h-[34px]" onClick={()=>setIsExportOpen(true)}><Download size={14}/> Export</Button>
-          <Button size="sm" className="gap-1.5 ml-1 h-[34px]" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={14}/> Add Product</Button>
+        <div className={cn("flex items-center gap-2", isMobile && "w-full justify-start")}>
+          <Button variant="outline" size="sm" className={cn("gap-1.5 h-[34px]", isMobile && "flex-1")} onClick={()=>setIsImportOpen(true)}><Upload size={14}/> Import</Button>
+          <Button variant="outline" size="sm" className={cn("gap-1.5 h-[34px]", isMobile && "flex-1")} onClick={()=>setIsExportOpen(true)}><Download size={14}/> Export</Button>
+          {!isMobile && <Button size="sm" className="gap-1.5 ml-1 h-[34px]" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={14}/> Add Product</Button>}
         </div>
+        {isMobile && (
+          <Button size="sm" className="w-full gap-1.5 h-[38px] shadow-lg shadow-[var(--color-primary)]/20" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={16}/> Add New Product</Button>
+        )}
       </div>
 
       {/* ── Table Global Toolbar ── */}
-      <div className="flex items-center justify-between bg-[var(--color-card)] p-2 rounded-xl border border-[var(--color-border)] shadow-sm">
+      <div className={cn("flex bg-[var(--color-card)] p-2 rounded-xl border border-[var(--color-border)] shadow-sm gap-4", isMobile ? "flex-col" : "items-center justify-between")}>
         
         {/* Left: View Controls */}
-        <div className="flex items-center gap-2">
+        <div className={cn("flex gap-2", isMobile ? "flex-col" : "items-center")}>
           {/* Status Tabs */}
-          <div className="flex items-center border border-[var(--color-border)] rounded-lg p-1 bg-[var(--color-muted)]">
+          <div className="flex items-center border border-[var(--color-border)] rounded-lg p-1 bg-[var(--color-muted)] overflow-x-auto no-scrollbar">
             {FILTER_TABS.map(tab => (
               <button
                 key={tab.key}
@@ -582,26 +645,26 @@ export default function MasterTab() {
             ))}
           </div>
 
-          <div className="w-px h-6 bg-slate-200 mx-1" />
+          {!isMobile && <div className="w-px h-6 bg-slate-200 mx-1" />}
 
           {/* Search */}
-          <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-[32px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 transition-all bg-[var(--color-card)]">
+          <div className={cn("flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-[32px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 transition-all bg-[var(--color-card)]", isMobile && "h-[38px]")}>
             <Search size={14} className="text-slate-400" />
             <input 
               type="text" 
               placeholder="Search product, SKU..." 
               value={search} 
               onChange={e => { setSearch(e.target.value); setPage(1); }} 
-              className="bg-transparent text-xs w-48 outline-none text-slate-700 placeholder:text-slate-400"
+              className="bg-transparent text-xs w-full outline-none text-slate-700 placeholder:text-slate-400"
             />
           </div>
 
           {(search || isFilterActive || statusFilter !== 'all') && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-              <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
+              {!isMobile && <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />}
               <button 
                 onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
-                className="group flex items-center gap-1.5 px-3 h-[32px] text-[11px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 rounded-lg transition-all shadow-sm"
+                className={cn("group flex items-center gap-1.5 px-3 h-[32px] text-[11px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 rounded-lg transition-all shadow-sm", isMobile && "h-[38px] w-full justify-center")}
                 title="Clear all search and filters"
               >
                 <RefreshCcw size={12} className="group-hover:-rotate-180 transition-transform duration-500" />
@@ -614,12 +677,13 @@ export default function MasterTab() {
 
 
         {/* Right: Actions & View Controls */}
-        <div className="flex items-center gap-2">
+        <div className={cn("flex items-center gap-2", isMobile && "w-full")}>
           {/* Advanced Filter Toggle */}
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={cn(
               "relative flex items-center gap-2 px-3.5 h-[32px] text-xs font-semibold border rounded-lg transition-all",
+              isMobile && "flex-1 h-[38px] justify-center",
               isFilterOpen 
                 ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20"
                 : isFilterActive 
@@ -640,25 +704,29 @@ export default function MasterTab() {
             )}
           </button>
 
-          <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
+          {!isMobile && (
+            <>
+              <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
 
-          {/* Expand / Collapse All */}
-          <div className="flex items-center border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-card)] shadow-sm">
-            <button 
-              onClick={() => setExpandedGroups(new Set(allGroupIds))} 
-              disabled={isAllExpanded} 
-              className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold border-r border-[var(--color-border)] transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
-            >
-              <Maximize2 size={13}/> Expand All
-            </button>
-            <button 
-              onClick={() => setExpandedGroups(new Set())} 
-              disabled={isAllCollapsed} 
-              className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
-            >
-              <Minimize2 size={13}/> Collapse All
-            </button>
-          </div>
+              {/* Expand / Collapse All */}
+              <div className="flex items-center border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-card)] shadow-sm">
+                <button 
+                  onClick={() => setExpandedGroups(new Set(allGroupIds))} 
+                  disabled={isAllExpanded} 
+                  className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold border-r border-[var(--color-border)] transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
+                >
+                  <Maximize2 size={13}/> Expand All
+                </button>
+                <button 
+                  onClick={() => setExpandedGroups(new Set())} 
+                  disabled={isAllCollapsed} 
+                  className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
+                >
+                  <Minimize2 size={13}/> Collapse All
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -681,187 +749,212 @@ export default function MasterTab() {
         />
       )}
 
-      {/* ── Table card ── */}
-      <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
-        <div className="overflow-x-auto" style={{scrollbarWidth:'thin'}}>
-          <table className="w-full border-collapse" style={{borderSpacing:0}}>
-            <thead>
-              {/* ── Row 1: base cols (rowSpan=2) + group parent headers ── */}
-              <tr>
-                <th colSpan={BASE_COLS.length}
-                  className="px-3 pt-2 pb-1 text-center border-b border-b-transparent sticky z-30 bg-[var(--color-muted)] shadow-[inset_-1px_0_0_var(--color-border)]"
-                  style={{ left: 0, minWidth: BASE_COLS.reduce((sum, c) => sum + (c.width || 0), 0) }}>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-[11px] font-bold tracking-wider uppercase">Identity</span>
-                  </div>
-                </th>
-
-                {GROUPS.map(g => {
-                  const expanded = expandedGroups.has(g.id);
-                  const colSpan  = expanded ? g.cols.length : 1;
-                  const hiddenN  = g.cols.length - 1;
-                  const gc       = GC[g.color];
-                  return (
-                    <th key={g.id} colSpan={colSpan}
-                      className={cn("px-3 pt-2 pb-1 text-center border-l border-[var(--color-border)] border-b border-b-transparent", gc.row1)}
-                      style={{minWidth: expanded ? g.cols.reduce((s,c)=>s+c.width,0) : g.cols[0].width}}>
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="text-[11px] font-bold tracking-wider uppercase">{g.label}</span>
-                        <button onClick={()=>toggleGroup(g.id)} className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all", gc.pill)}>
-                          {expanded
-                            ? <><Minimize2 size={12}/><span>Collapse</span></>
-                            : <><Maximize2 size={12}/><span>Expand ({hiddenN})</span></>}
-                        </button>
-                      </div>
-                    </th>
-                  );
-                })}
-
-                {/* Placeholder for Sticky Notes in Group Row */}
-                <th className="sticky top-0 right-0 z-30 bg-[var(--color-muted)] border-b border-l border-[var(--color-border)] shadow-[inset_1px_0_0_var(--color-border)]" />
-              </tr>
-
-
-              {/* ── Row 2: group sub-column names ── */}
-              <tr>
-                {BASE_COLS.map((col) => (
-                  <th key={col.id}
-                    className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
-                      col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
-                    style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky?col.stickyLeft:undefined}}>
-                    <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
-                      {col.label}
-                      {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
-                      {col.sortable&&sortCol!==col.id&&<ArrowUpDown size={10} className="inline ml-1 opacity-20"/>}
-                    </span>
+      {/* ── Table or Card view ── */}
+      {isMobile ? (
+        <div className="flex flex-col gap-4">
+          {paginated.length === 0 ? (
+            <div className="py-24 text-center bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)]">
+               <div className="flex flex-col items-center justify-center gap-3">
+                  <Search size={32} className="text-slate-300" />
+                  <p className="text-sm font-bold text-slate-900">No products found</p>
+               </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {paginated.map(sku => (
+                <SkuCard 
+                  key={sku.id} 
+                  sku={sku} 
+                  references={references} 
+                  onEdit={() => { setEditingSku(sku); setIsFormOpen(true); }}
+                  onNote={(e) => { e?.stopPropagation(); setActiveNoteSkuId(prev => prev === sku.id ? null : sku.id); }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
+          <div className="overflow-x-auto" style={{scrollbarWidth:'thin'}}>
+            <table className="w-full border-collapse" style={{borderSpacing:0}}>
+              <thead>
+                {/* ── Row 1: base cols (rowSpan=2) + group parent headers ── */}
+                <tr>
+                  <th colSpan={BASE_COLS.length}
+                    className="px-3 pt-2 pb-1 text-center border-b border-b-transparent sticky z-30 bg-[var(--color-muted)] shadow-[inset_-1px_0_0_var(--color-border)]"
+                    style={{ left: 0, minWidth: BASE_COLS.reduce((sum, c) => sum + (c.width || 0), 0) }}>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-[11px] font-bold tracking-wider uppercase">Identity</span>
+                    </div>
                   </th>
-                ))}
 
-                {GROUPS.map(g => {
-                  const expanded  = expandedGroups.has(g.id);
-                  const shownCols = expanded ? g.cols : [g.cols[0]];
-                  const gc        = GC[g.color];
-                  return shownCols.map((col, idx) => (
+                  {GROUPS.map(g => {
+                    const expanded = expandedGroups.size > 0 && expandedGroups.has(g.id);
+                    const colSpan  = expanded ? g.cols.length : 1;
+                    const hiddenN  = g.cols.length - 1;
+                    const gc       = GC[g.color];
+                    return (
+                      <th key={g.id} colSpan={colSpan}
+                        className={cn("px-3 pt-2 pb-1 text-center border-l border-[var(--color-border)] border-b border-b-transparent", gc.row1)}
+                        style={{minWidth: expanded ? g.cols.reduce((s,c)=>s+c.width,0) : g.cols[0].width}}>
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-[11px] font-bold tracking-wider uppercase">{g.label}</span>
+                          <button onClick={()=>toggleGroup(g.id)} className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all", gc.pill)}>
+                            {expanded
+                              ? <><Minimize2 size={12}/><span>Collapse</span></>
+                              : <><Maximize2 size={12}/><span>Expand ({hiddenN})</span></>}
+                          </button>
+                        </div>
+                      </th>
+                    );
+                  })}
+
+                  {/* Placeholder for Sticky Notes in Group Row */}
+                  <th className="sticky top-0 right-0 z-30 bg-[var(--color-muted)] border-b border-l border-[var(--color-border)] shadow-[inset_1px_0_0_var(--color-border)]" />
+                </tr>
+
+
+                {/* ── Row 2: group sub-column names ── */}
+                <tr>
+                  {BASE_COLS.map((col) => (
                     <th key={col.id}
-                      className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)]",
-                        idx===0 && "border-l border-[var(--color-border)]", gc.row2)}
-                      style={{width:col.width, minWidth:col.width, textAlign:col.align||'left'}}>
+                      className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
+                        col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
+                      style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky?col.stickyLeft:undefined}}>
                       <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
                         {col.label}
                         {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
                         {col.sortable&&sortCol!==col.id&&<ArrowUpDown size={10} className="inline ml-1 opacity-20"/>}
                       </span>
                     </th>
-                  ));
-                })}
+                  ))}
+
+                  {GROUPS.map(g => {
+                    const expanded  = expandedGroups.has(g.id);
+                    const shownCols = expanded ? g.cols : [g.cols[0]];
+                    const gc        = GC[g.color];
+                    return shownCols.map((col, idx) => (
+                      <th key={col.id}
+                        className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)]",
+                          idx===0 && "border-l border-[var(--color-border)]", gc.row2)}
+                        style={{width:col.width, minWidth:col.width, textAlign:col.align||'left'}}>
+                        <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
+                          {col.label}
+                          {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
+                          {col.sortable&&sortCol!==col.id&&<ArrowUpDown size={10} className="inline ml-1 opacity-20"/>}
+                        </span>
+                      </th>
+                    ));
+                  })}
 
 
-                {/* Content for Sticky Notes in Sub-column Row */}
-                <th className="sticky top-0 right-0 z-30 p-3 bg-[var(--color-muted)] border-b-2 border-l border-[var(--color-border)] shadow-[inset_1px_0_0_var(--color-border)]">
-                   <div className="flex items-center justify-center gap-1.5 opacity-60">
-                     <StickyNote size={13} className="text-[var(--color-muted-foreground)]" />
-                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">Notes</span>
-                   </div>
-                </th>
-              </tr>
-            </thead>
-
-
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={visibleCols.length} className="py-20 text-center text-sm text-[var(--color-muted-foreground)]">Loading products…</td></tr>
-              ) : paginated.length===0 ? (
-                <tr>
-                  <td colSpan={visibleCols.length} className="py-24 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
-                        <Search size={24} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">No products found</p>
-                        <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or search terms to find what you're looking for.</p>
-                      </div>
-                      <Button 
-                        variant="default"
-                        size="sm"
-                        onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
-                        className="mt-2 h-9 px-5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-bold text-xs gap-2 shadow-lg shadow-[var(--color-primary)]/20"
-                      >
-                        <RefreshCcw size={14} />
-                        Clear all filters
-                      </Button>
+                  {/* Content for Sticky Notes in Sub-column Row */}
+                  <th className="sticky top-0 right-0 z-30 p-3 bg-[var(--color-muted)] border-b-2 border-l border-[var(--color-border)] shadow-[inset_1px_0_0_var(--color-border)]">
+                    <div className="flex items-center justify-center gap-1.5 opacity-60">
+                      <StickyNote size={13} className="text-[var(--color-muted-foreground)]" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">Notes</span>
                     </div>
-                  </td>
+                  </th>
                 </tr>
-              ) : paginated.map(sku => {
-                const openFullEdit = () => { setEditingSku(sku); setIsFormOpen(true); };
-                return (
-                  <tr key={sku.id} className="group bg-[var(--color-card)] hover:bg-[var(--color-muted)]/30 transition-colors">
-                    {visibleCols.map((col) => {
-                      const isActive   = inlineEdit?.skuId===sku.id && inlineEdit?.colId===col.id;
-                      const isSelected = selectedCell?.skuId===sku.id && selectedCell?.colId===col.id && !isActive;
-                      const canInline  = !col.noInline && !NON_INLINE.has(col.id) && col.id!=='primary_image_url';
-                      const grp        = colGroupMap[col.id];
-                      const gc         = grp ? GC[grp.color] : null;
-                      // First col of a group gets a left border
-                      const isFirstGroupCol = grp && GROUPS.find(g=>g.id===grp.id)?.cols[0]?.id===col.id;
-                      const isNoteActive = activeNoteSkuId === sku.id;
-                      return (
-                        <td key={`${sku.id}-${col.id}`}
-                          onClick={isActive ? undefined : () => setSelectedCell({skuId: sku.id, colId: col.id})}
-                          onDoubleClick={isActive || !canInline ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
-                          className={cn(
-                            "border-b border-[var(--color-border)] transition-all relative group/cell",
-                            isActive ? "p-0 z-30" : "px-4 py-3 cursor-default align-top",
-                            isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-20 bg-[var(--color-primary)]/10 shadow-sm",
-                            col.sticky && "sticky z-10 bg-[var(--color-card)]",
-                            col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent]",
-                            col.sticky && col.isRight && "right-0 shadow-[inset_1px_0_0_var(--color-border)]",
-                            /* Ensure open popover is above everything */
-                            isNoteActive && col.id === 'remark' && "z-[50] overflow-visible",
-                            /* Ensure base columns have a right border when scrolling */
-                            col.sticky && !col.isRight && (col.id === 'barcode' ? "!shadow-[inset_-1px_0_0_var(--color-border)]" : ""),
-                            gc && !isActive && !isSelected && gc.td,
-                            isFirstGroupCol && "border-l border-[var(--color-border)]",
-                          )}
-                          style={{
-                            width: col.width, minWidth: col.width,
-                            maxWidth: isActive ? undefined : col.width,
-                            left: col.sticky && !col.isRight ? col.stickyLeft : undefined,
-                            right: col.sticky && col.isRight ? 0 : undefined,
-                            textAlign: col.align||'left',
-                            overflow: (isActive || isNoteActive) ? 'visible' : 'hidden',
-                            textOverflow: 'ellipsis', whiteSpace: (isActive || col.id === 'product_name' || col.isContent) ? 'normal' : 'nowrap',
-                          }}>
-                          {renderCell(col, sku, openFullEdit)}
-                        </td>
+              </thead>
 
-                      );
-                    })}
+
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={visibleCols.length} className="py-20 text-center text-sm text-[var(--color-muted-foreground)]">Loading products…</td></tr>
+                ) : paginated.length===0 ? (
+                  <tr>
+                    <td colSpan={visibleCols.length} className="py-24 text-center">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
+                          <Search size={24} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">No products found</p>
+                          <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or search terms to find what you're looking for.</p>
+                        </div>
+                        <Button 
+                          variant="default"
+                          size="sm"
+                          onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
+                          className="mt-2 h-9 px-5 rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-bold text-xs gap-2 shadow-lg shadow-[var(--color-primary)]/20"
+                        >
+                          <RefreshCcw size={14} />
+                          Clear all filters
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                ) : paginated.map(sku => {
+                  const openFullEdit = () => { setEditingSku(sku); setIsFormOpen(true); };
+                  return (
+                    <tr key={sku.id} className="group bg-[var(--color-card)] hover:bg-[var(--color-muted)]/30 transition-colors">
+                      {visibleCols.map((col) => {
+                        const isActive   = inlineEdit?.skuId===sku.id && inlineEdit?.colId===col.id;
+                        const isSelected = selectedCell?.skuId===sku.id && selectedCell?.colId===col.id && !isActive;
+                        const canInline  = !col.noInline && !NON_INLINE.has(col.id) && col.id!=='primary_image_url';
+                        const grp        = colGroupMap[col.id];
+                        const gc         = grp ? GC[grp.color] : null;
+                        // First col of a group gets a left border
+                        const isFirstGroupCol = grp && GROUPS.find(g=>g.id===grp.id)?.cols[0]?.id===col.id;
+                        const isNoteActive = activeNoteSkuId === sku.id;
+                        return (
+                          <td key={`${sku.id}-${col.id}`}
+                            onClick={isActive ? undefined : () => setSelectedCell({skuId: sku.id, colId: col.id})}
+                            onDoubleClick={isActive || !canInline ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
+                            className={cn(
+                              "border-b border-[var(--color-border)] transition-all relative group/cell",
+                              isActive ? "p-0 z-30" : "px-4 py-3 cursor-default align-top",
+                              isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-20 bg-[var(--color-primary)]/10 shadow-sm",
+                              col.sticky && "sticky z-10 bg-[var(--color-card)]",
+                              col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent]",
+                              col.sticky && col.isRight && "right-0 shadow-[inset_1px_0_0_var(--color-border)]",
+                              /* Ensure open popover is above everything */
+                              isNoteActive && col.id === 'remark' && "z-[50] overflow-visible",
+                              /* Ensure base columns have a right border when scrolling */
+                              col.sticky && !col.isRight && (col.id === 'barcode' ? "!shadow-[inset_-1px_0_0_var(--color-border)]" : ""),
+                              gc && !isActive && !isSelected && gc.td,
+                              isFirstGroupCol && "border-l border-[var(--color-border)]",
+                            )}
+                            style={{
+                              width: col.width, minWidth: col.width,
+                              maxWidth: isActive ? undefined : col.width,
+                              left: col.sticky && !col.isRight ? col.stickyLeft : undefined,
+                              right: col.sticky && col.isRight ? 0 : undefined,
+                              textAlign: col.align||'left',
+                              overflow: (isActive || isNoteActive) ? 'visible' : 'hidden',
+                              textOverflow: 'ellipsis', whiteSpace: (isActive || col.id === 'product_name' || col.isContent) ? 'normal' : 'nowrap',
+                            }}>
+                            {renderCell(col, sku, openFullEdit)}
+                          </td>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border)]">
-          <div className="flex items-center gap-3 text-xs text-[var(--color-muted-foreground)]">
-            <span>Showing {Math.min((page-1)*pageSize+1,filtered.length)}–{Math.min(page*pageSize,filtered.length)} of {filtered.length}</span>
-            <select value={pageSize} onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}} className="border border-[var(--color-border)] rounded-md bg-[var(--color-card)] text-[var(--color-foreground)] text-xs px-1.5 py-1 outline-none cursor-pointer">
-              {PAGE_SIZE_OPTIONS.map(n=><option key={n} value={n}>{n} / page</option>)}
-            </select>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={15}/></button>
-            {pageNums.map((n,i)=>n==='…'
-              ? <span key={`g${i}`} className="px-1 text-xs text-[var(--color-muted-foreground)]">…</span>
-              : <button key={n} onClick={()=>setPage(n)} className={cn("flex items-center justify-center w-8 h-8 rounded-lg border text-xs transition-colors", page===n?"bg-[var(--color-primary)] border-[var(--color-primary)] text-white font-semibold":"border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]")}>{n}</button>)}
-            <button onClick={()=>setPage(p=>Math.max(totalPages,p+1))} disabled={page===totalPages} className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronRight size={15}/></button>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border)]">
+            <div className="flex items-center gap-3 text-xs text-[var(--color-muted-foreground)]">
+              <span>Showing {Math.min((page-1)*pageSize+1,filtered.length)}–{Math.min(page*pageSize,filtered.length)} of {filtered.length}</span>
+              <select value={pageSize} onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}} className="border border-[var(--color-border)] rounded-md bg-[var(--color-card)] text-[var(--color-foreground)] text-xs px-1.5 py-1 outline-none cursor-pointer">
+                {PAGE_SIZE_OPTIONS.map(n=><option key={n} value={n}>{n} / page</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1} className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={15}/></button>
+              {pageNums.map((n,i)=>n==='…'
+                ? <span key={`g${i}`} className="px-1 text-xs text-[var(--color-muted-foreground)]">…</span>
+                : <button key={n} onClick={()=>setPage(n)} className={cn("flex items-center justify-center w-8 h-8 rounded-lg border text-xs transition-colors", page===n?"bg-[var(--color-primary)] border-[var(--color-primary)] text-white font-semibold":"border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]")}>{n}</button>)}
+              <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page===totalPages} className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronRight size={15}/></button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {isFormOpen && <SkuMasterForm initialData={editingSku} statusOptions={refLists.STATUS} onClose={()=>setIsFormOpen(false)} onSaved={()=>{setIsFormOpen(false);loadAll();}}/>}
       {isExportOpen && <ExportSlideOver skus={skus} filtered={filtered} paginated={paginated} references={references} onClose={()=>setIsExportOpen(false)} />}

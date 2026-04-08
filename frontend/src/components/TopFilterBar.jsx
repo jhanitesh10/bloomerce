@@ -33,7 +33,7 @@ export default function TopFilterBar({
     <div className="bg-white border border-[var(--color-border)] rounded-xl p-3 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-3">
       
       {/* Row 1: Controls */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:overflow-visible sm:flex-wrap sm:pb-0 sm:mx-0 sm:px-0">
           
           {/* Brand Filter */}
           <FilterDropdown
@@ -105,7 +105,7 @@ export default function TopFilterBar({
 
           {/* Fallback Results Pill (Only if no filters active) */}
           {!isAnyFilterActive && (
-            <div className="ml-auto flex items-center gap-2 px-3 h-[34px] bg-slate-50 border border-slate-200 rounded-xl shadow-sm">
+            <div className="ml-auto flex items-center gap-2 px-3 h-[34px] bg-slate-50 border border-slate-200 rounded-xl shadow-sm whitespace-nowrap">
                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</span>
                <span className="text-sm font-bold text-[var(--color-primary)] tabular-nums">{totalCount}</span>
             </div>
