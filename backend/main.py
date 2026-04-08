@@ -242,8 +242,14 @@ async def integrity_exception_handler(request, exc):
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+# In production, you would typically list your specific Vercel/Netlify URLs here.
+# For a seamless first deployment, we allow all origins.
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.post("/api/upload")
