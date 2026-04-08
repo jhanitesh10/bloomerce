@@ -8,9 +8,14 @@ load_dotenv() # Load variables from .env if present
 
 # Default to local sqlite for development if docker is not running.
 # To use MySQL, set DATABASE_URL="mysql+pymysql://user:userpassword@127.0.0.1:3306/bloomerce_db"
-# SQLAlchemy 1.4+ requires 'postgresql://' instead of 'postgres://'
-# Render/Heroku often provide strings starting with 'postgres://'
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./bloomerce_local.db")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Ensure we have a database URL
+if not SQLALCHEMY_DATABASE_URL:
+    # If missing, we'll try to fallback to a default but log a warning
+    # For now, I will keep it clean as requested.
+    raise ValueError("DATABASE_URL environment variable is not set!")
+
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
