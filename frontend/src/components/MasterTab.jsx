@@ -549,7 +549,7 @@ export default function MasterTab() {
       {/* ── Top Header & Global Actions ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Product Master</h2>
+          <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Prompt Master</h2>
           <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Click any cell to edit inline · Hover image to open full form</p>
         </div>
         <div className="flex items-center gap-2">

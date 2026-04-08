@@ -66,6 +66,14 @@ export default function TopFilterBar({
             onChange={(ids) => onFilterChange({ subCategoryIds: ids })}
           />
 
+          <FilterDropdown
+            label="Status"
+            icon={RefreshCcw}
+            options={refLists.STATUS || []}
+            selectedIds={filters.statusIds || []}
+            onChange={(ids) => onFilterChange({ statusIds: ids })}
+          />
+
 
 
           {/* Price Range */}
@@ -125,6 +133,11 @@ export default function TopFilterBar({
             {(filters.subCategoryIds || []).map(id => {
               const sc = (refLists.SUB_CATEGORY || []).find(x => x.id === id);
               return sc ? <ActiveChip key={`sc-${id}`} label={sc.label} onRemove={() => onFilterChange({ subCategoryIds: filters.subCategoryIds.filter(x => x !== id) })} /> : null;
+            })}
+
+            {(filters.statusIds || []).map(id => {
+              const s = (refLists.STATUS || []).find(x => x.id === id);
+              return s ? <ActiveChip key={`s-${id}`} label={s.label} variant="primary" onRemove={() => onFilterChange({ statusIds: filters.statusIds.filter(x => x !== id) })} /> : null;
             })}
 
 

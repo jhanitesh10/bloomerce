@@ -14,7 +14,8 @@ const FIELD_LABELS = {
   net_content_unit: "Net Content Unit", color: "Color", raw_product_size: "Raw Product Size", 
   package_size: "Package Size", package_weight: "Package Wt (g)", raw_product_weight: "Raw Product Wt", 
   finished_product_weight: "Finished Product Wt",
-  bundle_type: "Bundle Type", pack_type: "Pack Type", tax_rule_code: "Tax Rule Code (HSN)", tax_percent: "Tax Percent",
+  bundle_type: "Bundle Type", pack_type: "Pack Type", 
+  tax_rule_code: "Tax Rule Code (HSN)", tax_percent: "Tax Percent",
   // additional raw fields:
   created_at: "Created At", updated_at: "Updated At"
 };
