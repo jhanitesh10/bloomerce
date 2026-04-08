@@ -10,7 +10,7 @@ import SkuMasterForm from './SkuMasterForm';
 import InlineCellEditor from './InlineCellEditor';
 import ExportSlideOver from './ExportSlideOver';
 import ImportSlideOver from './ImportSlideOver';
-import FilterSlideOver from './FilterSlideOver';
+import TopFilterBar from './TopFilterBar';
 
 import { skuApi, refApi } from '../api';
 import { Button } from '@/components/ui/button';
@@ -238,17 +238,21 @@ export default function MasterTab() {
     hasNotes: null,
   };
   const [filters, setFilters] = useState(initialFilters);
-  const isFilterActive = useMemo(() => 
-    filters.brandIds.length > 0 || 
-    filters.categoryIds.length > 0 || 
-    filters.subCategoryIds.length > 0 ||
-    filters.statusIds.length > 0 || 
-    filters.minPrice !== '' || 
-    filters.maxPrice !== '' || 
-    filters.productType !== '' ||
-    filters.hasImage !== null || 
-    filters.hasNotes !== null
-  , [filters]);
+  const activeAdvancedFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.brandIds?.length) count += filters.brandIds.length;
+    if (filters.categoryIds?.length) count += filters.categoryIds.length;
+    if (filters.subCategoryIds?.length) count += filters.subCategoryIds.length;
+    if (filters.statusIds?.length) count += filters.statusIds.length;
+    if (filters.minPrice !== '') count += 1;
+    if (filters.maxPrice !== '') count += 1;
+    if (filters.productType !== '') count += 1;
+    if (filters.hasImage !== null) count += 1;
+    if (filters.hasNotes !== null) count += 1;
+    return count;
+  }, [filters]);
+
+  const isFilterActive = activeAdvancedFiltersCount > 0;
 
   const [editingSku,     setEditingSku]     = useState(null);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
@@ -568,27 +572,16 @@ export default function MasterTab() {
             />
           </div>
 
-          {/* Filter / Sort Buttons */}
-          <Button 
-            variant={isFilterActive ? "default" : "secondary"}
-            size="sm" 
-            className={cn("h-[32px] gap-1.5 px-3 transition-all", isFilterActive && "bg-[var(--color-primary)] text-white shadow-md ring-1 ring-[var(--color-primary)]")}
-            onClick={() => setIsFilterOpen(true)}
-          >
-            <Filter size={13} fill={isFilterActive ? "currentColor" : "none"} />
-            <span className="font-bold">Filter</span>
-            {isFilterActive && <span className="ml-0.5 w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
-          </Button>
           {(search || isFilterActive || statusFilter !== 'all') && (
-            <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
-              <div className="w-px h-4 bg-slate-200 mx-1" />
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+              <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
               <button 
                 onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
-                className="flex items-center gap-1.5 px-3 h-[32px] text-[10px] font-bold uppercase tracking-wider text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                className="group flex items-center gap-1.5 px-3 h-[32px] text-[11px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 rounded-lg transition-all shadow-sm"
                 title="Clear all search and filters"
               >
-                <RefreshCcw size={12} />
-                Clear
+                <RefreshCcw size={12} className="group-hover:-rotate-180 transition-transform duration-500" />
+                Clear All
               </button>
             </div>
           )}
@@ -596,24 +589,73 @@ export default function MasterTab() {
 
 
 
-        {/* Right: Expand / Collapse All */}
-        <div className="flex items-center border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-card)] shadow-sm">
-          <button 
-            onClick={() => setExpandedGroups(new Set(allGroupIds))} 
-            disabled={isAllExpanded} 
-            className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold border-r border-[var(--color-border)] transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
+        {/* Right: Actions & View Controls */}
+        <div className="flex items-center gap-2">
+          {/* Advanced Filter Toggle */}
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={cn(
+              "relative flex items-center gap-2 px-3.5 h-[32px] text-xs font-semibold border rounded-lg transition-all",
+              isFilterOpen 
+                ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20"
+                : isFilterActive 
+                  ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/15"
+                  : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)]/30 hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+            )}
+            title="Toggle Advanced Filters"
           >
-            <Maximize2 size={13}/> Expand All
+            <Filter size={13} />
+            <span>Filters</span>
+            {isFilterActive && (
+              <span className={cn(
+                "flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-black rounded-full tabular-nums",
+                isFilterOpen ? "bg-white text-[var(--color-primary)]" : "bg-[var(--color-primary)] text-white shadow-sm"
+              )}>
+                {activeAdvancedFiltersCount}
+              </span>
+            )}
           </button>
-          <button 
-            onClick={() => setExpandedGroups(new Set())} 
-            disabled={isAllCollapsed} 
-            className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
-          >
-            <Minimize2 size={13}/> Collapse All
-          </button>
+
+          <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
+
+          {/* Expand / Collapse All */}
+          <div className="flex items-center border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-card)] shadow-sm">
+            <button 
+              onClick={() => setExpandedGroups(new Set(allGroupIds))} 
+              disabled={isAllExpanded} 
+              className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold border-r border-[var(--color-border)] transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
+            >
+              <Maximize2 size={13}/> Expand All
+            </button>
+            <button 
+              onClick={() => setExpandedGroups(new Set())} 
+              disabled={isAllCollapsed} 
+              className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
+            >
+              <Minimize2 size={13}/> Collapse All
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* ── Advanced Filter Bar ── */}
+      {isFilterOpen && (
+        <TopFilterBar 
+          filters={filters}
+          onFilterChange={(newFilters) => {
+            setFilters(prev => ({ ...prev, ...newFilters }));
+            setPage(1);
+          }}
+          onClearAll={() => {
+            setFilters(initialFilters);
+            setPage(1);
+          }}
+          references={references}
+          refLists={refLists}
+          matchCount={filtered.length}
+          totalCount={skus.length}
+        />
+      )}
 
       {/* ── Table card ── */}
       <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
@@ -801,28 +843,6 @@ export default function MasterTab() {
       {isExportOpen && <ExportSlideOver skus={skus} filtered={filtered} paginated={paginated} references={references} onClose={()=>setIsExportOpen(false)} />}
       {isImportOpen && <ImportSlideOver skus={skus} refLists={refLists} onClose={()=>setIsImportOpen(false)} onImportComplete={()=>{setIsImportOpen(false);loadAll();}} />}
 
-      <FilterSlideOver 
-        isOpen={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        filters={filters}
-        onFilterChange={(update) => setFilters(prev => ({ ...prev, ...update }))}
-        onClearAll={() => { setFilters(initialFilters); setSearch(''); setStatusFilter('all'); }}
-        references={references}
-        refLists={refLists}
-        matchCount={filtered.length}
-      />
-
-    </div>
-  );
-}
-
-function FilterChip({ label, onRemove }) {
-  return (
-    <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm animate-in fade-in zoom-in-95 duration-200 group">
-      <span className="text-slate-700">{label}</span>
-      <button onClick={onRemove} className="text-slate-300 hover:text-red-500 transition-colors">
-        <X size={12} strokeWidth={2.5} />
-      </button>
     </div>
   );
 }
