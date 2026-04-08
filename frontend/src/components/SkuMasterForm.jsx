@@ -304,11 +304,9 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       }
     } else {
       // Default to 'Draft' status for new products
-      const draftRef = Object.entries(refLists?.STATUS || {}).find(([id, label]) => 
-        label?.toLowerCase() === 'draft'
-      );
-      if (draftRef) {
-        base.status_reference_id = Number(draftRef[0]);
+      const draftStatus = (statusOptions || []).find(s => s.label.toLowerCase() === 'draft');
+      if (draftStatus) {
+        base.status_reference_id = draftStatus.id;
       }
     }
     return base;
