@@ -15,7 +15,8 @@ import schemas
 from database import engine, get_db, SessionLocal
 
 from sqlalchemy.exc import IntegrityError
-models.Base.metadata.create_all(bind=engine)
+# Table creation is handled in the lifespan to avoid crashing on module load in serverless environments
+# models.Base.metadata.create_all(bind=engine)
 
 def seed_mock_data():
     db = SessionLocal()
@@ -229,7 +230,12 @@ def seed_mock_data():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    seed_mock_data()
+    # Ensure tables are created on startup
+    try:
+        models.Base.metadata.create_all(bind=engine)
+        seed_mock_data()
+    except Exception as e:
+        print(f"Startup error: {e}")
     yield
 
 app = FastAPI(title="Bloomerce Relational API", lifespan=lifespan)
@@ -239,8 +245,12 @@ async def integrity_exception_handler(request, exc):
     from fastapi import JSONResponse
     return JSONResponse(status_code=400, content={"detail": f"Database Integrity Error: {str(exc.orig)}"})
 
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Handle uploads directory gracefully (Vercel has a read-only filesystem except for /tmp)
+try:
+    os.makedirs("uploads", exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+except Exception as e:
+    print(f"Skipping local storage setup: {e}")
 
 # In production, you would typically list your specific Vercel/Netlify URLs here.
 # For a seamless first deployment, we allow all origins.
