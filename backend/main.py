@@ -233,7 +233,9 @@ async def lifespan(app: FastAPI):
     # Ensure tables are created on startup
     try:
         models.Base.metadata.create_all(bind=engine)
-        seed_mock_data()
+        # Only seed if the flag is explicitly set to true
+        if os.getenv("SEED_MOCK_DATA", "false").lower() == "true":
+            seed_mock_data()
     except Exception as e:
         print(f"Startup error: {e}")
     yield
