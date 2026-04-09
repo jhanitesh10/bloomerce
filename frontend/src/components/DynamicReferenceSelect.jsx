@@ -28,6 +28,8 @@ export default function DynamicReferenceSelect({
     }
   }, [referenceType, preloadedOptions]);
 
+  const lastReportedLabel = useRef(null);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -38,6 +40,17 @@ export default function DynamicReferenceSelect({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onBlur]);
+
+  // Report initial label back to parent once options load, so Drive preview can populate
+  useEffect(() => {
+    if (value && options.length > 0) {
+      const selected = options.find(opt => Number(opt.id) === Number(value));
+      if (selected && selected.label !== lastReportedLabel.current) {
+        lastReportedLabel.current = selected.label;
+        onChange(value, selected.label);
+      }
+    }
+  }, [options, value, onChange]);
 
   const loadOptions = () => {
     setLoading(true);
@@ -61,7 +74,7 @@ export default function DynamicReferenceSelect({
         parent_reference_id: parentId
       });
       setOptions([...options, newRef]);
-      onChange(newRef.id);
+      onChange(newRef.id, newRef.label);
       setSearch("");
       setIsOpen(false);
     } catch (err) {
@@ -138,7 +151,7 @@ export default function DynamicReferenceSelect({
                     ? "bg-[var(--color-primary)]/8 text-[var(--color-primary)]"
                     : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
                 )}
-                onClick={() => { onChange(opt.id); setIsOpen(false); setSearch(""); }}
+                onClick={() => { onChange(opt.id, opt.label); setIsOpen(false); setSearch(""); }}
               >
                 <span className="truncate">{opt.label}</span>
                 {value === opt.id && <Check size={13} className="text-[var(--color-primary)] flex-shrink-0" />}

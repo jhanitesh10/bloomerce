@@ -17,6 +17,8 @@ export const skuApi = {
   update: (id, data) => api.put(`/skus/${id}`, data).then(res => res.data),
   delete: (id) => api.delete(`/skus/${id}`).then(res => res.data),
   patchPlatforms: (id, data) => api.patch(`/skus/${id}/platforms`, data).then(res => res.data),
+  generateCatalogUrl: (id) => api.post(`/skus/${id}/generate-catalog-url`).then(res => res.data),
+  generateCatalogUrlPreview: (data) => api.post(`/skus/generate-catalog-url`, data).then(res => res.data),
 };
 
 export const refApi = {

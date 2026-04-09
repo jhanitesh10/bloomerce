@@ -86,3 +86,9 @@ class SkuMaster(SkuMasterBase):
 class PlatformPatch(BaseModel):
     action: str  
     reference_id: int
+
+class DriveFolderCreate(BaseModel):
+    brand_name: str
+    category_name: str
+    sub_category_name: str
+    sku_code: str

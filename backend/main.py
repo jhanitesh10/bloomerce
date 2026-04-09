@@ -13,6 +13,7 @@ import re
 import models
 import schemas
 from database import engine, get_db, SessionLocal
+from drive_service import DriveService
 
 from sqlalchemy.exc import IntegrityError
 # Table creation is handled in the lifespan to avoid crashing on module load in serverless environments
@@ -406,3 +407,68 @@ def patch_sku_platforms(id: int, patch_data: schemas.PlatformPatch, db: Session 
     db.commit()
     db.refresh(db_item)
     return db_item
+
+
+# ==========================================
+# GOOGLE DRIVE INTEGRATION
+# ==========================================
+
+def _generate_drive_url(brand_id: int, cat_id: int, subcat_id: int, sku_code: str, db: Session):
+    def get_label(ref_id):
+        if not ref_id: return None
+        ref = db.query(models.ReferenceData).filter(models.ReferenceData.id == ref_id).first()
+        return ref.label if ref else None
+
+    brand_label = get_label(brand_id)
+    cat_label = get_label(cat_id)
+    subcat_label = get_label(subcat_id)
+
+    drive = DriveService()
+    if not drive.service:
+        raise HTTPException(status_code=500, detail="Google Drive credentials not configured in backend.")
+    
+    return drive.create_sku_folder_structure(
+        brand=brand_label,
+        category=cat_label,
+        sub_category=subcat_label,
+        sku_code=sku_code
+    )
+
+@app.post("/api/skus/generate-catalog-url")
+def generate_sku_catalog_url_preview(data: schemas.DriveFolderCreate, db: Session = Depends(get_db)):
+    try:
+        drive = DriveService()
+        if not drive.service:
+            raise HTTPException(status_code=500, detail="Google Drive credentials not configured in backend.")
+        
+        url = drive.create_sku_folder_structure(
+            brand=data.brand_name,
+            category=data.category_name,
+            sub_category=data.sub_category_name,
+            sku_code=data.sku_code
+        )
+        return {"catalog_url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Google Drive Error: {str(e)}")
+
+@app.post("/api/skus/{id}/generate-catalog-url", response_model=schemas.SkuMaster)
+def generate_sku_catalog_url_saved(id: int, db: Session = Depends(get_db)):
+    sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deletedAt == None).first()
+    if not sku:
+        raise HTTPException(status_code=404, detail="SKU not found")
+
+    try:
+        folder_url = _generate_drive_url(
+            sku.brand_reference_id, 
+            sku.category_reference_id, 
+            sku.sub_category_reference_id, 
+            sku.sku_code,
+            db
+        )
+
+        sku.catalog_url = folder_url
+        db.commit()
+        db.refresh(sku)
+        return sku
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Google Drive Error: {str(e)}")
