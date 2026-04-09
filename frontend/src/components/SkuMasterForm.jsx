@@ -141,47 +141,45 @@ function ImageBlock({ value, onChange }) {
                </button>
              )}
 
-             <div
-               onClick={() => !uploading && fileRef.current?.click()}
-               className={cn(
-                 "w-full md:w-1/3 aspect-square max-w-[140px] flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-white cursor-pointer transition-all",
-                 "hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-[0.98]",
-                 uploading && "opacity-60 cursor-not-allowed"
-               )}
-             >
-                {uploading ? (
-                   <span className="w-8 h-8 rounded-full border-2 border-[var(--color-primary)] border-t-transparent animate-spin" />
-                ) : (
-                   <>
-                     <UploadCloud size={32} className="text-[var(--color-muted-foreground)] group-hover:text-[var(--color-primary)] transition-colors" />
-                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">Upload</span>
-                   </>
+              <div
+                className={cn(
+                  "w-full md:w-1/3 aspect-square max-w-[140px] flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-muted)]/10 cursor-not-allowed opacity-50 grayscale transition-all relative overflow-hidden group/disabled"
                 )}
-             </div>
+              >
+                  <UploadCloud size={32} className="text-[var(--color-muted-foreground)]" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">Upload</span>
+                  {/* Status Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5 backdrop-blur-[1px]">
+                    <span className="bg-[var(--color-card)] text-[var(--color-foreground)] text-[8px] font-black px-2 py-0.5 rounded shadow-sm border border-[var(--color-border)] uppercase tracking-tighter">Disabled</span>
+                  </div>
+              </div>
 
-             <div className="flex-1 w-full space-y-3">
-                <div className="flex flex-col gap-1.5">
-                   <span className="text-xs font-semibold text-[var(--color-foreground)]">Public Image or Drive URL</span>
-                   <div className="relative group/input">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[var(--color-muted-foreground)] group-focus-within/input:text-[var(--color-primary)] transition-colors">
-                        <Link size={14} />
-                      </div>
-                      <input
-                        type="url"
-                        value={tempUrl}
-                        onChange={(e) => setTempUrl(e.target.value)}
-                        onBlur={handleUrlBlur}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), applyUrl())}
-                        placeholder="Paste image link here..."
-                        className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60"
-                      />
-                   </div>
-                   <p className="text-[10px] text-[var(--color-muted-foreground)] leading-relaxed italic">
-                     Google Drive "view" links are auto-converted to direct image streams for preview.
-                   </p>
-                </div>
-             </div>
-          </div>
+              <div className="flex-1 w-full space-y-3">
+                 <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-[var(--color-foreground)]">Google Drive Image URL</span>
+                      <span className="text-[10px] font-bold text-[var(--color-primary)] uppercase tracking-tight bg-[var(--color-primary)]/5 px-2 py-0.5 rounded-full">Active</span>
+                    </div>
+                    <div className="relative group/input">
+                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[var(--color-muted-foreground)] group-focus-within/input:text-[var(--color-primary)] transition-colors">
+                         <Link size={14} />
+                       </div>
+                       <input
+                         type="url"
+                         value={tempUrl}
+                         onChange={(e) => setTempUrl(e.target.value)}
+                         onBlur={handleUrlBlur}
+                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), applyUrl())}
+                         placeholder="Paste Google Drive image link here..."
+                         className="w-full h-12 pl-10 pr-4 py-2.5 text-sm rounded-xl border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60 shadow-sm"
+                       />
+                    </div>
+                    <p className="text-[10px] text-[var(--color-muted-foreground)] leading-relaxed italic">
+                      Paste your Google Drive link above. We'll automatically convert it into a direct stream for the catalog preview.
+                    </p>
+                 </div>
+              </div>
+           </div>
         )}
         {uploading && (
            <div className="absolute inset-0 bg-[var(--color-card)]/40 backdrop-blur-[1px] flex items-center justify-center z-10">

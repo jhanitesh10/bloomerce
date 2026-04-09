@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import MasterTab from './components/MasterTab';
 import {
   Sparkles,
@@ -30,6 +30,10 @@ function App() {
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Hover Intent Timers
+  const hoverTimer = useRef(null);
+  const leaveTimer = useRef(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -89,8 +93,16 @@ function App() {
 
       {/* ── Sidebar ── */}
       <aside 
-        onMouseEnter={() => !isMobile && setIsHovered(true)}
-        onMouseLeave={() => !isMobile && setIsHovered(false)}
+        onMouseEnter={() => {
+          if (isMobile) return;
+          if (leaveTimer.current) clearTimeout(leaveTimer.current);
+          hoverTimer.current = setTimeout(() => setIsHovered(true), 200);
+        }}
+        onMouseLeave={() => {
+          if (isMobile) return;
+          if (hoverTimer.current) clearTimeout(hoverTimer.current);
+          leaveTimer.current = setTimeout(() => setIsHovered(false), 100);
+        }}
         className={cn(
           "flex flex-col flex-shrink-0 bg-[var(--color-sidebar)] border-r border-[var(--color-border)] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-xl shadow-[var(--color-shadow)]",
           isMobile 
