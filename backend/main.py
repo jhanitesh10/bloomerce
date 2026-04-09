@@ -472,3 +472,18 @@ def generate_sku_catalog_url_saved(id: int, db: Session = Depends(get_db)):
         return sku
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Google Drive Error: {str(e)}")
+@app.post("/api/skus/{id}/trash-catalog-folder", response_model=schemas.SkuMaster)
+def trash_sku_catalog_folder(id: int, db: Session = Depends(get_db)):
+    sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == id).first()
+    if not sku:
+        raise HTTPException(status_code=404, detail="SKU not found")
+    
+    if sku.catalog_url:
+        drive_service = DriveService()
+        drive_service.trash_folder(sku.catalog_url)
+        
+        sku.catalog_url = None
+        db.commit()
+        db.refresh(sku)
+    
+    return sku

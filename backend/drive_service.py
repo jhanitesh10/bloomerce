@@ -90,3 +90,21 @@ class DriveService:
         except Exception as e:
             print(f"Error creating SKU folder structure: {e}")
             raise e
+    def trash_folder(self, folder_url):
+        if not self.service or not folder_url:
+            return False
+        
+        try:
+            # Extract ID from URL
+            # Format: https://drive.google.com/drive/folders/ID
+            match = re.search(r'folders/([a-zA-Z0-9_-]+)', folder_url)
+            if not match:
+                return False
+            
+            folder_id = match.group(1)
+            # Move to trash
+            self.service.files().update(fileId=folder_id, body={'trashed': True}).execute()
+            return True
+        except Exception as e:
+            print(f"Error trashing folder: {e}")
+            return False

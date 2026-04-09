@@ -1,7 +1,7 @@
 import {
   Plus, Search, Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   ArrowUpDown, LayoutGrid, Rocket, FileEdit, Download, Upload,
-  SquarePen, Check, X, Filter, Maximize2, Minimize2, StickyNote, Send, Trash2, RefreshCcw
+  SquarePen, Check, X, Filter, Maximize2, Minimize2, StickyNote, Send, Trash2, RefreshCcw, ExternalLink
 } from 'lucide-react';
 
 
@@ -543,7 +543,18 @@ export default function MasterTab({ isMobile }) {
       case 'pack_type':                 return <span className="text-sm text-[var(--color-muted-foreground)]">{references.PACK_TYPE[val] || val || '—'}</span>;
       case 'net_content':  return <span className="text-sm text-[var(--color-muted-foreground)]">{sku.net_content_value ? `${sku.net_content_value} ${sku.net_content_unit||''}` : '—'}</span>;
       case 'tax_percent':  return <span className="text-sm text-[var(--color-muted-foreground)]">{val!=null ? `${val}%` : '—'}</span>;
-      case 'catalog_url':  return val ? <a href={val} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} className="text-xs text-[var(--color-primary)] underline underline-offset-2 truncate block">Link ↗</a> : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>;
+      case 'catalog_url':  return val ? (
+        <a 
+          href={val} 
+          target="_blank" 
+          rel="noreferrer" 
+          onClick={e=>e.stopPropagation()} 
+          className="flex items-center justify-center p-1.5 rounded-lg hover:bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-all mx-auto shadow-sm border border-[var(--color-primary)]/20"
+          title="Open in Google Drive"
+        >
+          <ExternalLink size={14} />
+        </a>
+      ) : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>;
       case 'createdAt': {
         if (!val) return <span className="text-sm text-[var(--color-muted-foreground)]">—</span>;
         const d = new Date(val);
