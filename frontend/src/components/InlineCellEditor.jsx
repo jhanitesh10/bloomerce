@@ -61,8 +61,15 @@ export default function InlineCellEditor({
           referenceType={refType}
           value={value}
           preloadedOptions={refLists?.[refType] || []}
-          onChange={(v) => { setValue(v); onSave(v); }} // Auto-save and close on select
+          onChange={(v, lbl) => { 
+            if (v !== value) {
+              setValue(v); 
+              onSave(v); 
+            }
+          }} // Auto-save and close ONLY on actual value change
           onBlur={handleSave}
+          autoOpen={true}
+          variant="flat"
           placeholder={`Search ${col.label}...`}
         />
       </div>

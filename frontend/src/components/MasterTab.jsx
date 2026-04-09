@@ -31,6 +31,7 @@ const BASE_COLS = [
   { id: 'primary_image_url',  label: 'Image',    width: 68,  align: 'center', noInline: true, sticky: true, stickyLeft: 44 },
   { id: 'product_name',       label: 'Product',  width: 260, sortable: true,  sticky: true, stickyLeft: 112 },
   { id: 'barcode',            label: 'SKU / EAN / Barcode ID',  width: 160, isMono: true,    sticky: true, stickyLeft: 372 },
+  { id: 'brand_reference_id', label: 'Brand',    width: 140, sortable: true,  sticky: true, stickyLeft: 532 },
 ];
 
 const REMARKS_COL = { id: 'remark', label: 'Notes', width: 62, align: 'center', sticky: true, isRight: true };
@@ -42,7 +43,6 @@ const GROUPS = [
     id: 'classification', label: 'Classification', color: 'violet',
     cols: [
       { id: 'status_reference_id',       label: 'Status',         width: 115 },
-      { id: 'brand_reference_id',        label: 'Brand',          width: 140 },
       { id: 'category_reference_id',     label: 'Category',       width: 140 },
       { id: 'sub_category_reference_id', label: 'Sub-Category',   width: 150 },
     ],
@@ -569,10 +569,33 @@ export default function MasterTab({ isMobile }) {
           </span>
         </div>
       );
-      case 'status_reference_id': { const lbl = references.STATUS[val]; return lbl ? <StatusBadge label={lbl}/> : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>; }
-      case 'brand_reference_id':        return <span className="text-sm text-[var(--color-foreground)]">{references.BRAND[val] || '—'}</span>;
-      case 'category_reference_id':     return <span className="text-sm text-[var(--color-muted-foreground)]">{references.CATEGORY[val] || '—'}</span>;
-      case 'sub_category_reference_id': return <span className="text-sm text-[var(--color-muted-foreground)]">{references.SUB_CATEGORY[val] || '—'}</span>;
+      case 'status_reference_id': { 
+        const lbl = references.STATUS[val]; 
+        return (
+          <div className="flex items-center justify-between gap-1 w-full group/ref bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg px-2 py-1 shadow-sm hover:border-[var(--color-primary)]/50 transition-all">
+            {lbl ? <StatusBadge label={lbl}/> : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>}
+            <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-70 group-hover/ref:text-[var(--color-primary)] transition-colors" />
+          </div>
+        );
+      }
+      case 'brand_reference_id': return (
+        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/20 border border-[var(--color-border)]/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
+          <span className="text-[13px] font-bold text-[var(--color-foreground)] truncate">{references.BRAND[val] || '—'}</span>
+          <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-70 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+        </div>
+      );
+      case 'category_reference_id': return (
+        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/10 border border-[var(--color-border)]/40 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
+          <span className="text-[13px] text-[var(--color-foreground)] truncate">{references.CATEGORY[val] || '—'}</span>
+          <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-60 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+        </div>
+      );
+      case 'sub_category_reference_id': return (
+        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/10 border border-[var(--color-border)]/40 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
+          <span className="text-[13px] text-[var(--color-muted-foreground)] truncate">{references.SUB_CATEGORY[val] || '—'}</span>
+          <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-60 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+        </div>
+      );
       case 'bundle_type':               return <span className="text-sm text-[var(--color-foreground)] font-medium">{references.BUNDLE_TYPE[val] || val || '—'}</span>;
       case 'pack_type':                 return <span className="text-sm text-[var(--color-muted-foreground)]">{references.PACK_TYPE[val] || val || '—'}</span>;
       case 'net_content':  return <span className="text-sm text-[var(--color-muted-foreground)]">{sku.net_content_value ? `${sku.net_content_value} ${sku.net_content_unit||''}` : '—'}</span>;
@@ -884,7 +907,7 @@ export default function MasterTab({ isMobile }) {
 
                 {/* ── Row 2: group sub-column names ── */}
                 <tr>
-                  <th className="sticky left-0 z-30 bg-slate-100 border-b-2 border-slate-200 px-3 w-10 text-center shadow-[inset_-1px_0_0_var(--color-border)]">
+                  <th className="sticky left-0 z-30 bg-slate-100 border-b-2 border-slate-200 w-11 text-center shadow-[inset_-1px_0_0_var(--color-border)]">
                     <input 
                       type="checkbox" 
                       className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
@@ -896,7 +919,7 @@ export default function MasterTab({ isMobile }) {
                     <th key={col.id}
                       className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
                         col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
-                       style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky? (col.stickyLeft + 40) :undefined}}>
+                       style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky? (col.stickyLeft + 44) :undefined}}>
                       <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
                         {col.label}
                         {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
@@ -965,7 +988,7 @@ export default function MasterTab({ isMobile }) {
                   const openFullEdit = () => { setEditingSku(sku); setIsFormOpen(true); };
                   return (
                     <tr key={sku.id} className={cn("group transition-colors", selectedSkuIds.has(sku.id) ? "bg-orange-50/30" : "bg-[var(--color-card)] hover:bg-[var(--color-muted)]/30")}>
-                      <td className="sticky left-0 z-20 px-3 py-3 border-b border-slate-200 bg-inherit text-center shadow-[inset_-1px_0_0_var(--color-border)]">
+                      <td className="sticky left-0 z-20 w-11 py-3 border-b border-slate-200 bg-inherit text-center shadow-[inset_-1px_0_0_var(--color-border)]">
                         <input 
                           type="checkbox" 
                           className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
@@ -982,10 +1005,19 @@ export default function MasterTab({ isMobile }) {
                         // First col of a group gets a left border
                         const isFirstGroupCol = grp && GROUPS.find(g=>g.id===grp.id)?.cols[0]?.id===col.id;
                         const isNoteActive = activeNoteSkuId === sku.id;
+                        const isRefField = !!REF_MAP[col.id];
                         return (
                           <td key={`${sku.id}-${col.id}`}
-                            onClick={isActive ? undefined : () => setSelectedCell({skuId: sku.id, colId: col.id})}
-                            onDoubleClick={isActive || !canInline ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
+                            onClick={isActive ? undefined : (e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setSelectedCell({skuId: sku.id, colId: col.id});
+                              if (isRefField && canInline) {
+                                startInlineEdit(sku, col.id);
+                                setSelectedCell(null);
+                              }
+                            }}
+                            onDoubleClick={(isActive || !canInline || isRefField) ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
                             className={cn(
                               "border-b border-[var(--color-border)] transition-all relative group/cell",
                               isActive ? "p-0 z-30" : "px-4 py-3 cursor-default align-top",
@@ -1003,7 +1035,7 @@ export default function MasterTab({ isMobile }) {
                             style={{
                               width: col.width, minWidth: col.width,
                               maxWidth: isActive ? undefined : col.width,
-                              left: col.sticky && !col.isRight ? (col.stickyLeft + 40) : undefined,
+                              left: col.sticky && !col.isRight ? (col.stickyLeft + 44) : undefined,
                               right: col.sticky && col.isRight ? 0 : undefined,
                               textAlign: col.align||'left',
                               overflow: (isActive || isNoteActive) ? 'visible' : 'hidden',
