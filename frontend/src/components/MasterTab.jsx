@@ -122,7 +122,10 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 // ── Note Popover Component ──────────────────────────────────────────────────
 function NotePopover({ sku, onSave, onClose, onDraftChange }) {
-  const [val, setVal] = useState(sku.remark || '');
+  const [val, setVal] = useState(() => {
+    const draft = localStorage.getItem(`bloomerce_note_draft_${sku.id}`);
+    return draft !== null ? draft : (sku.remark || '');
+  });
   const [saving, setSaving] = useState(false);
   const textareaRef = useRef(null);
 
@@ -138,6 +141,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
   const handleChange = (newVal) => {
     setVal(newVal);
     onDraftChange(newVal);
+    localStorage.setItem(`bloomerce_note_draft_${sku.id}`, newVal);
   };
 
   const handleSave = async (e) => {
@@ -145,6 +149,8 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
     if (saving) return;
     setSaving(true);
     await onSave(val);
+    // Clear draft from localStorage on successful save
+    localStorage.removeItem(`bloomerce_note_draft_${sku.id}`);
     setSaving(false);
   };
 
@@ -323,9 +329,32 @@ export default function MasterTab({ isMobile }) {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [inlineEdit,     setInlineEdit]     = useState(null); // { skuId, colId }
   const [selectedCell,   setSelectedCell]   = useState(null); // { skuId, colId }
-  const [activeNoteSkuId, setActiveNoteSkuId] = useState(null);
+  const [activeNoteSkuId, setActiveNoteSkuId] = useState(() => {
+    return localStorage.getItem('bloomerce_active_note_id') || null;
+  });
   const noteDraftRef   = useRef('');
   const savingRef      = useRef(false);
+
+  // Sync active note ID to localStorage — validate against loaded SKUs to avoid broken popovers
+  useEffect(() => {
+    if (activeNoteSkuId) {
+      localStorage.setItem('bloomerce_active_note_id', activeNoteSkuId);
+    } else {
+      localStorage.removeItem('bloomerce_active_note_id');
+    }
+  }, [activeNoteSkuId]);
+
+  // After SKUs load, validate the restored note ID — clear it if the SKU no longer exists
+  useEffect(() => {
+    if (activeNoteSkuId && skus.length > 0) {
+      const exists = skus.some(s => s.id === activeNoteSkuId);
+      if (!exists) {
+        localStorage.removeItem(`bloomerce_note_draft_${activeNoteSkuId}`);
+        localStorage.removeItem('bloomerce_active_note_id');
+        setActiveNoteSkuId(null);
+      }
+    }
+  }, [skus, activeNoteSkuId]);
 
 
 
@@ -386,6 +415,8 @@ export default function MasterTab({ isMobile }) {
     if (sku && draft !== (sku.remark || '')) {
       await saveInlineEdit(activeNoteSkuId, 'remark', draft);
     }
+    // Clear draft storage on close/save
+    localStorage.removeItem(`bloomerce_note_draft_${activeNoteSkuId}`);
     setActiveNoteSkuId(null);
   }, [activeNoteSkuId, skus, saveInlineEdit]);
 

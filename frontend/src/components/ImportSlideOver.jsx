@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
 import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, XCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -100,14 +100,59 @@ function CustomFieldSelect({ currentVal, onChange, options, disabledOptions }) {
 }
 
 export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onImportComplete }) {
-  const [file, setFile] = useState(null);
-  const [csvHeaders, setCsvHeaders] = useState([]);
-  const [csvData, setCsvData] = useState([]);
-  const [mappings, setMappings] = useState({}); // { csvHeader: systemFieldId | "" }
+  const [file, setFile] = useState(null); // File object specifically cannot be persisted easily
+  
+  const [csvHeaders, setCsvHeaders] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bloomerce_import_headers');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return [];
+  });
+
+  const [csvData, setCsvData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bloomerce_import_data');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return [];
+  });
+
+  const [mappings, setMappings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bloomerce_import_mappings');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return {};
+  }); // { csvHeader: systemFieldId | "" }
+
   const [isImporting, setIsImporting] = useState(false);
   const [importStats, setImportStats] = useState(null); // { success, skipped, total }
   
   const fileRef = useRef(null);
+
+  // Sync to localStorage
+  useEffect(() => {
+    if (importStats) {
+       // If import finished successfully, clear the draft
+       localStorage.removeItem('bloomerce_import_data');
+       localStorage.removeItem('bloomerce_import_headers');
+       localStorage.removeItem('bloomerce_import_mappings');
+       return;
+    }
+
+    try {
+      localStorage.setItem('bloomerce_import_headers', JSON.stringify(csvHeaders));
+      localStorage.setItem('bloomerce_import_mappings', JSON.stringify(mappings));
+      // Only store data if it's reasonably sized to avoid QuotaExceededError
+      const dataStr = JSON.stringify(csvData);
+      if (dataStr.length < 2000000) { // ~2MB limit for data
+        localStorage.setItem('bloomerce_import_data', dataStr);
+      }
+    } catch (e) {
+      console.warn("Could not save import draft to localStorage:", e);
+    }
+  }, [csvHeaders, csvData, mappings, importStats]);
   
   // -- 1. File Handling --
   const handleFileUpload = (e) => {
@@ -139,7 +184,14 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     });
   };
 
+  // hasRestoredData: true when we have persisted data but no live File object
+  const hasRestoredData = !file && csvHeaders.length > 0;
+
   const handleReset = () => {
+    // Also clear localStorage drafts on deliberate reset
+    localStorage.removeItem('bloomerce_import_data');
+    localStorage.removeItem('bloomerce_import_headers');
+    localStorage.removeItem('bloomerce_import_mappings');
     setFile(null);
     setCsvHeaders([]);
     setCsvData([]);
@@ -276,9 +328,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
               </div>
             </div>
             
-            {file && !importStats && (
+            {(file || hasRestoredData) && !importStats && (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={isImporting} className="hidden sm:inline-flex">Cancel</Button>
+                <Button variant="outline" size="sm" onClick={handleReset} disabled={isImporting}>Start Over</Button>
                 <Button size="sm" onClick={executeImport} disabled={isImporting || !mappedSkuCode || activeMappingsCount===0} className="gap-1.5 h-9">
                   {isImporting ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Save size={14}/>}
                   {isImporting ? 'Importing' : <><span className="hidden sm:inline">Run Import</span><span className="sm:hidden">Import</span></>}
@@ -290,8 +342,8 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
         <div className="flex-1 overflow-y-auto w-full flex flex-col pt-2">
           
-          {/* STEP 1: UPLOAD */}
-          {!file && (
+          {/* STEP 1: UPLOAD — only show if no data at all */}
+          {!file && !hasRestoredData && (
              <div className="p-6">
                 <h3 className="text-sm font-semibold mb-3">1. Upload CSV</h3>
                 <input type="file" accept=".csv" ref={fileRef} className="hidden" onChange={handleFileUpload} />
@@ -308,6 +360,14 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                   <span className="text-xs text-[var(--color-muted-foreground)]">Ensure it includes a SKU Code column to uniquely identify rows</span>
                 </button>
              </div>
+          )}
+
+          {/* RESTORED SESSION BANNER */}
+          {hasRestoredData && !importStats && (
+            <div className="mx-6 mt-4 flex items-center gap-2.5 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+              <AlertCircle size={14} className="flex-shrink-0 text-amber-500" />
+              <span><strong>Session restored.</strong> Your previous column mappings are loaded. Upload the same CSV to re-import, or click <strong>Start Over</strong> to reset.</span>
+            </div>
           )}
 
           {/* IMPORT SUCCESS STATE */}
@@ -338,7 +398,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
           )}
 
           {/* STEP 2: MAPPING */}
-          {file && !importStats && (
+          {(file || hasRestoredData) && !importStats && (
             <>
               <div className="px-5 sm:px-6 py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-1">

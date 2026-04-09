@@ -32,8 +32,13 @@ const GROUPS = [
 const PREFS_KEY = 'bloomerce_export_prefs';
 
 export default function ExportSlideOver({ onClose, skus = [], filtered = [], paginated = [], references = {}, isEmbedded = false }) {
-  const [scope, setScope] = useState('filtered'); // 'all', 'filtered', 'current_page'
+  const [scope, setScope] = useState(() => localStorage.getItem('bloomerce_export_csv_scope') || 'filtered'); // 'all', 'filtered', 'current_page'
   const [expandedGroups, setExpandedGroups] = useState(new Set(['identity']));
+
+  // Sync scope to localStorage
+  useEffect(() => {
+    localStorage.setItem('bloomerce_export_csv_scope', scope);
+  }, [scope]);
 
   // config schema: { [field_id]: { selected: boolean, outputName: string } }
   const [config, setConfig] = useState(() => {

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   X, Save, UploadCloud, RefreshCw, Trash2, Link, ArrowLeft,
   Package, Tag, FileText, BarChart2, Layers, Info, StickyNote,
-  AlertCircle, FolderPlus, ExternalLink
+  AlertCircle, FolderPlus, ExternalLink, BookmarkCheck
 } from 'lucide-react';
 
 // ─── Auto-resizing textarea ───────────────────────────────────────
@@ -275,9 +275,27 @@ const sanitizeFolderName = (name) => {
     .replace(/\s+/g, "_");
 };
 
+// ─── Persistence Helpers ──────────────────────────────────────────
+const getDraftKey = (id) => id ? `bloomerce_sku_edit_draft_${id}` : `bloomerce_sku_add_draft`;
+
 // ─── Main Form ────────────────────────────────────────────────────
 export default function SkuMasterForm({ initialData, statusOptions, onClose, onSaved }) {
   const [form, setForm] = useState(() => {
+    const draftKey = getDraftKey(initialData?.id);
+    const savedDraft = localStorage.getItem(draftKey);
+    
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        // Ensure the draft matches the current initialData (for Edit mode)
+        // If editing, we want to make sure we're not using a draft from a different product 
+        // (the ID in the key handles this, but we're being extra safe)
+        return { ...EMPTY, ...parsed };
+      } catch (e) {
+        console.error("Failed to parse draft:", e);
+      }
+    }
+
     if (!initialData) {
       // Set default status to "Draft" if available
       const draftStatus = (statusOptions || []).find(s => s.label.toLowerCase() === 'draft');
@@ -293,6 +311,13 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     }
     return merged;
   });
+
+  // Sync draft to localStorage
+  useEffect(() => {
+    const draftKey = getDraftKey(initialData?.id);
+    // We only save if the form is "dirty" compared to initial state (or it's a new product)
+    localStorage.setItem(draftKey, JSON.stringify(form));
+  }, [form, initialData?.id]);
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -439,8 +464,33 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     return a !== b;
   });
 
-  const handleClose = () => { if (isDirty) { setConfirmClose(true); return; } onClose(); };
-  const handleDiscard = () => { setConfirmClose(false); onClose(); };
+  const handleClose = () => {
+    if (!isEdit) {
+      // For NEW products: silently keep the draft and close — no popup needed
+      // The next time they open Add Product, the draft will be restored
+      onClose();
+      return;
+    }
+    // For EDIT: only show dialog if there are unsaved changes
+    if (isDirty) {
+      setConfirmClose(true);
+      return;
+    }
+    onClose();
+  };
+
+  // Keep draft & close: closes without saving but retains localStorage draft for later
+  const handleKeepDraft = () => {
+    setConfirmClose(false);
+    onClose();
+  };
+
+  // Discard: clears localStorage draft and reverts form
+  const handleDiscard = () => {
+    localStorage.removeItem(getDraftKey(initialData?.id));
+    setConfirmClose(false);
+    onClose();
+  };
   const set = (name, value) => setForm(p => ({ ...p, [name]: value }));
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -485,6 +535,10 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
 
       if (initialData?.id) await skuApi.update(initialData.id, payload);
       else await skuApi.create(payload);
+      
+      // Clear draft on success
+      localStorage.removeItem(getDraftKey(initialData?.id));
+      
       savedSnapshot.current = { ...form };
       onSaved();
     } catch (err) {
@@ -510,20 +564,31 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       {/* Slide-over Panel */}
       <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:max-w-2xl bg-[var(--color-card)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
 
-        {/* ── Unsaved-changes dialog ────────────────────────────── */}
+        {/* ── Unsaved-changes dialog (Edit mode only) ───────────── */}
         {confirmClose && (
           <div className="absolute inset-0 z-60 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm rounded-none">
-            <div className="bg-[var(--color-card)] rounded-2xl shadow-xl border border-[var(--color-border)] p-6 w-80 flex flex-col gap-4">
+            <div className="bg-[var(--color-card)] rounded-2xl shadow-xl border border-[var(--color-border)] p-6 w-[340px] flex flex-col gap-5">
               <div>
                 <p className="font-semibold text-[var(--color-foreground)] text-base">Unsaved changes</p>
-                <p className="text-sm text-[var(--color-muted-foreground)] mt-1">You have changes that haven't been saved yet.</p>
+                <p className="text-sm text-[var(--color-muted-foreground)] mt-1">You have changes that haven't been saved to the database. What would you like to do?</p>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={handleDiscard}>Discard</Button>
-                <Button size="sm" disabled={saving} onClick={() => saveForm({ fromDialog: true })}>
-                  {saving ? (
-                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  ) : 'Save Changes'}
+              <div className="flex flex-col gap-2">
+                {/* Option 1: Save & Close */}
+                <Button size="sm" disabled={saving} onClick={() => saveForm({ fromDialog: true })} className="w-full justify-start gap-2 h-10">
+                  {saving ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Save size={14} />}
+                  <span>Save &amp; Close</span>
+                </Button>
+                {/* Option 2: Keep draft */}
+                <Button variant="outline" size="sm" onClick={handleKeepDraft} className="w-full justify-start gap-2 h-10">
+                  <BookmarkCheck size={14} className="text-amber-500" />
+                  <span className="text-left leading-tight">Keep changes, close for now
+                    <span className="block text-[10px] text-[var(--color-muted-foreground)] font-normal">You can return to this product and continue editing</span>
+                  </span>
+                </Button>
+                {/* Option 3: Discard */}
+                <Button variant="ghost" size="sm" onClick={handleDiscard} className="w-full justify-start gap-2 h-10 text-red-500 hover:text-red-600 hover:bg-red-50">
+                  <Trash2 size={14} />
+                  <span>Discard all changes</span>
                 </Button>
               </div>
             </div>
@@ -545,6 +610,11 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               <div>
                 <h2 className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">{title}</h2>
                 {isEdit && <span className="text-[10px] text-[var(--color-muted-foreground)] font-mono">{initialData.sku_code}</span>}
+                {!isEdit && isDirty && (
+                  <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                    <BookmarkCheck size={10} /> Draft auto-saved
+                  </span>
+                )}
               </div>
             </div>
 

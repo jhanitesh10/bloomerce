@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   X, Download, Check, Image as ImageIcon, FolderTree, Tag, 
   Info, LayoutList, Files, Loader2, FileArchive, Plus, Trash2, 
@@ -19,15 +19,40 @@ const TAGS = [
 ];
 
 export default function ImageExportSlideOver({ onClose, skus = [], filtered = [], selected = [], references = {}, isEmbedded = false }) {
-  const [scope, setScope] = useState(selected.length > 0 ? 'selected' : 'filtered');
+  const [scope, setScope] = useState(() => {
+    const saved = localStorage.getItem('bloomerce_export_image_scope');
+    // If saved scope was 'selected' but nothing is currently selected, fall back to 'filtered'
+    if (saved === 'selected' && selected.length === 0) return 'filtered';
+    return saved || (selected.length > 0 ? 'selected' : 'filtered');
+  });
   const [isExporting, setIsExporting] = useState(false);
-  const [flattenHierarchy, setFlattenHierarchy] = useState(false);
+  const [flattenHierarchy, setFlattenHierarchy] = useState(() => localStorage.getItem('bloomerce_export_image_flatten') === 'true');
 
   // FOLDER LEVELS (Vertical)
-  const [folderLevels, setFolderLevels] = useState(['brand', 'category', 'sku_code']);
+  const [folderLevels, setFolderLevels] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bloomerce_export_image_folders');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return ['brand', 'category', 'sku_code'];
+  });
   
   // FILE SEGMENTS (Horizontal)
-  const [fileSegments, setFileSegments] = useState(['sku_code', 'index']);
+  const [fileSegments, setFileSegments] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bloomerce_export_image_files');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return ['sku_code', 'index'];
+  });
+
+  // Persistence Effects
+  useEffect(() => {
+    localStorage.setItem('bloomerce_export_image_scope', scope);
+    localStorage.setItem('bloomerce_export_image_flatten', String(flattenHierarchy));
+    localStorage.setItem('bloomerce_export_image_folders', JSON.stringify(folderLevels));
+    localStorage.setItem('bloomerce_export_image_files', JSON.stringify(fileSegments));
+  }, [scope, flattenHierarchy, folderLevels, fileSegments]);
 
   const targetData = useMemo(() => {
     if (scope === 'selected') return selected;
