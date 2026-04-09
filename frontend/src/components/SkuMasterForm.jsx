@@ -687,122 +687,142 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               {activeTab === 'content' && (
                 <>
                   <Field label="Catalog / Product Page URL">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-2">
-                        <input type="url" name="catalog_url" value={form.catalog_url} onChange={handleChange}
-                          className={cn(inputCls(false), "grow font-mono text-[11px]")} placeholder="https://example.com/product-page" />
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 group min-h-[40px]">
+                        {!showDrivePreview ? (
+                          <>
+                            <input
+                              type="url"
+                              name="catalog_url"
+                              value={form.catalog_url}
+                              onChange={handleChange}
+                              className={cn(inputCls(false), "w-full sm:grow font-mono text-[11px] h-10")}
+                              placeholder="https://drive.google.com/..."
+                            />
 
-                        {form.catalog_url && !showDrivePreview && (
-                          <div className="flex items-center gap-2">
-                             <a
-                               href={form.catalog_url}
-                               target="_blank"
-                               rel="noreferrer"
-                               className="flex items-center justify-center w-[38px] h-[38px] rounded-xl border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95 transition-all shrink-0 shadow-sm"
-                               title="Open Drive Link"
-                             >
-                                <ExternalLink size={14} />
-                             </a>
+                            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                              {form.catalog_url ? (
+                                <>
+                                  <a
+                                    href={form.catalog_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex flex-1 sm:flex-none items-center justify-center w-auto sm:w-10 h-10 px-4 sm:px-0 rounded-xl border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95 transition-all shrink-0 shadow-sm gap-2"
+                                    title="Open Drive Link"
+                                  >
+                                    <ExternalLink size={15} />
+                                    <span className="sm:hidden text-xs font-bold uppercase tracking-wider">Open</span>
+                                  </a>
 
-                             <button
-                               type="button"
-                               onClick={handleRegenerateClick}
-                               disabled={generatingUrl}
-                               title="Re-generate Google Drive Folder"
-                               className="flex items-center justify-center w-[38px] h-[38px] rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 active:scale-95 transition-all shrink-0"
-                             >
-                               <RefreshCw size={14} className={generatingUrl ? "animate-spin" : ""} />
-                             </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleRegenerateClick}
+                                    disabled={generatingUrl}
+                                    className="flex flex-1 sm:flex-none items-center justify-center w-auto sm:w-10 h-10 px-4 sm:px-0 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 active:scale-95 transition-all shrink-0 gap-2"
+                                    title="Re-generate Google Drive Folder"
+                                  >
+                                    <RefreshCw size={15} className={generatingUrl ? "animate-spin" : ""} />
+                                    <span className="sm:hidden text-xs font-bold uppercase tracking-wider">Reset</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={handleGenerateDriveFolder}
+                                  disabled={generatingUrl || (initialData?.id && isDirty) || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id}
+                                  className={cn(
+                                    "flex flex-1 sm:flex-none items-center justify-center gap-2 px-6 sm:px-4 h-10 rounded-xl text-xs font-bold transition-all border shrink-0 shadow-sm w-full sm:w-auto",
+                                    (generatingUrl || (initialData?.id && isDirty) || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id)
+                                      ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
+                                      : "bg-white border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95"
+                                  )}
+                                >
+                                  <FolderPlus size={15} />
+                                  Preview Path
+                                </button>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="grow flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1.5 p-3 sm:p-0 sm:px-3 sm:py-1 rounded-2xl sm:rounded-xl bg-amber-50/50 border border-amber-200 shadow-sm animate-in slide-in-from-right-2 duration-300 h-auto sm:h-11">
+                            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-1 grow min-w-0">
+                               <div className="flex flex-col gap-1 sm:contents">
+                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">Brand</span>
+                                <input
+                                  className="min-w-0 flex-1 bg-white/90 hover:bg-white border border-transparent focus:border-amber-300 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-600 text-[11px] truncate shadow-sm sm:shadow-none"
+                                  value={driveDraft.brand_name}
+                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, brand_name: sanitizeFolderName(e.target.value) }))}
+                                  placeholder="brand"
+                                />
+                              </div>
+                              
+                              <span className="hidden sm:inline text-amber-300 shrink-0 select-none">/</span>
+
+                              <div className="flex flex-col gap-1 sm:contents">
+                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">Category</span>
+                                <input
+                                  className="min-w-0 flex-1 bg-white/90 hover:bg-white border border-transparent focus:border-amber-300 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-600 text-[11px] truncate shadow-sm sm:shadow-none"
+                                  value={driveDraft.category_name}
+                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, category_name: sanitizeFolderName(e.target.value) }))}
+                                  placeholder="category"
+                                />
+                              </div>
+
+                              <span className="hidden sm:inline text-amber-300 shrink-0 select-none">/</span>
+
+                              <div className="flex flex-col gap-1 sm:contents">
+                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">Sub-Cat</span>
+                                <input
+                                  className="min-w-0 flex-1 bg-white/90 hover:bg-white border border-transparent focus:border-amber-300 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-600 text-[11px] truncate shadow-sm sm:shadow-none"
+                                  value={driveDraft.sub_category_name}
+                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, sub_category_name: sanitizeFolderName(e.target.value) }))}
+                                  placeholder="subcategory"
+                                />
+                              </div>
+
+                              <span className="hidden sm:inline text-amber-300 shrink-0 select-none">/</span>
+
+                              <div className="flex flex-col gap-1 sm:contents">
+                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">SKU Code</span>
+                                <input
+                                  className="min-w-0 flex-1 bg-white font-bold border border-amber-200 focus:border-amber-400 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-900 text-[11px] truncate shadow-inner"
+                                  value={driveDraft.sku_code}
+                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, sku_code: sanitizeFolderName(e.target.value) }))}
+                                  placeholder="sku"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 sm:gap-1.5 mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-amber-200 sm:pl-2">
+                               <button
+                                 type="button"
+                                 onClick={handleGenerateDriveFolder}
+                                 disabled={generatingUrl}
+                                 className="flex grow sm:grow-0 items-center justify-center gap-2 sm:gap-0 px-4 sm:px-0 w-auto sm:w-8 h-10 sm:h-8 rounded-xl sm:rounded-lg bg-amber-500 text-white hover:bg-amber-600 active:scale-95 transition-all shadow-md shadow-amber-500/20"
+                               >
+                                 {generatingUrl ? <RefreshCw size={14} className="animate-spin" /> : <Check size={16} />}
+                                 <span className="sm:hidden text-xs font-bold uppercase tracking-widest">Confirm & Create</span>
+                               </button>
+                               <button
+                                 type="button"
+                                 onClick={() => setShowDrivePreview(false)}
+                                 className="flex items-center justify-center w-12 sm:w-8 h-10 sm:h-8 rounded-xl sm:rounded-lg bg-white border border-amber-200 text-amber-600 hover:bg-amber-100 active:scale-95 transition-all"
+                               >
+                                 <X size={16} />
+                               </button>
+                            </div>
                           </div>
-                        )}
-
-                        {!form.catalog_url && !showDrivePreview && (
-                          <button
-                            type="button"
-                            onClick={handleGenerateDriveFolder}
-                            disabled={generatingUrl || (initialData?.id && isDirty) || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id}
-                            className={cn(
-                              "flex items-center gap-1.5 px-4 h-[38px] rounded-xl text-xs font-semibold transition-all border shrink-0",
-                              (generatingUrl || (initialData?.id && isDirty) || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id)
-                                ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
-                                : "bg-white border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95 shadow-sm"
-                            )}
-                          >
-                            <FolderPlus size={14} />
-                            Preview Folder Path
-                          </button>
                         )}
                       </div>
 
-                      {showDrivePreview && !form.catalog_url && (
-                        <div className="bg-slate-50/50 rounded-2xl p-3 border border-slate-200 flex flex-col gap-2 animate-[fade-in_0.2s_ease]">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                              <Info size={10} /> Review & Tweak Folder Path
-                            </span>
-                            <button type="button" onClick={() => setShowDrivePreview(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                              <X size={14}/>
-                            </button>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-sm grow min-w-0 h-11">
-                            <div className="flex items-center gap-1 text-[11px] font-medium grow min-w-0">
-
-                              <input
-                                className="min-w-[40px] flex-1 bg-slate-50/80 hover:bg-slate-100/80 focus:bg-white border-transparent focus:border-slate-200 rounded px-2 py-1 outline-none transition-all text-slate-600 truncate placeholder:text-slate-400"
-                                value={driveDraft.brand_name}
-                                onChange={(e) => setDriveDraft(prev => ({ ...prev, brand_name: sanitizeFolderName(e.target.value) }))}
-                                placeholder="brand"
-                              />
-
-                              <span className="text-slate-300 shrink-0 select-none">/</span>
-
-                              <input
-                                className="min-w-[40px] flex-1 bg-slate-50/80 hover:bg-slate-100/80 focus:bg-white border-transparent focus:border-slate-200 rounded px-2 py-1 outline-none transition-all text-slate-600 truncate placeholder:text-slate-400"
-                                value={driveDraft.category_name}
-                                onChange={(e) => setDriveDraft(prev => ({ ...prev, category_name: sanitizeFolderName(e.target.value) }))}
-                                placeholder="category"
-                              />
-
-                              <span className="text-slate-300 shrink-0 select-none">/</span>
-
-                              <input
-                                className="min-w-[40px] flex-1 bg-slate-50/80 hover:bg-slate-100/80 focus:bg-white border-transparent focus:border-slate-200 rounded px-2 py-1 outline-none transition-all text-slate-600 truncate placeholder:text-slate-400"
-                                value={driveDraft.sub_category_name}
-                                onChange={(e) => setDriveDraft(prev => ({ ...prev, sub_category_name: sanitizeFolderName(e.target.value) }))}
-                                placeholder="subcategory"
-                              />
-
-                              <span className="text-slate-300 shrink-0 select-none">/</span>
-
-                              <input
-                                className="min-w-[40px] flex-1 bg-slate-50/80 hover:bg-slate-100/80 focus:bg-white border-transparent focus:border-slate-200 rounded px-2 py-1 outline-none transition-all text-slate-900 font-bold truncate placeholder:text-slate-400"
-                                value={driveDraft.sku_code}
-                                onChange={(e) => setDriveDraft(prev => ({ ...prev, sku_code: sanitizeFolderName(e.target.value) }))}
-                                placeholder="sku"
-                              />
-                            </div>
-                            <Button size="sm" type="button" onClick={handleGenerateDriveFolder} disabled={generatingUrl} className="h-7 px-4 rounded-lg text-[10px] font-bold gap-1.5 shadow-sm ml-2 bg-[var(--color-primary)] text-white hover:opacity-90">
-                               {generatingUrl ? (
-                                 <RefreshCw size={12} className="animate-spin" />
-                               ) : (
-                                 <Save size={12} />
-                               )}
-                               Confirm & Create
-                            </Button>
-                          </div>
-                          <p className="px-1 text-[9px] text-slate-400 italic">Editing these will only affect the folder name, not the product data.</p>
-                        </div>
-                      )}
-
                       {initialData?.id && isDirty && !form.catalog_url && !showDrivePreview && (
-                        <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
-                          <AlertCircle size={10} /> Save first
+                        <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1 ml-1 mt-1">
+                          <AlertCircle size={10} /> Save product first
                         </p>
                       )}
                       {!initialData?.id && !form.catalog_url && !showDrivePreview && (!form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id) && (
-                        <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
-                          <AlertCircle size={10} /> Complete Identity & Classification first
+                        <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1 ml-1 mt-1">
+                          <AlertCircle size={10} /> Complete Identity first
                         </p>
                       )}
                     </div>
