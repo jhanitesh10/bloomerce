@@ -105,10 +105,10 @@ const GC = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const NON_INLINE = new Set(['primary_image_url', 'net_content', 'content_trigger', 'catalog_url', 'remark']);
-const REF_MAP    = { 
-  brand_reference_id: 'BRAND', 
-  category_reference_id: 'CATEGORY', 
-  sub_category_reference_id: 'SUB_CATEGORY', 
+const REF_MAP    = {
+  brand_reference_id: 'BRAND',
+  category_reference_id: 'CATEGORY',
+  sub_category_reference_id: 'SUB_CATEGORY',
   status_reference_id: 'STATUS',
   bundle_type: 'BUNDLE_TYPE',
   pack_type: 'PACK_TYPE'
@@ -156,7 +156,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
 
 
   return (
-    <div 
+    <div
       className="note-popover absolute bottom-full right-0 mb-2 w-64 bg-white rounded-2xl shadow-2xl border border-[var(--color-border)] p-4 z-[100] animate-[scale-in_0.15s_ease-out] text-left"
       onClick={e => e.stopPropagation()}
     >
@@ -167,8 +167,8 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
         </div>
         <div className="flex items-center gap-1">
           {val && (
-            <button 
-              onClick={() => setVal('')} 
+            <button
+              onClick={() => setVal('')}
               className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md transition-all text-[var(--color-muted-foreground)] flex items-center gap-1 px-2"
               title="Clear text"
             >
@@ -182,7 +182,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
         </div>
       </div>
 
-      
+
       <textarea
         ref={textareaRef}
         value={val}
@@ -195,15 +195,15 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
           if (e.key === 'Escape') onClose();
         }}
       />
-      
+
       <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
         <span className="text-[10px] text-[var(--color-muted-foreground)] italic whitespace-nowrap opacity-70">
           Ctrl + Enter to save
         </span>
         <div className="flex-1" />
-        <Button 
-          size="sm" 
-          onClick={handleSave} 
+        <Button
+          size="sm"
+          onClick={handleSave}
           disabled={saving}
           className="h-8 px-4 rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-[11px] font-bold flex items-center justify-center gap-2 shadow-md shadow-[var(--color-primary)]/20 min-w-[120px]"
         >
@@ -212,7 +212,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
         </Button>
       </div>
 
-      
+
       {/* Tiny arrow pointing to the icon */}
       <div className="absolute top-full right-5 w-3 h-3 bg-white border-r border-b border-[var(--color-border)] rotate-45 -translate-y-[6px]" />
     </div>
@@ -224,7 +224,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
 function SkuCard({ sku, references, onEdit, onNote }) {
   const brand = references.BRAND[sku.brand_reference_id] || '—';
   const statusLbl = references.STATUS[sku.status_reference_id];
-  
+
   return (
     <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 group animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex items-start gap-4">
@@ -238,7 +238,7 @@ function SkuCard({ sku, references, onEdit, onNote }) {
             </div>
           )}
         </div>
-        
+
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
@@ -255,9 +255,9 @@ function SkuCard({ sku, references, onEdit, onNote }) {
           </div>
         </div>
       </div>
-      
+
       <div className="h-px bg-[var(--color-border)] opacity-50 my-1" />
-      
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
            {statusLbl && <StatusBadge label={statusLbl} />}
@@ -268,7 +268,7 @@ function SkuCard({ sku, references, onEdit, onNote }) {
              </div>
            )}
         </div>
-        <button 
+        <button
           onClick={onNote}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] text-[11px] font-bold text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] transition-colors active:scale-95"
         >
@@ -373,18 +373,18 @@ export default function MasterTab({ isMobile }) {
       try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
       const toMap = arr => (arr || []).reduce((a, r) => ({ ...a, [r.id]: r.label }), {});
       setSkus(skuData || []);
-      setReferences({ 
-        BRAND: toMap(brands), 
-        CATEGORY: toMap(cats), 
-        STATUS: toMap(statuses), 
+      setReferences({
+        BRAND: toMap(brands),
+        CATEGORY: toMap(cats),
+        STATUS: toMap(statuses),
         SUB_CATEGORY: toMap(subcats),
         BUNDLE_TYPE: toMap(bundles),
         PACK_TYPE: toMap(packs)
       });
-      setRefLists({ 
-        BRAND: brands, 
-        CATEGORY: cats, 
-        STATUS: statuses, 
+      setRefLists({
+        BRAND: brands,
+        CATEGORY: cats,
+        STATUS: statuses,
         SUB_CATEGORY: subcats,
         BUNDLE_TYPE: bundles,
         PACK_TYPE: packs
@@ -409,7 +409,7 @@ export default function MasterTab({ isMobile }) {
     if (!activeNoteSkuId) return;
     const sku = skus.find(s => s.id === activeNoteSkuId);
     const draft = noteDraftRef.current;
-    
+
     // Only save if changed
     if (sku && draft !== (sku.remark || '')) {
       await saveInlineEdit(activeNoteSkuId, 'remark', draft);
@@ -425,13 +425,13 @@ export default function MasterTab({ isMobile }) {
 
   // ── Global Event Listeners ──────────────────────────────────────────────────
   useEffect(() => { loadAll(); }, [loadAll]);
-  
+
   // Handle clicking outside of cells, editors or notes
   useEffect(() => {
-    const handleGlobalClick = (e) => { 
+    const handleGlobalClick = (e) => {
       // Deselect cell if click is outside any td
-      if (!e.target.closest('td')) setSelectedCell(null); 
-      
+      if (!e.target.closest('td')) setSelectedCell(null);
+
       // Auto-save and close Note if click is outside the popover/trigger
       if (activeNoteSkuId && !e.target.closest('.note-popover') && !e.target.closest('.note-trigger')) {
         handleNoteClose();
@@ -483,7 +483,7 @@ export default function MasterTab({ isMobile }) {
     // 8. Boolean / Quality Checks
     if (filters.hasImage === true && !s.primary_image_url) return false;
     if (filters.hasImage === false && s.primary_image_url) return false;
-    
+
     if (filters.hasNotes === true && !s.remark) return false;
     if (filters.hasNotes === false && s.remark) return false;
 
@@ -507,11 +507,11 @@ export default function MasterTab({ isMobile }) {
       setPage(1);
       return;
     }
-    
+
     const allCols = [...BASE_COLS, ...GROUPS.flatMap(g => g.cols)];
     const c = allCols.find(col => col.id === colId);
     if (!c?.sortable) return;
-    
+
     if (sortCol === colId) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
@@ -529,7 +529,6 @@ export default function MasterTab({ isMobile }) {
     return map;
   }, []);
 
-  // ── Inline editor ───────────────────────────────────────────────────────────
   // ── Cell renderer ───────────────────────────────────────────────────────────
   const renderCell = (col, sku, openFullEdit) => {
     if (inlineEdit?.skuId===sku.id && inlineEdit?.colId===col.id) {
@@ -568,8 +567,8 @@ export default function MasterTab({ isMobile }) {
           </span>
         </div>
       );
-      case 'status_reference_id': { 
-        const lbl = references.STATUS[val]; 
+      case 'status_reference_id': {
+        const lbl = references.STATUS[val];
         return (
           <div className="flex items-center justify-between gap-1 w-full group/ref bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg px-2 py-1 shadow-sm hover:border-[var(--color-primary)]/50 transition-all">
             {lbl ? <StatusBadge label={lbl}/> : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>}
@@ -610,11 +609,11 @@ export default function MasterTab({ isMobile }) {
       case 'net_content':  return <span className="text-sm text-[var(--color-muted-foreground)]">{sku.net_content_value ? `${sku.net_content_value} ${sku.net_content_unit||''}` : '—'}</span>;
       case 'tax_percent':  return <span className="text-sm text-[var(--color-muted-foreground)]">{val!=null ? `${val}%` : '—'}</span>;
       case 'catalog_url':  return val ? (
-        <a 
-          href={val} 
-          target="_blank" 
-          rel="noreferrer" 
-          onClick={e=>e.stopPropagation()} 
+        <a
+          href={val}
+          target="_blank"
+          rel="noreferrer"
+          onClick={e=>e.stopPropagation()}
           className="flex items-center justify-center p-1.5 rounded-lg hover:bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-all mx-auto shadow-sm border border-[var(--color-primary)]/20"
           title="Open in Google Drive"
         >
@@ -634,7 +633,7 @@ export default function MasterTab({ isMobile }) {
 
       case 'remark': return (
         <div className="relative flex items-center justify-center">
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); setActiveNoteSkuId(prev => prev === sku.id ? null : sku.id); }}
             className={cn(
               "note-trigger p-2 rounded-lg transition-all mx-auto relative group-hover:scale-110",
@@ -646,10 +645,10 @@ export default function MasterTab({ isMobile }) {
             <StickyNote size={15} fill={val ? "currentColor" : "none"} fillOpacity={0.2} />
             {val && <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full border border-white" />}
           </button>
-          
+
           {activeNoteSkuId === sku.id && (
-            <NotePopover 
-              sku={sku} 
+            <NotePopover
+              sku={sku}
               onSave={(v) => saveInlineEdit(sku.id, 'remark', v).then(() => setActiveNoteSkuId(null))}
               onClose={handleNoteClose}
               onDraftChange={(v) => { noteDraftRef.current = v; }}
@@ -692,10 +691,10 @@ export default function MasterTab({ isMobile }) {
         </div>
         <div className={cn("flex items-center gap-2", isMobile && "w-full justify-start")}>
           <Button variant="outline" size="sm" className={cn("gap-1.5 h-[34px]", isMobile && "flex-1")} onClick={()=>setIsImportOpen(true)}><Upload size={14}/> Import</Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={cn("gap-1.5 h-[34px] bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm", isMobile && "flex-1")} 
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn("gap-1.5 h-[34px] bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm", isMobile && "flex-1")}
             onClick={() => setIsExportCenterOpen(true)}
           >
             <Download size={14} className="text-slate-400" /> Export
@@ -709,7 +708,7 @@ export default function MasterTab({ isMobile }) {
 
       {/* ── Table Global Toolbar ── */}
       <div className={cn("flex bg-[var(--color-card)] p-2 rounded-xl border border-[var(--color-border)] shadow-sm gap-4", isMobile ? "flex-col" : "items-center justify-between")}>
-        
+
         {/* Left: View Controls */}
         <div className={cn("flex gap-2", isMobile ? "flex-col" : "items-center")}>
           {/* Status Tabs */}
@@ -735,11 +734,11 @@ export default function MasterTab({ isMobile }) {
           {/* Search */}
           <div className={cn("flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-[32px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 transition-all bg-[var(--color-card)]", isMobile && "h-[38px]")}>
             <Search size={14} className="text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search product, SKU..." 
-              value={search} 
-              onChange={e => { setSearch(e.target.value); setPage(1); }} 
+            <input
+              type="text"
+              placeholder="Search product, SKU..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
               className="bg-transparent text-xs w-full outline-none text-slate-700 placeholder:text-slate-400"
             />
           </div>
@@ -747,7 +746,7 @@ export default function MasterTab({ isMobile }) {
           {(search || isFilterActive || statusFilter !== 'all') && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
               {!isMobile && <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />}
-              <button 
+              <button
                 onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
                 className={cn("group flex items-center gap-1.5 px-3 h-[32px] text-[11px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 rounded-lg transition-all shadow-sm", isMobile && "h-[38px] w-full justify-center")}
                 title="Clear all search and filters"
@@ -769,9 +768,9 @@ export default function MasterTab({ isMobile }) {
             className={cn(
               "relative flex items-center gap-2 px-3.5 h-[32px] text-xs font-semibold border rounded-lg transition-all",
               isMobile && "flex-1 h-[38px] justify-center",
-              isFilterOpen 
+              isFilterOpen
                 ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20"
-                : isFilterActive 
+                : isFilterActive
                   ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/15"
                   : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)]/30 hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
             )}
@@ -795,16 +794,16 @@ export default function MasterTab({ isMobile }) {
 
               {/* Expand / Collapse All */}
               <div className="flex items-center border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-card)] shadow-sm">
-                <button 
-                  onClick={() => setExpandedGroups(new Set(allGroupIds))} 
-                  disabled={isAllExpanded} 
+                <button
+                  onClick={() => setExpandedGroups(new Set(allGroupIds))}
+                  disabled={isAllExpanded}
                   className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold border-r border-[var(--color-border)] transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
                 >
                   <Maximize2 size={13}/> Expand All
                 </button>
-                <button 
-                  onClick={() => setExpandedGroups(new Set())} 
-                  disabled={isAllCollapsed} 
+                <button
+                  onClick={() => setExpandedGroups(new Set())}
+                  disabled={isAllCollapsed}
                   className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
                 >
                   <Minimize2 size={13}/> Collapse All
@@ -817,7 +816,7 @@ export default function MasterTab({ isMobile }) {
 
       {/* ── Advanced Filter Bar ── */}
       {isFilterOpen && (
-        <TopFilterBar 
+        <TopFilterBar
           filters={filters}
           onFilterChange={(newFilters) => {
             setFilters(prev => ({ ...prev, ...newFilters }));
@@ -847,10 +846,10 @@ export default function MasterTab({ isMobile }) {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {paginated.map(sku => (
-                <SkuCard 
-                  key={sku.id} 
-                  sku={sku} 
-                  references={references} 
+                <SkuCard
+                  key={sku.id}
+                  sku={sku}
+                  references={references}
                   onEdit={() => { setEditingSku(sku); setIsFormOpen(true); }}
                   onNote={(e) => { e?.stopPropagation(); setActiveNoteSkuId(prev => prev === sku.id ? null : sku.id); }}
                 />
@@ -958,7 +957,7 @@ export default function MasterTab({ isMobile }) {
                           <p className="text-sm font-bold text-slate-900">No products found</p>
                           <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or search terms to find what you're looking for.</p>
                         </div>
-                        <Button 
+                        <Button
                           variant="default"
                           size="sm"
                           onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
@@ -997,10 +996,11 @@ export default function MasterTab({ isMobile }) {
                             }}
                             onDoubleClick={(isActive || !canInline || isRefField) ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
                             className={cn(
-                              "border-b border-[var(--color-border)] transition-all relative group/cell",
-                              isActive ? "p-0 z-30" : "px-4 py-3 cursor-default align-top",
-                              isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-20 bg-[var(--color-primary)]/10 shadow-sm",
-                               col.sticky && "sticky z-10 bg-[var(--color-card)]",
+                              "transition-all relative group/cell",
+                              "border-b border-[var(--color-border)] px-4 py-3 cursor-default align-top",
+                              isActive && "z-20",
+                              isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-30 after:absolute after:inset-0 after:bg-[var(--color-primary)]/10 after:pointer-events-none shadow-sm",
+                               col.sticky && "sticky z-40 bg-[var(--color-card)]",
                                col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent] after:absolute after:inset-y-0 after:right-0 after:w-[1px] after:bg-[var(--color-border)]",
                               col.sticky && col.isRight && "right-0 shadow-[inset_1px_0_0_var(--color-border)]",
                               /* Ensure open popover is above everything */
@@ -1037,31 +1037,31 @@ export default function MasterTab({ isMobile }) {
       <div className="mt-4 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm px-4 sm:px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 text-xs text-[var(--color-muted-foreground)]">
           <span>Showing {Math.min((page-1)*pageSize+1,filtered.length)}–{Math.min(page*pageSize,filtered.length)} of {filtered.length}</span>
-          <select 
-            value={pageSize} 
-            onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}} 
+          <select
+            value={pageSize}
+            onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}}
             className="border border-[var(--color-border)] rounded-md bg-[var(--color-card)] text-[var(--color-foreground)] text-xs px-1.5 py-1 outline-none cursor-pointer"
           >
             {PAGE_SIZE_OPTIONS.map(n=><option key={n} value={n}>{n} / page</option>)}
           </select>
         </div>
         <div className="flex items-center gap-1">
-          <button 
-            onClick={()=>setPage(p=>Math.max(1,p-1))} 
-            disabled={page===1} 
+          <button
+            onClick={()=>setPage(p=>Math.max(1,p-1))}
+            disabled={page===1}
             className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft size={15}/>
           </button>
-          
+
           <div className="flex items-center gap-1">
             {pageNums.map((n,i)=>n==='…'
               ? <span key={`g${i}`} className="px-1 text-xs text-[var(--color-muted-foreground)]">…</span>
-              : <button 
-                  key={n} 
-                  onClick={()=>setPage(n)} 
+              : <button
+                  key={n}
+                  onClick={()=>setPage(n)}
                   className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-lg border text-xs transition-colors", 
+                    "flex items-center justify-center w-8 h-8 rounded-lg border text-xs transition-colors",
                     page===n ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white font-semibold" : "border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
                   )}
                 >
@@ -1069,9 +1069,9 @@ export default function MasterTab({ isMobile }) {
                 </button>)}
           </div>
 
-          <button 
-            onClick={()=>setPage(p=>Math.min(totalPages,p+1))} 
-            disabled={page===totalPages} 
+          <button
+            onClick={()=>setPage(p=>Math.min(totalPages,p+1))}
+            disabled={page===totalPages}
             className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight size={15}/>
@@ -1081,16 +1081,15 @@ export default function MasterTab({ isMobile }) {
 
       {isFormOpen && <SkuMasterForm initialData={editingSku} statusOptions={refLists.STATUS} onClose={()=>setIsFormOpen(false)} onSaved={()=>{setIsFormOpen(false);loadAll();}}/>}
       {isExportCenterOpen && (
-        <ExportCenterSlideOver 
-          onClose={() => setIsExportCenterOpen(false)} 
-          skus={skus} 
-          filtered={filtered} 
-          selected={selectedSkus} 
-          references={references} 
+        <ExportCenterSlideOver
+          onClose={() => setIsExportCenterOpen(false)}
+          skus={skus}
+          filtered={filtered}
+          selected={selectedSkus}
+          references={references}
         />
       )}
       {isImportOpen && <ImportSlideOver skus={skus} refLists={refLists} onClose={()=>setIsImportOpen(false)} onImportComplete={()=>{setIsImportOpen(false);loadAll();}} />}
-
     </div>
   );
 }

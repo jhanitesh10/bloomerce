@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { refApi } from '../api';
-import { Plus, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Check, ChevronsUpDown, Search as SearchIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function DynamicReferenceSelect({
@@ -125,7 +125,7 @@ export default function DynamicReferenceSelect({
         className={cn(
           "flex items-center justify-between w-full transition-all",
           variant === 'flat' 
-            ? "bg-transparent border-none ring-0 p-0 h-full cursor-pointer" 
+            ? "bg-transparent border-none ring-0 px-0 py-0 h-full cursor-pointer" 
             : "rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm cursor-pointer hover:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-ring)] focus-within:border-transparent",
           className
         )}
@@ -147,19 +147,20 @@ export default function DynamicReferenceSelect({
           style={{ 
             top: coords.top, 
             left: coords.left, 
-            width: coords.width,
-            marginTop: '8px'
+            width: Math.max(coords.width, 240),
+            maxWidth: '400px',
+            marginTop: '6px'
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
           {/* Search container */}
-          <div className="p-3 border-b border-[var(--color-border)] bg-slate-50/50">
-            <div className="relative flex items-center">
-              <Plus size={14} className="absolute left-3 text-[var(--color-muted-foreground)] opacity-50" />
+          <div className="px-3 pt-3 pb-2">
+            <div className="relative flex items-center group">
+              <SearchIcon size={14} className="absolute left-3 text-[var(--color-muted-foreground)] opacity-40 group-focus-within:text-[var(--color-primary)] transition-colors" />
               <input
                 type="text"
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[var(--color-border)] bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60 text-[var(--color-foreground)]"
-                placeholder={`Search or add new ${referenceType.toLowerCase()}...`}
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[var(--color-border)] bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60 text-[var(--color-foreground)]"
+                placeholder={`Search or add ${referenceType.toLowerCase()}...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onClick={(e) => e.stopPropagation()}

@@ -17,7 +17,7 @@ export default function InlineCellEditor({
 }) {
   const [value, setValue] = useState(initialValue ?? '');
   const containerRef = useRef(null);
-  
+
   // Save handler logic
   const handleSave = () => onSave(value === '' ? null : value);
   const handleKey  = (e) => {
@@ -40,38 +40,41 @@ export default function InlineCellEditor({
     col.isMono ? "font-mono text-xs text-[var(--color-foreground)]" :
     "text-sm text-[var(--color-foreground)]"
   );
-  const baseOuter = "w-full h-full absolute inset-0 px-4 py-3 bg-[var(--color-card)] outline-none border-2 border-[var(--color-primary)] shadow-[0_4px_12px_rgba(0,0,0,0.1)] z-[100] transition-colors";
+
+  // Revised baseOuter for a seamless, "in-place" feel (no manual padding, parent td handles it)
+  const baseOuter = "w-full h-full bg-transparent outline-none border-0 z-10 animate-editor-in";
 
   // ── 1. DROPDOWN (Combobox) ──────────────────────────────────────────────────
   if (['brand_reference_id', 'category_reference_id', 'sub_category_reference_id', 'status_reference_id', 'bundle_type', 'pack_type'].includes(col.id)) {
-    const listMap = { 
-      'brand_reference_id': 'BRAND', 
-      'category_reference_id': 'CATEGORY', 
-      'sub_category_reference_id': 'SUB_CATEGORY', 
+    const listMap = {
+      'brand_reference_id': 'BRAND',
+      'category_reference_id': 'CATEGORY',
+      'sub_category_reference_id': 'SUB_CATEGORY',
       'status_reference_id': 'STATUS',
       'bundle_type': 'BUNDLE_TYPE',
       'pack_type': 'PACK_TYPE'
     };
     const refType = listMap[col.id];
-    
-    // We override DynamicReferenceSelect to look completely flat and fully fill the cell
+
     return (
-      <div className={cn(baseOuter, "p-0 rounded-none flex items-center shadow-lg border outline-none", typography)} ref={containerRef} onKeyDown={handleKey}>
-        <DynamicReferenceSelect
-          referenceType={refType}
-          value={value}
-          preloadedOptions={refLists?.[refType] || []}
-          onChange={(v, lbl) => { 
-            if (v !== value) {
-              setValue(v); 
-              onSave(v); 
-            }
-          }} // Auto-save and close ONLY on actual value change
-          onBlur={handleSave}
-          autoOpen={true}
-          variant="flat"
-          placeholder={`Search ${col.label}...`}
-        />
+      <div className={cn("w-full h-full relative z-10 animate-editor-in flex items-center")} ref={containerRef} onKeyDown={handleKey}>
+        <div className="w-full flex items-center justify-between px-2.5 py-1.5 bg-white border border-[var(--color-primary)]/20 rounded-lg shadow-sm">
+          <DynamicReferenceSelect
+            referenceType={refType}
+            value={value}
+            preloadedOptions={refLists?.[refType] || []}
+            onChange={(v, lbl) => {
+              if (v !== value) {
+                setValue(v);
+                onSave(v);
+              }
+            }}
+            onBlur={handleSave}
+            autoOpen={true}
+            variant="flat"
+            placeholder={`Select ${col.label}...`}
+          />
+        </div>
       </div>
     );
   }
@@ -79,7 +82,7 @@ export default function InlineCellEditor({
   // ── 2. LONG TEXT (Content) ──────────────────────────────────────────────────
   if (col.isContent) {
     const popOutClass = cn(
-      "absolute left-[-2px] top-[-2px] w-[calc(100%+4px)] min-h-[160px] p-4 bg-[var(--color-card)] outline-none border-2 border-[var(--color-primary)] rounded-lg shadow-[0_12px_36px_rgba(0,0,0,0.25)] z-[200] resize-y leading-relaxed",
+      "absolute left-[-2px] top-[-2px] w-[calc(100%+4px)] min-h-[160px] p-4 bg-[var(--color-card)] outline-none border border-[var(--color-primary)]/20 rounded-lg shadow-premium-xl z-[200] resize-y leading-relaxed animate-editor-in",
       typography
     );
     return (
