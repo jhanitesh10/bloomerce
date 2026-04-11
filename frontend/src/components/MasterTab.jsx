@@ -296,7 +296,6 @@ export default function MasterTab({ isMobile }) {
   const [isExportCenterOpen, setIsExportCenterOpen] = useState(false);
   const [isImportOpen,   setIsImportOpen]   = useState(false);
   const [isFilterOpen,   setIsFilterOpen]   = useState(false);
-  const [selectedSkuIds, setSelectedSkuIds] = useState(new Set());
 
   // Advanced Filtering State
   const initialFilters = {
@@ -497,7 +496,7 @@ export default function MasterTab({ isMobile }) {
     return va < vb ? (sortDir === 'asc' ? -1 : 1) : va > vb ? (sortDir === 'asc' ? 1 : -1) : 0;
   }), [skus, search, statusFilter, filters, references, sortCol, sortDir]);
 
-  const selectedSkus = useMemo(() => skus.filter(s => selectedSkuIds.has(s.id)), [skus, selectedSkuIds]);
+  const selectedSkus = []; // Selected functionality removed for now
 
   const totalPages    = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated     = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -596,8 +595,18 @@ export default function MasterTab({ isMobile }) {
           <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-60 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
         </div>
       );
-      case 'bundle_type':               return <span className="text-sm text-[var(--color-foreground)] font-medium">{references.BUNDLE_TYPE[val] || val || '—'}</span>;
-      case 'pack_type':                 return <span className="text-sm text-[var(--color-muted-foreground)]">{references.PACK_TYPE[val] || val || '—'}</span>;
+      case 'bundle_type':               return (
+        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-amber-50/20 border border-amber-200/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-amber-400/50 hover:bg-white transition-all">
+          <span className="text-[13px] font-medium text-amber-900 truncate">{references.BUNDLE_TYPE[val] || val || '—'}</span>
+          <ChevronDown size={14} className="text-amber-500/60 group-hover/ref:text-amber-600 transition-colors flex-shrink-0" />
+        </div>
+      );
+      case 'pack_type':                 return (
+        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-amber-50/10 border border-amber-200/30 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-amber-400/50 hover:bg-white transition-all">
+          <span className="text-[13px] text-amber-800/80 truncate">{references.PACK_TYPE[val] || val || '—'}</span>
+          <ChevronDown size={14} className="text-amber-500/50 group-hover/ref:text-amber-600 transition-colors flex-shrink-0" />
+        </div>
+      );
       case 'net_content':  return <span className="text-sm text-[var(--color-muted-foreground)]">{sku.net_content_value ? `${sku.net_content_value} ${sku.net_content_unit||''}` : '—'}</span>;
       case 'tax_percent':  return <span className="text-sm text-[var(--color-muted-foreground)]">{val!=null ? `${val}%` : '—'}</span>;
       case 'catalog_url':  return val ? (
@@ -666,21 +675,6 @@ export default function MasterTab({ isMobile }) {
     }
   };
 
-  const toggleSelectAll = () => {
-    if (selectedSkuIds.size === paginated.length) {
-      setSelectedSkuIds(new Set());
-    } else {
-      setSelectedSkuIds(new Set(paginated.map(s => s.id)));
-    }
-  };
-
-  const toggleSelectRow = (id) => {
-    setSelectedSkuIds(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-  };
 
   // Expand / Collapse All
   const allGroupIds = GROUPS.map(g => g.id);
@@ -871,9 +865,9 @@ export default function MasterTab({ isMobile }) {
               <thead>
                 {/* ── Row 1: base cols (rowSpan=2) + group parent headers ── */}
                 <tr>
-                  <th colSpan={BASE_COLS.length + 1}
-                    className="px-3 pt-2 pb-1 text-center border-b border-b-transparent sticky z-30 bg-[var(--color-muted)] shadow-[inset_-1px_0_0_var(--color-border)]"
-                    style={{ left: 0, minWidth: BASE_COLS.reduce((sum, c) => sum + (c.width || 0), 0) + 40 }}>
+                  <th colSpan={BASE_COLS.length}
+                    className="px-3 pt-2 pb-1 text-center border-b border-b-transparent sticky z-30 bg-slate-100 shadow-[inset_-1px_0_0_var(--color-border)]"
+                    style={{ left: 0, minWidth: BASE_COLS.reduce((sum, c) => sum + (c.width || 0), 0) }}>
                     <div className="flex items-center justify-center gap-2">
                        <span className="text-[11px] font-bold tracking-wider uppercase">Identity</span>
                     </div>
@@ -907,19 +901,11 @@ export default function MasterTab({ isMobile }) {
 
                 {/* ── Row 2: group sub-column names ── */}
                 <tr>
-                  <th className="sticky left-0 z-30 bg-slate-100 border-b-2 border-slate-200 w-11 text-center shadow-[inset_-1px_0_0_var(--color-border)]">
-                    <input 
-                      type="checkbox" 
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                      checked={paginated.length > 0 && paginated.every(s => selectedSkuIds.has(s.id))}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
                   {BASE_COLS.map((col) => (
                     <th key={col.id}
                       className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
                         col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
-                       style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky? (col.stickyLeft + 44) :undefined}}>
+                       style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky? col.stickyLeft :undefined}}>
                       <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
                         {col.label}
                         {col.sortable&&sortCol===col.id&&<ArrowUpDown size={10} className="inline ml-1 text-[var(--color-primary)]"/>}
@@ -960,10 +946,10 @@ export default function MasterTab({ isMobile }) {
 
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleCols.length + 1} className="py-20 text-center text-sm text-[var(--color-muted-foreground)]">Loading products…</td></tr>
+                  <tr><td colSpan={visibleCols.length} className="py-20 text-center text-sm text-[var(--color-muted-foreground)]">Loading products…</td></tr>
                 ) : paginated.length===0 ? (
                   <tr>
-                    <td colSpan={visibleCols.length + 1} className="py-24 text-center">
+                    <td colSpan={visibleCols.length} className="py-24 text-center">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
                           <Search size={24} />
@@ -987,15 +973,7 @@ export default function MasterTab({ isMobile }) {
                 ) : paginated.map(sku => {
                   const openFullEdit = () => { setEditingSku(sku); setIsFormOpen(true); };
                   return (
-                    <tr key={sku.id} className={cn("group transition-colors", selectedSkuIds.has(sku.id) ? "bg-orange-50/30" : "bg-[var(--color-card)] hover:bg-[var(--color-muted)]/30")}>
-                      <td className="sticky left-0 z-20 w-11 py-3 border-b border-slate-200 bg-inherit text-center shadow-[inset_-1px_0_0_var(--color-border)]">
-                        <input 
-                          type="checkbox" 
-                          className="w-3.5 h-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                          checked={selectedSkuIds.has(sku.id)}
-                          onChange={() => toggleSelectRow(sku.id)}
-                        />
-                      </td>
+                    <tr key={sku.id} className="group transition-colors bg-[var(--color-card)] hover:bg-[var(--color-muted)]/30">
                       {visibleCols.map((col) => {
                         const isActive   = inlineEdit?.skuId===sku.id && inlineEdit?.colId===col.id;
                         const isSelected = selectedCell?.skuId===sku.id && selectedCell?.colId===col.id && !isActive;
@@ -1022,8 +1000,8 @@ export default function MasterTab({ isMobile }) {
                               "border-b border-[var(--color-border)] transition-all relative group/cell",
                               isActive ? "p-0 z-30" : "px-4 py-3 cursor-default align-top",
                               isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-20 bg-[var(--color-primary)]/10 shadow-sm",
-                              col.sticky && "sticky z-10 bg-inherit",
-                              col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent]",
+                               col.sticky && "sticky z-10 bg-[var(--color-card)]",
+                               col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent] after:absolute after:inset-y-0 after:right-0 after:w-[1px] after:bg-[var(--color-border)]",
                               col.sticky && col.isRight && "right-0 shadow-[inset_1px_0_0_var(--color-border)]",
                               /* Ensure open popover is above everything */
                               isNoteActive && col.id === 'remark' && "z-[50] overflow-visible",
@@ -1035,7 +1013,7 @@ export default function MasterTab({ isMobile }) {
                             style={{
                               width: col.width, minWidth: col.width,
                               maxWidth: isActive ? undefined : col.width,
-                              left: col.sticky && !col.isRight ? (col.stickyLeft + 44) : undefined,
+                              left: col.sticky && !col.isRight ? col.stickyLeft : undefined,
                               right: col.sticky && col.isRight ? 0 : undefined,
                               textAlign: col.align||'left',
                               overflow: (isActive || isNoteActive) ? 'visible' : 'hidden',

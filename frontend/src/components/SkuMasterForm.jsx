@@ -993,24 +993,16 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
 
               {/* PRODUCT & BUNDLE */}
               {activeTab === 'bundling' && (
-                <>
-                  <FieldRow>
-                    <DynamicReferenceSelect
-                      label="Bundle Type"
-                      referenceType="BUNDLE_TYPE"
-                      value={form.bundle_type}
-                      onChange={(val) => set('bundle_type', val)}
-                      placeholder="Select bundle (e.g. Single, Combo, Gifting)"
-                    />
-                    <DynamicReferenceSelect
-                      label="Pack Type"
-                      referenceType="PACK_TYPE"
-                      value={form.pack_type}
-                      onChange={(val) => set('pack_type', val)}
-                      placeholder="Select pack (e.g. Finished, Raw+Package)"
-                    />
-                  </FieldRow>
-                </>
+                <FieldRow>
+                  <Field label="Bundle Type">
+                    <DynamicReferenceSelect label="" referenceType="BUNDLE_TYPE" value={form.bundle_type}
+                      onChange={(v) => set('bundle_type', v)} placeholder="Single / Combo / Pack…" />
+                  </Field>
+                  <Field label="Pack Type">
+                    <DynamicReferenceSelect label="" referenceType="PACK_TYPE" value={form.pack_type}
+                      onChange={(v) => set('pack_type', v)} placeholder="Mono Carton / Glass Bottle…" />
+                  </Field>
+                </FieldRow>
               )}
 
               {/* TAX & COMPLIANCE */}

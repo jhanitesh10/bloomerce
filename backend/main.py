@@ -81,7 +81,27 @@ def seed_mock_data():
     db.add_all(platforms)
     db.commit()
 
-    B = brands; C = categories; SC = sub_cats; S = statuses; P = platforms
+    # ── BUNDLE TYPES ──────────────────────────────────────────────────────────
+    bundle_types = [
+        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Single", key="bt_single", display_order=1),
+        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Combo", key="bt_combo", display_order=2),
+        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Pack of 2", key="bt_pack2", display_order=3),
+        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Pack of 3", key="bt_pack3", display_order=4),
+    ]
+    db.add_all(bundle_types)
+
+    # ── PACK TYPES ────────────────────────────────────────────────────────────
+    pack_types = [
+        models.ReferenceData(reference_data_type="PACK_TYPE", label="Mono Carton", key="pt_mono_carton", display_order=1),
+        models.ReferenceData(reference_data_type="PACK_TYPE", label="Glass Bottle", key="pt_glass_bottle", display_order=2),
+        models.ReferenceData(reference_data_type="PACK_TYPE", label="Plastic Jar", key="pt_plastic_jar", display_order=3),
+        models.ReferenceData(reference_data_type="PACK_TYPE", label="Tube", key="pt_tube", display_order=4),
+        models.ReferenceData(reference_data_type="PACK_TYPE", label="Box", key="pt_box", display_order=5),
+    ]
+    db.add_all(pack_types)
+    db.flush()
+
+    B = brands; C = categories; SC = sub_cats; S = statuses; P = platforms; BT = bundle_types; PT = pack_types
 
     # ── 15 REALISTIC SKUs ─────────────────────────────────────────────────────
     products = [

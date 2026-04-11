@@ -143,61 +143,74 @@ export default function DynamicReferenceSelect({
       {/* Portal for Dropdown */}
       {isOpen && createPortal(
         <div 
-          className="fixed z-[9999] bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-100"
+          className="fixed z-[9999] bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col animate-dropdown-enter"
           style={{ 
             top: coords.top, 
             left: coords.left, 
             width: coords.width,
-            marginTop: '4px'
+            marginTop: '8px'
           }}
-          onMouseDown={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+          onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* Search */}
-          <div className="p-2 border-b border-[var(--color-border)] bg-[var(--color-muted)]">
-            <input
-              type="text"
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-[var(--color-ring)] transition-all placeholder:text-[var(--color-muted-foreground)] text-[var(--color-foreground)]"
-              placeholder="Search or add new…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              autoFocus
-            />
+          {/* Search container */}
+          <div className="p-3 border-b border-[var(--color-border)] bg-slate-50/50">
+            <div className="relative flex items-center">
+              <Plus size={14} className="absolute left-3 text-[var(--color-muted-foreground)] opacity-50" />
+              <input
+                type="text"
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[var(--color-border)] bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60 text-[var(--color-foreground)]"
+                placeholder={`Search or add new ${referenceType.toLowerCase()}...`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
           </div>
 
-          {/* Options */}
-          <div className="max-h-64 overflow-y-auto">
+          {/* Options list */}
+          <div className="max-h-72 overflow-y-auto custom-scrollbar p-1">
             {loading && (
-              <div className="py-4 text-center text-xs text-[var(--color-muted-foreground)]">Loading…</div>
+              <div className="py-8 flex flex-col items-center justify-center gap-2 text-[var(--color-muted-foreground)]">
+                <div className="w-4 h-4 border-2 border-[var(--color-primary)]/30 border-t-[var(--color-primary)] rounded-full animate-spin" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
+              </div>
             )}
 
             {!loading && filteredOptions.length === 0 && !showCreateOption && (
-              <div className="py-4 text-center text-xs text-[var(--color-muted-foreground)]">No options found.</div>
+              <div className="py-10 text-center">
+                <p className="text-xs text-[var(--color-muted-foreground)] px-4">No results for "{search}"</p>
+              </div>
             )}
 
-            {!loading && filteredOptions.map(opt => (
-              <div
-                key={opt.id}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors",
-                  value === opt.id
-                    ? "bg-[var(--color-primary)]/8 text-[var(--color-primary)]"
-                    : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-                )}
-                onClick={() => { onChange(opt.id, opt.label); setIsOpen(false); setSearch(""); }}
-              >
-                <span className="truncate">{opt.label}</span>
-                {value === opt.id && <Check size={13} className="text-[var(--color-primary)] flex-shrink-0" />}
-              </div>
-            ))}
+            {!loading && filteredOptions.map(opt => {
+              const isSelected = Number(value) === Number(opt.id);
+              return (
+                <div
+                  key={opt.id}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2.5 text-[13px] rounded-lg cursor-pointer transition-all mx-1 mb-0.5",
+                    isSelected
+                      ? "bg-[var(--color-primary)]/8 text-[var(--color-primary)] font-semibold"
+                      : "text-[var(--color-foreground)]/80 hover:bg-slate-50 hover:text-[var(--color-foreground)]"
+                  )}
+                  onClick={() => { onChange(opt.id, opt.label); setIsOpen(false); setSearch(""); }}
+                >
+                  <span className="truncate">{opt.label}</span>
+                  {isSelected && <Check size={14} className="text-[var(--color-primary)] flex-shrink-0" strokeWidth={3} />}
+                </div>
+              );
+            })}
 
             {showCreateOption && !loading && (
               <div
-                className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-[var(--color-primary)] hover:bg-[var(--color-primary)]/8 border-t border-[var(--color-border)] font-medium transition-colors"
+                className="flex items-center gap-2.5 px-4 py-3 mt-1 text-[13px] cursor-pointer text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 border-t border-[var(--color-border)] font-bold transition-all"
                 onClick={(e) => { e.stopPropagation(); handleCreate(); }}
               >
-                <Plus size={13} />
-                <span>Add "{search}"</span>
+                <div className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
+                  <Plus size={12} strokeWidth={3} />
+                </div>
+                <span>Create new "{search}"</span>
               </div>
             )}
           </div>
