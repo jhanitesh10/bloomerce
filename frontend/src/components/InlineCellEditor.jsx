@@ -5,13 +5,21 @@ import { X, Check, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DynamicReferenceSelect from './DynamicReferenceSelect';
 
+const REF_MAP = {
+  'brand_reference_id': 'BRAND',
+  'category_reference_id': 'CATEGORY',
+  'sub_category_reference_id': 'SUB_CATEGORY',
+  'status_reference_id': 'STATUS',
+  'bundle_type': 'BUNDLE_TYPE',
+  'pack_type': 'PACK_TYPE'
+};
+
 /**
  * Robust cell editor handling specific form factors (ComboBox, TextArea, Input)
  * to avoid data-grid CSS overflow clipping.
  */
 export default function InlineCellEditor({
   col,
-  sku,
   initialValue,
   onSave,
   onCancel,
@@ -19,22 +27,46 @@ export default function InlineCellEditor({
 }) {
   const [value, setValue] = useState(initialValue ?? '');
   const containerRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [rect, setRect] = useState(null);
 
-  // Save handler logic
-  const handleSave = () => onSave(value === '' ? null : value);
-  const handleKey  = (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-    if (e.key === 'Enter' && !col.isContent) { e.preventDefault(); handleSave(); }
-  };
+  const isDropdown = !!REF_MAP[col.id];
+  const hasChanges = value !== (initialValue ?? '');
 
   // Auto-focus input when mounted
   useEffect(() => {
-    const el = containerRef.current?.querySelector('input, textarea');
-    if (el) {
-      el.focus();
-      if (typeof el.select === 'function') el.select();
+    if (!isDropdown) {
+      const el = containerRef.current?.querySelector('input, textarea');
+      if (el) {
+        el.focus();
+        if (typeof el.select === 'function') el.select();
+      }
     }
-  }, []);
+  }, [isDropdown]);
+
+  // Handle portal positioning if needed
+  useLayoutEffect(() => {
+    if (col.isContent && containerRef.current) {
+      const parentTd = containerRef.current.closest('td');
+      if (parentTd) setRect(parentTd.getBoundingClientRect());
+    }
+  }, [col.isContent]);
+
+  const handleKey = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+    if (e.key === 'Enter' && !col.isContent && !(e.ctrlKey || e.metaKey)) { 
+      e.preventDefault(); 
+      onSave(value === '' ? null : value); 
+    }
+  };
+
+  const handleContentSave = async () => {
+    if (saving) return;
+    if (!hasChanges) { onCancel(); return; }
+    setSaving(true);
+    await onSave(value);
+    setSaving(false);
+  };
 
   // Base typography to exactly match cell contents for seamless transition
   const typography = cn(
@@ -43,84 +75,46 @@ export default function InlineCellEditor({
     "text-sm text-[var(--color-foreground)]"
   );
 
-  // Revised baseOuter for a seamless, "in-place" feel (no manual padding, parent td handles it)
   const baseOuter = "w-full h-full bg-transparent outline-none border-0 z-10 animate-editor-in";
 
-  // ── 1. DROPDOWN (Combobox) ──────────────────────────────────────────────────
-  if (['brand_reference_id', 'category_reference_id', 'sub_category_reference_id', 'status_reference_id', 'bundle_type', 'pack_type'].includes(col.id)) {
-    const listMap = {
-      'brand_reference_id': 'BRAND',
-      'category_reference_id': 'CATEGORY',
-      'sub_category_reference_id': 'SUB_CATEGORY',
-      'status_reference_id': 'STATUS',
-      'bundle_type': 'BUNDLE_TYPE',
-      'pack_type': 'PACK_TYPE'
-    };
-    const refType = listMap[col.id];
-
+  // ── 1. DROPDOWN (Reference Select) ──────────────────────────────────────────
+  if (isDropdown) {
     return (
-      <div className={cn("w-full h-full relative z-10 animate-editor-in flex items-center")} ref={containerRef} onKeyDown={handleKey}>
-        <div className="w-full flex items-center justify-between px-2.5 py-1.5 bg-white border border-[var(--color-primary)]/20 rounded-lg shadow-sm">
-          <DynamicReferenceSelect
-            referenceType={refType}
-            value={value}
-            preloadedOptions={refLists?.[refType] || []}
-            onChange={(v, lbl) => {
-              if (v !== value) {
-                setValue(v);
-                onSave(v);
-              }
-            }}
-            onBlur={handleSave}
-            autoOpen={true}
-            variant="flat"
-            placeholder={`Select ${col.label}...`}
-          />
-        </div>
+      <div className="w-full h-full min-h-[36px]" ref={containerRef} onKeyDown={handleKey}>
+        <DynamicReferenceSelect
+          referenceType={REF_MAP[col.id]}
+          value={value}
+          preloadedOptions={refLists?.[REF_MAP[col.id]] || []}
+          onChange={(v) => {
+            if (v !== value) {
+              setValue(v);
+              onSave(v);
+            }
+          }}
+          onBlur={() => onSave(value === '' ? null : value)}
+          autoOpen={true}
+          variant="flat"
+          placeholder={`Select ${col.label}...`}
+        />
       </div>
     );
   }
 
   // ── 2. LONG TEXT (Content Editor Card - Portaled) ───────────────────────────
   if (col.isContent) {
-    const [saving, setSaving] = useState(false);
-    const [rect, setRect] = useState(null);
-    const hasChanges = value !== (initialValue ?? '');
-
-    // Track original cell position to "float" over it
-    useLayoutEffect(() => {
-      if (containerRef.current) {
-        const parentTd = containerRef.current.closest('td');
-        if (parentTd) setRect(parentTd.getBoundingClientRect());
-      }
-    }, []);
-
-    const handleContentSave = async () => {
-      if (saving || !hasChanges) { onCancel(); return; }
-      setSaving(true);
-      await onSave(value);
-      setSaving(false);
-    };
-
     if (!rect) return <div ref={containerRef} className="w-full h-full" />;
 
     return createPortal(
       <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-        {/* Backdrop for focus */}
         <div 
           className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] animate-in fade-in duration-200" 
           onClick={onCancel}
         />
         
-        <div 
-          className={cn(
-            "bg-white rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.3)] border border-[var(--color-border)] overflow-hidden z-[1001] animate-[scale-in_0.2s_ease-out] relative",
-            "w-full max-w-[520px]"
-          )}
-        >
+        <div className="relative w-full max-w-[520px] bg-white rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.3)] border border-[var(--color-border)] overflow-hidden z-[1001] animate-[scale-in_0.2s_ease-out]">
           <div className="bg-slate-50 px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-               <div className="w-2.5 h-2.5 bg-[var(--color-primary)] rounded-full animate-pulse shadow-[0_0_10px_var(--color-primary)]" />
+               <div className="w-2.5 h-2.5 bg-[var(--color-primary)] rounded-full animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
                <span className="text-[12px] font-black uppercase tracking-[0.15em] text-slate-500">Editing {col.label}</span>
             </div>
             <button onClick={onCancel} className="p-2 hover:bg-slate-200 rounded-full transition-colors group">
@@ -151,14 +145,14 @@ export default function InlineCellEditor({
               
               <div className="flex items-center gap-4">
                 <span className="text-[11px] text-slate-400 font-bold italic hidden sm:block opacity-60">
-                  {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + Enter to Apply
+                  {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + Enter to Save
                 </span>
                 <Button
                   size="default"
                   onClick={handleContentSave}
                   disabled={saving}
                   className={cn(
-                    "h-11 px-7 rounded-2xl font-black text-[12px] uppercase tracking-wider transition-all flex items-center gap-2 shadow-xl",
+                    "h-11 px-7 rounded-2xl font-black text-[12px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl",
                     hasChanges 
                       ? "bg-[var(--color-primary)] text-white shadow-[var(--color-primary)]/30 scale-105 active:scale-95" 
                       : "bg-slate-100 text-slate-400 shadow-none cursor-default"
@@ -183,7 +177,7 @@ export default function InlineCellEditor({
         type={col.isNum ? 'number' : 'text'}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onBlur={handleSave}
+        onBlur={() => onSave(value === '' ? null : value)}
         onKeyDown={handleKey}
         className={cn(baseOuter, typography)}
       />

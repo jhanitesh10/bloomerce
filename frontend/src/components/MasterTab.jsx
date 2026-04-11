@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 
-import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import SkuMasterForm from './SkuMasterForm';
 import InlineCellEditor from './InlineCellEditor';
@@ -121,7 +121,7 @@ const FILTER_TABS = [
 ];
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-// ── Note Popover Component ──────────────────────────────────────────────────
+// ── Note Popover Component (Portaled & Spacious) ─────────────────────────────
 function NotePopover({ sku, onSave, onClose, onDraftChange }) {
   const [val, setVal] = useState(() => {
     const draft = localStorage.getItem(`bloomerce_note_draft_${sku.id}`);
@@ -133,10 +133,9 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
   useEffect(() => {
     if (textareaRef.current) {
        textareaRef.current.focus();
-       // Place cursor at end
        textareaRef.current.setSelectionRange(val.length, val.length);
     }
-    onDraftChange(val); // Initialize draft
+    onDraftChange(val); 
   }, []);
 
   const handleChange = (newVal) => {
@@ -150,28 +149,26 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
     if (saving) return;
     setSaving(true);
     await onSave(val);
-    // Clear draft from localStorage on successful save
     localStorage.removeItem(`bloomerce_note_draft_${sku.id}`);
     setSaving(false);
   };
-
 
   return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       {/* Backdrop for focus */}
       <div 
-        className="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px] animate-in fade-in duration-200" 
+        className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] animate-in fade-in duration-200" 
         onClick={onClose}
       />
       
       <div
-        className="relative w-full max-w-[420px] bg-white rounded-3xl shadow-[0_30px_70px_rgba(0,0,0,0.25)] border border-[var(--color-border)] overflow-hidden animate-[scale-in_0.2s_ease-out] text-left"
+        className="relative w-full max-w-[520px] bg-white rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.3)] border border-[var(--color-border)] overflow-hidden animate-[scale-in_0.2s_ease-out] text-left"
         onClick={e => e.stopPropagation()}
       >
         <div className="bg-slate-50 px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
              <div className="w-2.5 h-2.5 bg-[var(--color-primary)] rounded-full animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
-             <span className="text-[12px] font-black uppercase tracking-[0.15em] text-slate-500">Edit SKU Note</span>
+             <span className="text-[12px] font-black uppercase tracking-[0.15em] text-slate-500">Edit SKU Remark</span>
           </div>
           <div className="flex items-center gap-2">
             {val && (
@@ -180,11 +177,11 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
                 className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all flex items-center gap-1.5"
                 title="Clear content"
               >
-                <Trash2 size={14} />
+                <Trash2 size={15} />
               </button>
             )}
             <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors group">
-              <X size={16} className="text-slate-400 group-hover:text-slate-600" />
+              <X size={18} className="text-slate-400 group-hover:text-slate-600" />
             </button>
           </div>
         </div>
@@ -196,7 +193,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
             value={val}
             onChange={e => handleChange(e.target.value)}
             placeholder="Add internal product remarks or operational notes here..."
-            className="w-full h-40 p-5 text-[14px] rounded-2xl border border-[var(--color-border)] bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/5 focus:border-[var(--color-primary)] transition-all resize-none text-[var(--color-foreground)] leading-relaxed placeholder:opacity-40"
+            className="w-full h-48 p-5 text-[14px] rounded-2xl border border-[var(--color-border)] bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/5 focus:border-[var(--color-primary)] transition-all resize-none text-[var(--color-foreground)] leading-relaxed placeholder:opacity-40"
             onKeyDown={e => {
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSave();
               if (e.key === 'Escape') onClose();
@@ -213,25 +210,25 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
             
             <div className="flex items-center gap-4">
               <span className="text-[11px] text-slate-400 font-bold italic hidden sm:block opacity-60">
-                {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + Enter
+                {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + Enter to Save
               </span>
               <Button
                 size="default"
                 onClick={handleSave}
                 disabled={saving}
                 className={cn(
-                  "h-11 px-6 rounded-2xl font-black text-[12px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl",
+                  "h-11 px-7 rounded-2xl font-black text-[12px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl",
                   val !== (sku.remark || '')
-                    ? "bg-[var(--color-primary)] text-white shadow-[var(--color-primary)]/30 scale-105"
-                    : "bg-slate-100 text-slate-400 shadow-none scale-100 cursor-default"
+                    ? "bg-[var(--color-primary)] text-white shadow-[var(--color-primary)]/30 scale-105 active:scale-95"
+                    : "bg-slate-100 text-slate-400 shadow-none cursor-default"
                 )}
               >
                 {saving ? (
                    <RefreshCcw size={14} className="animate-spin" />
                 ) : (
-                  <Send size={15} />
+                  <Check size={18} />
                 )}
-                <span>{sku.remark ? 'Update & Close' : 'Save Note'}</span>
+                <span>Save Remark</span>
               </Button>
             </div>
           </div>
@@ -1052,9 +1049,9 @@ export default function MasterTab({ isMobile }) {
                 })}
               </tbody>
             </table>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
       {/* Pagination Footer - Visible on both Desktop and Mobile */}
       <div className="mt-4 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm px-4 sm:px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
