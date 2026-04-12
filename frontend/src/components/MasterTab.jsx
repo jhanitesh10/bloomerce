@@ -105,6 +105,40 @@ const GC = {
   orange:  { row1: 'bg-orange-50  text-orange-700  border-orange-200',  row2: 'bg-orange-50/70',  td: 'bg-orange-50/25',  pill: 'bg-orange-100 text-orange-700 hover:bg-orange-200'  },
 };
 
+// ── Skeleton Loaders ──────────────────────────────────────────────────────────
+function TableRowSkeleton({ visibleCols }) {
+  return (
+    <tr className="border-b border-[var(--color-border)]">
+      {visibleCols.map(col => (
+        <td key={col.id} className="px-4 py-4" style={{ width: col.width }}>
+           <div className={cn(
+             "skeleton-box h-4",
+             col.id === 'primary_image_url' ? "w-10 h-10 rounded-xl" : "w-2/3"
+           )} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <div className="bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] p-4 shadow-sm">
+      <div className="flex gap-4 items-start mb-4">
+        <div className="w-16 h-16 rounded-xl skeleton-box" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 skeleton-box w-3/4" />
+          <div className="h-3 skeleton-box w-1/2" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--color-border)]">
+        <div className="h-3 skeleton-box w-2/3" />
+        <div className="h-3 skeleton-box w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const NON_INLINE = new Set(['primary_image_url', 'net_content', 'content_trigger', 'catalog_url', 'remark']);
 const REF_MAP    = {
@@ -927,7 +961,14 @@ export default function MasterTab({ isMobile }) {
       {/* ── Table or Card view ── */}
       {isMobile ? (
         <div className="flex flex-col gap-4">
-          {paginated.length === 0 ? (
+          {loading ? (
+             <>
+               <CardSkeleton />
+               <CardSkeleton />
+               <CardSkeleton />
+               <CardSkeleton />
+             </>
+          ) : paginated.length === 0 ? (
             <div className="py-24 text-center bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)]">
                <div className="flex flex-col items-center justify-center gap-3">
                   <Search size={32} className="text-slate-300" />
@@ -1036,7 +1077,16 @@ export default function MasterTab({ isMobile }) {
 
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={visibleCols.length} className="py-20 text-center text-sm text-[var(--color-muted-foreground)]">Loading products…</td></tr>
+                   <>
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                     <TableRowSkeleton visibleCols={visibleCols} />
+                   </>
                 ) : paginated.length===0 ? (
                   <tr>
                     <td colSpan={visibleCols.length} className="py-24 text-center">
