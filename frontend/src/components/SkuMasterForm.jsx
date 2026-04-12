@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   X, Save, UploadCloud, RefreshCw, Trash2, Link, ArrowLeft,
   Package, Tag, FileText, BarChart2, Layers, Info, StickyNote,
-  AlertCircle, FolderPlus, ExternalLink, BookmarkCheck
+  AlertCircle, FolderPlus, ExternalLink, BookmarkCheck, Check
 } from 'lucide-react';
 
 // ─── Auto-resizing textarea ───────────────────────────────────────
@@ -269,9 +269,10 @@ const inputCls = (hasError) => cn(
 );
 
 const sanitizeFolderName = (name) => {
-  if (!name) return "";
-  return name.trim().toLowerCase()
-    .replace(/[^a-z0-9\s_]/g, "")
+  if (name == null) return "";
+  // Ensure we're working with a string to avoid .trim() crashes on numbers
+  return String(name).trim().toLowerCase()
+    .replace(/[^a-z0-9\s_-]/g, "")
     .replace(/\s+/g, "_");
 };
 
@@ -283,12 +284,12 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
   const [form, setForm] = useState(() => {
     const draftKey = getDraftKey(initialData?.id);
     const savedDraft = localStorage.getItem(draftKey);
-    
+
     if (savedDraft) {
       try {
         const parsed = JSON.parse(savedDraft);
         // Ensure the draft matches the current initialData (for Edit mode)
-        // If editing, we want to make sure we're not using a draft from a different product 
+        // If editing, we want to make sure we're not using a draft from a different product
         // (the ID in the key handles this, but we're being extra safe)
         return { ...EMPTY, ...parsed };
       } catch (e) {
@@ -333,9 +334,11 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     sku_code: ''
   });
 
-  const handleRegenerateClick = async () => {
+  const handleRegenerateClick = async (e) => {
+    e?.stopPropagation();
     if (window.confirm("This will move the current Google Drive folder to trash and generate a new one based on current data. Are you sure?")) {
       try {
+        console.log("Drive Flow: Regenerate requested", { sku: form.sku_code });
         setGeneratingUrl(true);
         // 1. Trash the old one on the server
         if (initialData?.id && form.catalog_url) {
@@ -346,7 +349,8 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
         // 3. Open preview to let user see/tweak the new path
         setShowDrivePreview(true);
       } catch (err) {
-        alert("Failed to trash folder: " + err.message);
+        console.error("Drive Flow Error (Regenerate):", err);
+        alert("Failed to trash folder: " + (err.response?.data?.detail || err.message));
       } finally {
         setGeneratingUrl(false);
       }
@@ -407,34 +411,49 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     return payload;
   };
 
-  const handleGenerateDriveFolder = async () => {
+  const handleGenerateDriveFolder = async (e) => {
+    e?.stopPropagation();
+
     if (!showDrivePreview) {
-      setDriveDraft({
-        brand_name: sanitizeFolderName(driveDraft.brand_name) || '',
-        category_name: sanitizeFolderName(driveDraft.category_name) || '',
-        sub_category_name: sanitizeFolderName(driveDraft.sub_category_name) || '',
-        sku_code: sanitizeFolderName(form.sku_code) || ''
+      console.log("Drive Flow: Opening preview panel", {
+        sku: form.sku_code,
+        draft: driveDraft
       });
+
+      // Initialize driveDraft labels from the form values
+      setDriveDraft(prev => ({
+        ...prev,
+        sku_code: sanitizeFolderName(form.sku_code) || ''
+      }));
       setShowDrivePreview(true);
       return;
     }
 
+    console.log("Drive Flow: Requesting folder creation", driveDraft);
     setGeneratingUrl(true);
     try {
       const res = await skuApi.generateCatalogUrlPreview(driveDraft);
-      const updatedUrl = res.catalog_url;
+      console.log("Drive Flow: Received response", res);
 
-      set('catalog_url', updatedUrl || '');
+      if (!res || !res.catalog_url) {
+        throw new Error("Backend failed to return a valid Catalog URL.");
+      }
+
+      const updatedUrl = res.catalog_url;
+      set('catalog_url', updatedUrl);
       setShowDrivePreview(false);
 
       if (initialData?.id) {
         // Auto-save if editing existing product - USING preparePayload to avoid 422 errors
+        console.log("Drive Flow: Auto-saving edited SKU", initialData.id);
         const payload = preparePayload({ ...form, catalog_url: updatedUrl });
         await skuApi.update(initialData.id, payload);
         if (onSaved) onSaved();
       }
     } catch (err) {
-      alert(`Failed to create Google Drive folder: ${err.message}`);
+      console.error("Drive Flow Error (Create):", err);
+      const msg = err.response?.data?.detail || err.message || "Unknown error";
+      alert(`Failed to create Google Drive folder: ${msg}`);
     } finally {
       setGeneratingUrl(false);
     }
@@ -535,10 +554,10 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
 
       if (initialData?.id) await skuApi.update(initialData.id, payload);
       else await skuApi.create(payload);
-      
+
       // Clear draft on success
       localStorage.removeItem(getDraftKey(initialData?.id));
-      
+
       savedSnapshot.current = { ...form };
       onSaved();
     } catch (err) {
@@ -599,8 +618,8 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
         <div className="flex flex-col border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
           <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 w-full">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button 
-                onClick={handleClose} 
+              <button
+                onClick={handleClose}
                 className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors shrink-0"
                 title="Close"
               >
@@ -629,8 +648,8 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               >
                 <StickyNote size={18} />
               </button>
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 disabled={saving}
                 className="h-9 gap-1.5 sm:gap-2 shrink-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white transition-all font-bold px-3 sm:px-4 shadow-lg shadow-[var(--color-primary)]/20"
               >
@@ -804,10 +823,10 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                                 <button
                                   type="button"
                                   onClick={handleGenerateDriveFolder}
-                                  disabled={generatingUrl || (initialData?.id && isDirty) || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id}
+                                  disabled={generatingUrl || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id}
                                   className={cn(
                                     "flex flex-1 sm:flex-none items-center justify-center gap-2 px-6 sm:px-4 h-10 rounded-xl text-xs font-bold transition-all border shrink-0 shadow-sm w-full sm:w-auto",
-                                    (generatingUrl || (initialData?.id && isDirty) || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id)
+                                    (generatingUrl || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id)
                                       ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
                                       : "bg-white border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95"
                                   )}
@@ -830,7 +849,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                                   placeholder="brand"
                                 />
                               </div>
-                              
+
                               <span className="hidden sm:inline text-amber-300 shrink-0 select-none">/</span>
 
                               <div className="flex flex-col gap-1 sm:contents">

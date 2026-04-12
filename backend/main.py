@@ -603,16 +603,24 @@ def _generate_drive_url(brand_id: int, cat_id: int, subcat_id: int, sku_code: st
 
 @app.post("/api/skus/generate-catalog-url")
 def generate_sku_catalog_url_preview(data: schemas.DriveFolderCreate, db: Session = Depends(get_db)):
+    # 1. Validation
+    if not data.brand_name.strip():
+        raise HTTPException(status_code=400, detail="Brand name is required for catalog generation.")
+    if not data.category_name.strip():
+        raise HTTPException(status_code=400, detail="Category name is required for catalog generation.")
+    if not data.sku_code.strip():
+        raise HTTPException(status_code=400, detail="SKU Code is required for catalog generation.")
+
     try:
         drive = DriveService()
         if not drive.service:
             raise HTTPException(status_code=500, detail="Google Drive credentials not configured in backend.")
         
         url = drive.create_sku_folder_structure(
-            brand=data.brand_name,
-            category=data.category_name,
-            sub_category=data.sub_category_name,
-            sku_code=data.sku_code
+            brand=data.brand_name.strip(),
+            category=data.category_name.strip(),
+            sub_category=data.sub_category_name.strip() if data.sub_category_name else "general",
+            sku_code=data.sku_code.strip()
         )
         return {"catalog_url": url}
     except Exception as e:
