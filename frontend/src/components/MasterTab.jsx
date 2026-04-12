@@ -270,7 +270,7 @@ function SkuCard({ sku, references, onEdit, onNote }) {
           </div>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-[11px] font-mono text-[var(--color-muted-foreground)]">{sku.sku_code || sku.barcode || 'NO SKU CODE'}</p>
-            <CopyButton value={sku.sku_code || sku.barcode} className="h-5 w-5 opacity-40 hover:opacity-100" iconSize={10} />
+            <CopyButton value={sku.sku_code || sku.barcode} className="h-5 w-5 opacity-70" iconSize={10} />
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[11px] font-bold text-[var(--color-primary)]/80 uppercase tracking-tighter">{brand}</span>
@@ -589,7 +589,7 @@ export default function MasterTab({ isMobile }) {
             {barcodeVal && (
               <CopyButton 
                 value={barcodeVal} 
-                className="opacity-0 group-hover/item:opacity-100" 
+                className="opacity-100 md:opacity-0 group-hover/item:opacity-100" 
                 title="Copy SKU/Barcode" 
               />
             )}
@@ -606,7 +606,7 @@ export default function MasterTab({ isMobile }) {
           {val && (
             <CopyButton 
               value={val} 
-              className="opacity-0 group-hover/item:opacity-100 flex-shrink-0" 
+              className="opacity-100 md:opacity-0 group-hover/item:opacity-100 flex-shrink-0" 
               title="Copy Product Name" 
             />
           )}
@@ -667,7 +667,7 @@ export default function MasterTab({ isMobile }) {
           </a>
           <CopyButton 
             value={val} 
-            className="opacity-0 group-hover/item:opacity-100" 
+            className="opacity-100 md:opacity-0 group-hover/item:opacity-100" 
             title="Copy Drive Link" 
           />
         </div>
@@ -700,7 +700,7 @@ export default function MasterTab({ isMobile }) {
             {val && (
               <CopyButton 
                 value={val} 
-                className="opacity-0 group-hover/item:opacity-100" 
+                className="opacity-100 md:opacity-0 group-hover/item:opacity-100" 
                 title="Copy Remark"
               />
             )}
@@ -724,13 +724,13 @@ export default function MasterTab({ isMobile }) {
         if (col.isNum)    return (
           <div className="group/item flex items-center justify-end gap-1.5">
             <span className="font-semibold text-sm tabular-nums">₹{Number(val).toLocaleString('en-IN')}</span>
-            <CopyButton value={val} className="opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.labelValue || col.label}`} />
+            <CopyButton value={val} className="opacity-100 md:opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.labelValue || col.label}`} />
           </div>
         );
         if (col.isMono)   return (
           <div className="group/item flex items-center justify-between gap-1.5">
             <span className="font-mono text-xs text-[var(--color-muted-foreground)] truncate">{val}</span>
-            <CopyButton value={val} className="opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.label}`} />
+            <CopyButton value={val} className="opacity-100 md:opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.label}`} />
           </div>
         );
         if (col.isContent) return (
@@ -740,7 +740,7 @@ export default function MasterTab({ isMobile }) {
             </span>
             <CopyButton 
               value={val} 
-              className="opacity-0 group-hover/item:opacity-100 flex-shrink-0" 
+              className="opacity-100 md:opacity-0 group-hover/item:opacity-100 flex-shrink-0" 
               title={`Copy ${col.label}`} 
             />
           </div>

@@ -6,15 +6,15 @@ import { cn } from '@/lib/utils';
 import { skuApi, refApi } from '../api';
 
 const FIELD_LABELS = {
-  product_name: "Product Name", sku_code: "SKU / EAN / Barcode ID*", barcode: "SKU / EAN / Barcode ID", brand_reference_id: "Brand", 
+  product_name: "Product Name", sku_code: "SKU / EAN / Barcode ID*", barcode: "SKU / EAN / Barcode ID", brand_reference_id: "Brand",
   product_component_group_code: "Component Group Code", primary_image_url: "Image URL",
-  description: "Description", key_feature: "Key Features", key_ingredients: "Key Ingredients", 
-  ingredients: "Ingredients", how_to_use: "How To Use", product_care: "Product Care", 
+  description: "Description", key_feature: "Key Features", key_ingredients: "Key Ingredients",
+  ingredients: "Ingredients", how_to_use: "How To Use", product_care: "Product Care",
   caution: "Caution", seo_keywords: "SEO Keywords", catalog_url: "Catalog URL",
   category_reference_id: "Category", sub_category_reference_id: "Sub-Category", status_reference_id: "Product Status",
-  mrp: "MRP", purchase_cost: "Purchase Cost", net_content_value: "Net Content Value", 
-  net_content_unit: "Net Content Unit", color: "Color", raw_product_size: "Raw Product Size", 
-  package_size: "Package Size", package_weight: "Package Wt (g)", raw_product_weight: "Raw Product Wt", 
+  mrp: "MRP", purchase_cost: "Purchase Cost", net_content_value: "Net Content Value",
+  net_content_unit: "Net Content Unit", color: "Color", raw_product_size: "Raw Product Size",
+  package_size: "Package Size", package_weight: "Package Wt (g)", raw_product_weight: "Raw Product Wt",
   finished_product_weight: "Finished Product Wt",
   bundle_type: "Bundle Type", pack_type: "Pack Type", tax_rule_code: "Tax Rule Code (HSN)", tax_percent: "Tax Percent",
   product_type: "Product Type", remark: "Remark", metadata_json: "Metadata (JSON)",
@@ -43,7 +43,7 @@ function CustomFieldSelect({ currentVal, onChange, options, disabledOptions }) {
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
-      <div 
+      <div
         onClick={() => { setIsOpen(!isOpen); setSearch(''); }}
         className={cn(
           "w-full bg-white border rounded px-2.5 py-1.5 text-xs focus:outline-none transition-colors cursor-pointer flex justify-between items-center",
@@ -58,17 +58,17 @@ function CustomFieldSelect({ currentVal, onChange, options, disabledOptions }) {
         <div className="absolute z-50 top-full mt-1 w-full bg-[var(--color-card)] border border-[var(--color-border)] shadow-lg rounded-md overflow-hidden">
           <div className="p-1.5 border-b border-[var(--color-border)] flex items-center gap-1.5">
             <Search size={12} className="text-[var(--color-muted-foreground)]" />
-            <input 
+            <input
               autoFocus
-              type="text" 
-              placeholder="Search field..." 
-              value={search} 
+              type="text"
+              placeholder="Search field..."
+              value={search}
               onChange={e => setSearch(e.target.value)}
               className="bg-transparent border-none outline-none text-xs w-full text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)]"
             />
           </div>
           <div className="max-h-48 overflow-y-auto p-1">
-            <div 
+            <div
               onClick={() => { onChange(""); setIsOpen(false); }}
               className="px-2 py-1.5 text-xs text-[var(--color-muted-foreground)] cursor-pointer hover:bg-[var(--color-muted)] rounded transition-colors"
             >
@@ -77,7 +77,7 @@ function CustomFieldSelect({ currentVal, onChange, options, disabledOptions }) {
             {filtered.map(sf => {
               const isDisabled = disabledOptions.includes(sf.id) && currentVal !== sf.id;
               return (
-                <div 
+                <div
                   key={sf.id}
                   onClick={() => {
                     if(isDisabled) return;
@@ -102,8 +102,8 @@ function CustomFieldSelect({ currentVal, onChange, options, disabledOptions }) {
 }
 
 export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onImportComplete }) {
-  const [file, setFile] = useState(null); 
-  
+  const [file, setFile] = useState(null);
+
   const [csvHeaders, setCsvHeaders] = useState(() => {
     try {
       const saved = localStorage.getItem('bloomerce_import_headers');
@@ -126,14 +126,14 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
       if (saved) return JSON.parse(saved);
     } catch(e) {}
     return {};
-  }); 
+  });
 
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [progressStatus, setProgressStatus] = useState("");
   const [importStats, setImportStats] = useState(null); // { success, skipped, failed, total }
   const [importErrors, setImportErrors] = useState([]);
-  
+
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -148,19 +148,19 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
       localStorage.setItem('bloomerce_import_headers', JSON.stringify(csvHeaders));
       localStorage.setItem('bloomerce_import_mappings', JSON.stringify(mappings));
       const dataStr = JSON.stringify(csvData);
-      if (dataStr.length < 2000000) { 
+      if (dataStr.length < 2000000) {
         localStorage.setItem('bloomerce_import_data', dataStr);
       }
     } catch (e) {
       console.warn("Could not save import draft to localStorage:", e);
     }
   }, [csvHeaders, csvData, mappings, importStats]);
-  
+
   const handleFileUpload = (e) => {
     const f = e.target.files[0];
     if (!f) return;
     setFile(f);
-    
+
     Papa.parse(f, {
       header: true,
       skipEmptyLines: true,
@@ -168,12 +168,12 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         const headers = results.meta.fields || [];
         setCsvHeaders(headers);
         setCsvData(results.data);
-        
+
         const initialMapping = {};
         headers.forEach(h => {
           const lowerH = h.toLowerCase().trim();
-          const match = SYSTEM_FIELDS.find(sf => 
-            sf.id.toLowerCase() === lowerH || 
+          const match = SYSTEM_FIELDS.find(sf =>
+            sf.id.toLowerCase() === lowerH ||
             sf.label.split('*')[0].toLowerCase() === lowerH ||
             sf.id === lowerH.replace(/\s+/g, '_')
           );
@@ -216,9 +216,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   const executeImport = async () => {
     if(!mappedSkuCode) return alert("You must map a column to 'SKU Code' because it is mandatory.");
-    
+
     setIsImporting(true);
-    let success = 0; 
+    let success = 0;
     let skipped = 0;
     let failed = 0;
     let errorsCollected = [];
@@ -227,7 +227,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     for (let i = 0; i < csvData.length; i += BATCH_SIZE) {
       const end = Math.min(i + BATCH_SIZE, csvData.length);
       setProgressStatus(`Processing rows ${i + 1} to ${end}...`);
-      
+
       const chunk = csvData.slice(i, end);
       const batchPayload = [];
 
@@ -251,10 +251,10 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
         const numericAndIdFields = [
           'brand_reference_id', 'category_reference_id', 'sub_category_reference_id', 'status_reference_id',
-          'mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'finished_product_weight', 
+          'mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'finished_product_weight',
           'net_content_value', 'tax_percent'
         ];
-        
+
         numericAndIdFields.forEach(k => {
           if (backendRow[k] === "") backendRow[k] = null;
         });
@@ -297,7 +297,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
       localStorage.removeItem('bloomerce_import_headers');
       localStorage.removeItem('bloomerce_import_mappings');
     }
-    
+
     setIsImporting(false);
     if(onImportComplete) onImportComplete();
   };
@@ -310,9 +310,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   return (
     <>
       <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm animate-[fade-in_0.2s_ease]" onClick={() => !isImporting && onClose()} />
-      
+
       <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
-        
+
         <div className="flex flex-col border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
@@ -324,7 +324,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                 <span className="text-[10px] text-[var(--color-muted-foreground)] hidden sm:inline">Upload CSV and map fields to your database</span>
               </div>
             </div>
-            
+
             {(file || hasRestoredData) && !importStats && (
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleReset} disabled={isImporting}>Start Over</Button>
@@ -339,7 +339,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
               <Button size="sm" onClick={onClose} className="px-5">Close and View Data</Button>
             )}
           </div>
-          
+
           {isImporting && (
             <div className="flex flex-col bg-[var(--color-primary)]/5 border-b border-[var(--color-border)] p-4 sm:p-6 space-y-3">
               <div className="flex justify-between items-end">
@@ -357,7 +357,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
               </div>
 
               <div className="h-2 w-full bg-[var(--color-primary)]/10 rounded-full overflow-hidden relative border border-[var(--color-primary)]/5">
-                <div 
+                <div
                   className="absolute inset-y-0 left-0 bg-[var(--color-primary)] transition-all duration-700 ease-in-out shadow-[0_0_12px_var(--color-primary)]"
                   style={{ width: `${importProgress}%` }}
                 />
@@ -387,7 +387,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         </div>
 
         <div className="flex-1 overflow-y-auto w-full flex flex-col pt-2">
-          
+
           {!file && !hasRestoredData && (
              <div className="p-6">
                 <h3 className="text-sm font-semibold mb-3">1. Upload CSV</h3>
@@ -428,7 +428,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                   {importStats.total} rows were processed from your file.
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-white border border-[var(--color-border)] rounded-2xl p-4 shadow-sm text-center">
                   <span className="block text-2xl font-bold text-emerald-600">{importStats.success}</span>
@@ -453,9 +453,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                        {Math.round((importStats.success / (importStats.total || 1)) * 100)}%
                      </span>
                      <div className="flex-1 h-1.5 bg-[var(--color-muted)] rounded-full overflow-hidden">
-                       <div 
-                         className="h-full bg-emerald-500" 
-                         style={{ width: `${(importStats.success / (importStats.total || 1)) * 100}%` }} 
+                       <div
+                         className="h-full bg-emerald-500"
+                         style={{ width: `${(importStats.success / (importStats.total || 1)) * 100}%` }}
                        />
                      </div>
                   </div>
@@ -507,7 +507,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                   <h3 className="text-sm font-semibold">2. Map CSV Columns to System Fields</h3>
                   <span className="text-[11px] sm:text-xs text-[var(--color-muted-foreground)]">{activeMappingsCount} of {csvHeaders.length} columns mapped</span>
                 </div>
-                
+
                 {!mappedSkuCode && (
                   <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-medium mb-4">
                     <AlertCircle size={14} className="flex-shrink-0"/>
@@ -533,7 +533,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                             </div>
                             <span className="sm:hidden text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase tracking-wider bg-[var(--color-muted)] px-1.5 py-0.5 rounded">CSV Column</span>
                           </div>
-                          
+
                           <div className="hidden sm:col-span-1 sm:flex justify-center text-[var(--color-muted-foreground)] opacity-50">
                              <ChevronRight size={14}/>
                           </div>
@@ -558,7 +558,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                   <FileSpreadsheet size={15} className="text-[var(--color-primary)]" />
                   <h3 className="text-sm font-semibold">Ready to Import Preview</h3>
                 </div>
-                
+
                 {activeCols.length === 0 ? (
                   <div className="text-xs text-center text-[var(--color-muted-foreground)] py-8 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] border-dashed">
                     Map at least one column to see a preview
