@@ -80,7 +80,7 @@ export default function InlineCellEditor({
   // ── 1. DROPDOWN (Reference Select) ──────────────────────────────────────────
   if (isDropdown) {
     return (
-      <div className="w-full h-full min-h-[36px]" ref={containerRef} onKeyDown={handleKey}>
+      <div className="w-full h-full flex items-center" ref={containerRef} onKeyDown={handleKey}>
         <DynamicReferenceSelect
           referenceType={REF_MAP[col.id]}
           value={value}
@@ -177,7 +177,11 @@ export default function InlineCellEditor({
         type={col.isNum ? 'number' : 'text'}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onBlur={() => onSave(value === '' ? null : value)}
+        onBlur={() => {
+          // Robust saving on blur, but we rely on saveInlineEdit's 
+          // conditional clearing to avoid focus theft.
+          onSave(value === '' ? null : value);
+        }}
         onKeyDown={handleKey}
         className={cn(baseOuter, typography)}
       />

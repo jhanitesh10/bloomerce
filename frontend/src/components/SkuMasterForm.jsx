@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DynamicReferenceSelect from './DynamicReferenceSelect';
 import { skuApi, uploadApi, refApi } from '../api';
 import { Button } from '@/components/ui/button';
@@ -93,9 +93,9 @@ function ImageBlock({ value, onChange }) {
     <div className="mb-6">
       <input type="file" accept="image/*" ref={fileRef} className="hidden" onChange={handleFile} />
 
-      <div className="relative group rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-muted)]/30 transition-all hover:bg-[var(--color-muted)]/50 min-h-[120px] flex flex-col">
+      <div className="relative group rounded-2xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-muted)]/10 transition-all hover:bg-[var(--color-muted)]/20 min-h-[120px] flex flex-col">
         {!isAddingOrReplacing ? (
-          <div className="relative h-48 bg-white flex items-center justify-center p-4">
+          <div className="relative h-48 bg-[var(--color-card)] flex items-center justify-center p-4">
             <img
               src={value}
               alt="Product Preview"
@@ -106,12 +106,12 @@ function ImageBlock({ value, onChange }) {
               }}
             />
             {/* Fallback if image fails to load */}
-            <div className="hidden absolute inset-0 flex flex-col items-center justify-center text-red-500 gap-2">
+            <div className="hidden absolute inset-0 flex flex-col items-center justify-center text-red-500/80 gap-2">
               <AlertCircle size={24} />
               <span className="text-[10px] uppercase font-bold tracking-wider">Invalid Image URL</span>
             </div>
 
-            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-3 backdrop-blur-[2px]">
+            <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-3 backdrop-blur-[2px]">
               <button
                 type="button"
                 onClick={() => setShowOptions(true)}
@@ -134,7 +134,7 @@ function ImageBlock({ value, onChange }) {
                <button
                  type="button"
                  onClick={() => setShowOptions(false)}
-                 className="absolute top-4 left-4 p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-white hover:text-[var(--color-foreground)] transition-colors shadow-sm bg-white/50 border border-[var(--color-border)]"
+                 className="absolute top-4 left-4 p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-card)] hover:text-[var(--color-foreground)] transition-colors shadow-sm bg-[var(--color-card)]/50 border border-[var(--color-border)]"
                  title="Back to Preview"
                >
                  <ArrowLeft size={14} />
@@ -149,7 +149,7 @@ function ImageBlock({ value, onChange }) {
                   <UploadCloud size={32} className="text-[var(--color-muted-foreground)]" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">Upload</span>
                   {/* Status Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5 backdrop-blur-[1px]">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5 dark:bg-slate-950/20 backdrop-blur-[1px]">
                     <span className="bg-[var(--color-card)] text-[var(--color-foreground)] text-[8px] font-black px-2 py-0.5 rounded shadow-sm border border-[var(--color-border)] uppercase tracking-tighter">Disabled</span>
                   </div>
               </div>
@@ -158,7 +158,7 @@ function ImageBlock({ value, onChange }) {
                  <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-[var(--color-foreground)]">Google Drive Image URL</span>
-                      <span className="text-[10px] font-bold text-[var(--color-primary)] uppercase tracking-tight bg-[var(--color-primary)]/5 px-2 py-0.5 rounded-full">Active</span>
+                      <span className="text-[10px] font-bold text-[var(--color-primary)] uppercase tracking-tight bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">Cloud Active</span>
                     </div>
                     <div className="relative group/input">
                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[var(--color-muted-foreground)] group-focus-within/input:text-[var(--color-primary)] transition-colors">
@@ -171,10 +171,10 @@ function ImageBlock({ value, onChange }) {
                          onBlur={handleUrlBlur}
                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), applyUrl())}
                          placeholder="Paste Google Drive image link here..."
-                         className="w-full h-12 pl-10 pr-4 py-2.5 text-sm rounded-xl border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60 shadow-sm"
+                         className="w-full h-11 pl-10 pr-4 py-2 text-sm rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/40 shadow-sm"
                        />
                     </div>
-                    <p className="text-[10px] text-[var(--color-muted-foreground)] leading-relaxed italic">
+                    <p className="text-[10px] text-[var(--color-muted-foreground)] leading-relaxed italic opacity-70">
                       Paste your Google Drive link above. We'll automatically convert it into a direct stream for the catalog preview.
                     </p>
                  </div>
@@ -183,7 +183,7 @@ function ImageBlock({ value, onChange }) {
         )}
         {uploading && (
            <div className="absolute inset-0 bg-[var(--color-card)]/40 backdrop-blur-[1px] flex items-center justify-center z-10">
-              <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-full shadow-lg border border-[var(--color-border)]">
+              <div className="flex items-center gap-3 bg-[var(--color-card)] px-5 py-2.5 rounded-full shadow-lg border border-[var(--color-border)]">
                  <span className="w-4 h-4 rounded-full border-2 border-[var(--color-primary)] border-t-transparent animate-spin" />
                  <span className="text-xs font-bold text-[var(--color-foreground)] tracking-tight">Optimizing Image…</span>
               </div>
@@ -281,6 +281,7 @@ const getDraftKey = (id) => id ? `bloomerce_sku_edit_draft_${id}` : `bloomerce_s
 
 // ─── Main Form ────────────────────────────────────────────────────
 export default function SkuMasterForm({ initialData, statusOptions, onClose, onSaved }) {
+  const isEdit = Boolean(initialData?.id);
   const [form, setForm] = useState(() => {
     const draftKey = getDraftKey(initialData?.id);
     const savedDraft = localStorage.getItem(draftKey);
@@ -476,12 +477,21 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     return base;
   })());
 
-  const isDirty = Object.keys(EMPTY).some(k => {
-    let a = form[k], b = savedSnapshot.current[k];
-    a = (a === '' || a === null || a === undefined) ? null : String(a);
-    b = (b === '' || b === null || b === undefined) ? null : String(b);
-    return a !== b;
-  });
+  const isDirty = useMemo(() => {
+    return Object.keys(EMPTY).some(k => {
+      let a = form[k];
+      let b = savedSnapshot.current[k];
+      
+      // Normalize values for comparison
+      const normalize = (val) => {
+        if (val === '' || val === null || val === undefined) return null;
+        // Optimization: ensure numeric fields are compared strictly as strings to avoid scale issues (e.g. 499 vs 499.0)
+        return String(val).trim();
+      };
+      
+      return normalize(a) !== normalize(b);
+    });
+  }, [form]);
 
   const handleClose = () => {
     if (!isEdit) {
@@ -568,7 +578,6 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
   };
 
   const handleSubmit = (e) => { e.preventDefault(); saveForm(); };
-  const isEdit = Boolean(initialData?.id);
   const title = isEdit ? 'Edit Product' : 'Add New Product';
   const tabsWithErrors = getTabsWithErrors(errors);
 
@@ -598,14 +607,14 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                   <span>Save &amp; Close</span>
                 </Button>
                 {/* Option 2: Keep draft */}
-                <Button variant="outline" size="sm" onClick={handleKeepDraft} className="w-full justify-start gap-2 h-10">
+                <Button variant="outline" size="sm" onClick={handleKeepDraft} className="w-full justify-start gap-2 h-12">
                   <BookmarkCheck size={14} className="text-amber-500" />
-                  <span className="text-left leading-tight">Keep changes, close for now
-                    <span className="block text-[10px] text-[var(--color-muted-foreground)] font-normal">You can return to this product and continue editing</span>
+                  <span className="text-left leading-none">Keep changes, close for now
+                    <span className="block text-[10px] text-[var(--color-muted-foreground)] font-normal mt-1">You can return to this product later.</span>
                   </span>
                 </Button>
                 {/* Option 3: Discard */}
-                <Button variant="ghost" size="sm" onClick={handleDiscard} className="w-full justify-start gap-2 h-10 text-red-500 hover:text-red-600 hover:bg-red-50">
+                <Button variant="ghost" size="sm" onClick={handleDiscard} className="w-full justify-start gap-2 h-10 text-red-500 hover:text-red-600 hover:bg-red-500/10">
                   <Trash2 size={14} />
                   <span>Discard all changes</span>
                 </Button>
@@ -665,15 +674,15 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
 
         {/* ── Notes panel ─────────────────────────────────────── */}
         {notesOpen && (
-          <div className="px-5 py-3 bg-amber-50 border-b border-amber-200 flex-shrink-0">
-            <p className="text-[11px] font-semibold text-amber-700 mb-1.5 uppercase tracking-wide">Internal Notes</p>
+          <div className="px-5 py-3 bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 flex-shrink-0 animate-[fade-in_0.2s_ease]">
+            <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1.5 uppercase tracking-wider">Internal Operational Notes</p>
             <AutoTextarea
               name="remark"
               value={form.remark}
               onChange={handleChange}
               placeholder="QC flags, artwork status, launch remarks…"
               rows={2}
-              className="bg-white border-amber-200 focus:ring-amber-400/30 text-amber-900 placeholder:text-amber-400"
+              className="bg-[var(--color-card)] border-amber-500/20 focus:ring-amber-500/30 text-amber-900 dark:text-amber-100 placeholder:text-amber-500/40"
             />
           </div>
         )}

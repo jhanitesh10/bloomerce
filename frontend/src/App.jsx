@@ -124,7 +124,7 @@ function App() {
             )}
           </div>
           {isMobile && (
-            <button onClick={() => setIsMobileMenuOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+            <button onClick={() => setIsMobileMenuOpen(false)} className="p-1.5 rounded-lg hover:bg-[var(--color-sidebar-accent)] text-[var(--color-muted-foreground)]">
               <X size={18} />
             </button>
           )}

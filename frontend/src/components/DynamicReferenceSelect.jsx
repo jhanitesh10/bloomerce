@@ -23,6 +23,7 @@ export default function DynamicReferenceSelect({
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const triggerRef = useRef(null);
+  const portalRef = useRef(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
 
   useEffect(() => {
@@ -37,7 +38,10 @@ export default function DynamicReferenceSelect({
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      const isInsideTrigger = dropdownRef.current && dropdownRef.current.contains(event.target);
+      const isInsidePortal = portalRef.current && portalRef.current.contains(event.target);
+      
+      if (!isInsideTrigger && !isInsidePortal) {
         setIsOpen(false);
         if (onBlur) onBlur();
       }
@@ -46,16 +50,27 @@ export default function DynamicReferenceSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onBlur]);
 
-  // Update coordinates when opening
-  useEffect(() => {
-    if (isOpen && triggerRef.current) {
+  const updateCoords = () => {
+    if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setCoords({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
         width: rect.width
       });
     }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      window.addEventListener('scroll', updateCoords, true);
+      window.addEventListener('resize', updateCoords);
+    }
+    return () => {
+      window.removeEventListener('scroll', updateCoords, true);
+      window.removeEventListener('resize', updateCoords);
+    };
   }, [isOpen]);
 
   // Report initial label back to parent once options load, so Drive preview can populate
@@ -129,8 +144,9 @@ export default function DynamicReferenceSelect({
             : "rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm cursor-pointer hover:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-ring)] focus-within:border-transparent",
           className
         )}
-        onClick={(e) => {
+        onMouseDown={(e) => {
           e.stopPropagation();
+          e.preventDefault(); // Prevent focus on the trigger itself
           setIsOpen(!isOpen);
         }}
       >
@@ -143,13 +159,13 @@ export default function DynamicReferenceSelect({
       {/* Portal for Dropdown */}
       {isOpen && createPortal(
         <div 
-          className="fixed z-[9999] bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col animate-dropdown-enter"
+          ref={portalRef}
+          className="fixed z-[10000] bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col animate-dropdown-enter"
           style={{ 
-            top: coords.top, 
+            top: coords.top + 6, 
             left: coords.left, 
             width: Math.max(coords.width, 240),
-            maxWidth: '400px',
-            marginTop: '6px'
+            maxWidth: '400px'
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >

@@ -283,14 +283,23 @@ try:
 except Exception as e:
     print(f"Skipping local storage setup: {e}")
 
-# In production, you would typically list your specific Vercel/Netlify URLs here.
-# For a seamless first deployment, we allow all origins.
+# CORS Configuration
+# We explicitly list the frontend origin to support allow_credentials=True, 
+# which is often required for secure browser contexts and cross-origin persistence.
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "*" # Fallback for other dev environments
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 @app.post("/api/upload")

@@ -29,11 +29,11 @@ function StatusBadge({ label }) {
 
 // ── Base columns (always visible, rowSpan=2, pinned left) ─────────────────────
 const BASE_COLS = [
-  { id: 'actions',            label: '',         width: 44,  align: 'center', noInline: true, sticky: true, stickyLeft: 0 },
-  { id: 'primary_image_url',  label: 'Image',    width: 68,  align: 'center', noInline: true, sticky: true, stickyLeft: 44 },
-  { id: 'product_name',       label: 'Product',  width: 260, sortable: true,  sticky: true, stickyLeft: 112 },
-  { id: 'barcode',            label: 'SKU / EAN / Barcode ID',  width: 160, isMono: true,    sticky: true, stickyLeft: 372 },
-  { id: 'brand_reference_id', label: 'Brand',    width: 140, sortable: true,  sticky: true, stickyLeft: 532 },
+  { id: 'actions',            label: '',         width: 52,  align: 'center', noInline: true, sticky: true, stickyLeft: 0 },
+  { id: 'primary_image_url',  label: 'Image',    width: 76,  align: 'center', noInline: true, sticky: true, stickyLeft: 52 },
+  { id: 'product_name',       label: 'Product',  width: 260, sortable: true,  sticky: true, stickyLeft: 128 },
+  { id: 'barcode',            label: 'SKU / EAN / Barcode ID',  width: 160, isMono: true,    sticky: true, stickyLeft: 388 },
+  { id: 'brand_reference_id', label: 'Brand',    width: 140, sortable: true,  sticky: true, stickyLeft: 548 },
 ];
 
 const REMARKS_COL = { id: 'remark', label: 'Notes', width: 62, align: 'center', sticky: true, isRight: true };
@@ -97,12 +97,38 @@ const GROUPS = [
 ];
 
 // ── Group colour tokens ───────────────────────────────────────────────────────
+// ── Group colour tokens ───────────────────────────────────────────────────────
 const GC = {
-  violet:  { row1: 'bg-violet-50  text-violet-700  border-violet-200',  row2: 'bg-violet-50/70',  td: 'bg-violet-50/25',  pill: 'bg-violet-100 text-violet-700 hover:bg-violet-200'  },
-  emerald: { row1: 'bg-emerald-50 text-emerald-700 border-emerald-200', row2: 'bg-emerald-50/70', td: 'bg-emerald-50/25', pill: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
-  blue:    { row1: 'bg-blue-50    text-blue-700    border-blue-200',    row2: 'bg-blue-50/70',    td: 'bg-blue-50/25',    pill: 'bg-blue-100 text-blue-700 hover:bg-blue-200'    },
-  amber:   { row1: 'bg-amber-50   text-amber-700   border-amber-200',   row2: 'bg-amber-50/70',   td: 'bg-amber-50/25',   pill: 'bg-amber-100 text-amber-700 hover:bg-amber-200'   },
-  orange:  { row1: 'bg-orange-50  text-orange-700  border-orange-200',  row2: 'bg-orange-50/70',  td: 'bg-orange-50/25',  pill: 'bg-orange-100 text-orange-700 hover:bg-orange-200'  },
+  violet:  { 
+    row1: 'bg-[var(--color-primary)]/5  text-[var(--color-primary)]  border-[var(--color-primary)]/20',  
+    row2: 'bg-[var(--color-primary)]/[0.03]',  
+    td: 'bg-[var(--color-primary)]/[0.01]',  
+    pill: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20'  
+  },
+  emerald: { 
+    row1: 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20 dark:text-emerald-400', 
+    row2: 'bg-emerald-500/[0.03]', 
+    td: 'bg-emerald-500/[0.01]', 
+    pill: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20' 
+  },
+  blue:    { 
+    row1: 'bg-blue-500/5    text-blue-600    border-blue-500/20    dark:text-blue-400',    
+    row2: 'bg-blue-500/[0.03]',    
+    td: 'bg-blue-500/[0.01]',    
+    pill: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20'    
+  },
+  amber:   { 
+    row1: 'bg-amber-500/5   text-amber-600   border-amber-500/20   dark:text-amber-400',   
+    row2: 'bg-amber-500/[0.03]',   
+    td: 'bg-amber-500/[0.01]',   
+    pill: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'   
+  },
+  orange:  { 
+    row1: 'bg-orange-500/5  text-orange-600  border-orange-500/20  dark:text-orange-400',  
+    row2: 'bg-orange-500/[0.03]',  
+    td: 'bg-orange-500/[0.01]',  
+    pill: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20'  
+  },
 };
 
 // ── Skeleton Loaders ──────────────────────────────────────────────────────────
@@ -192,43 +218,43 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       {/* Backdrop for focus */}
       <div 
-        className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px] animate-in fade-in duration-200" 
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" 
         onClick={onClose}
       />
       
       <div
-        className="relative w-full max-w-[520px] bg-white rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.3)] border border-[var(--color-border)] overflow-hidden animate-[scale-in_0.2s_ease-out] text-left"
+        className="relative w-full max-w-[520px] bg-[var(--color-card)] rounded-3xl shadow-[0_30px_90px_var(--color-shadow)] border border-[var(--color-border)] overflow-hidden animate-[scale-in_0.2s_ease-out] text-left"
         onClick={e => e.stopPropagation()}
       >
-        <div className="bg-slate-50 px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+        <div className="bg-[var(--color-muted)]/50 px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
              <div className="w-2.5 h-2.5 bg-[var(--color-primary)] rounded-full animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
-             <span className="text-[12px] font-black uppercase tracking-[0.15em] text-slate-500">Edit SKU Remark</span>
+             <span className="text-[12px] font-black uppercase tracking-[0.15em] text-[var(--color-muted-foreground)]">Edit SKU Remark</span>
           </div>
           <div className="flex items-center gap-2">
             {val && (
               <button
                 onClick={() => setVal('')}
-                className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all flex items-center gap-1.5"
+                className="p-2 hover:bg-red-500/10 text-[var(--color-muted-foreground)] hover:text-red-500 rounded-full transition-all flex items-center gap-1.5"
                 title="Clear content"
               >
                 <Trash2 size={15} />
               </button>
             )}
-            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors group">
-              <X size={18} className="text-slate-400 group-hover:text-slate-600" />
+            <button onClick={onClose} className="p-2 hover:bg-[var(--color-muted)] rounded-full transition-colors group">
+              <X size={18} className="text-[var(--color-muted-foreground)] group-hover:text-[var(--color-foreground)]" />
             </button>
           </div>
         </div>
 
-        <div className="p-6 bg-white">
+        <div className="p-6 bg-[var(--color-card)]">
           <textarea
             autoFocus
             ref={textareaRef}
             value={val}
             onChange={e => handleChange(e.target.value)}
             placeholder="Add internal product remarks or operational notes here..."
-            className="w-full h-48 p-5 text-[14px] rounded-2xl border border-[var(--color-border)] bg-slate-50/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/5 focus:border-[var(--color-primary)] transition-all resize-none text-[var(--color-foreground)] leading-relaxed placeholder:opacity-40"
+            className="w-full h-48 p-5 text-[14px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 focus:bg-[var(--color-card)] focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/5 focus:border-[var(--color-primary)] transition-all resize-none text-[var(--color-foreground)] leading-relaxed placeholder:opacity-40"
             onKeyDown={e => {
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSave();
               if (e.key === 'Escape') onClose();
@@ -238,13 +264,13 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
           <div className="flex items-center justify-between mt-6">
              <button 
                 onClick={onClose}
-                className="text-[12px] font-bold text-slate-400 hover:text-slate-600 transition-colors px-2"
+                className="text-[12px] font-bold text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors px-2"
               >
                 Discard Changes
               </button>
             
             <div className="flex items-center gap-4">
-              <span className="text-[11px] text-slate-400 font-bold italic hidden sm:block opacity-60">
+              <span className="text-[11px] text-[var(--color-muted-foreground)] font-bold italic hidden sm:block opacity-60">
                 {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + Enter to Save
               </span>
               <Button
@@ -255,7 +281,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
                   "h-11 px-7 rounded-2xl font-black text-[12px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xl",
                   val !== (sku.remark || '')
                     ? "bg-[var(--color-primary)] text-white shadow-[var(--color-primary)]/30 scale-105 active:scale-95"
-                    : "bg-slate-100 text-slate-400 shadow-none cursor-default"
+                    : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)] shadow-none cursor-default"
                 )}
               >
                 {saving ? (
@@ -452,9 +478,10 @@ export default function MasterTab({ isMobile }) {
   }, []);
 
   const saveInlineEdit = useCallback(async (skuId, colId, value) => {
-    if (savingRef.current) return; savingRef.current = true;
-    const parsed = value === '' ? null : value;
-    setInlineEdit(null);
+    if (savingRef.current) return; 
+    
+    // Only clear if this specific cell is still the active editor
+    setInlineEdit(prev => (prev?.skuId === skuId && prev?.colId === colId) ? null : prev);
     if (parsed !== undefined) {
       setSkus(prev => prev.map(s => s.id === skuId ? { ...s, [colId]: parsed } : s));
       try { await skuApi.update(skuId, { [colId]: parsed }); }
@@ -801,33 +828,33 @@ export default function MasterTab({ isMobile }) {
   return (
     <div className="flex flex-col gap-5">
       {/* ── Top Header & Global Actions ── */}
-      <div className={cn("flex justify-between gap-4", isMobile ? "flex-col items-start" : "items-center")}>
-        <div>
+      <div className={cn("flex justify-between gap-4", isMobile ? "flex-col items-stretch" : "items-center")}>
+        <div className={cn(isMobile && "text-center")}>
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Products Master</h2>
           <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Click any cell to edit inline · Hover image to open full form</p>
         </div>
-        <div className={cn("flex flex-wrap items-center gap-2", isMobile ? "w-full" : "")}>
+        <div className={cn("flex flex-wrap items-center gap-2", isMobile ? "grid grid-cols-2" : "")}>
           <Button 
             variant="outline" 
             size="sm" 
-            className={cn("gap-1.5 h-[36px] font-semibold", isMobile && "w-full")} 
+            className={cn("gap-1.5 h-[36px] font-semibold", isMobile && "w-full text-[11px] px-2")} 
             onClick={()=>setIsImportOpen(true)}
           >
-            <Upload size={14}/> Import
+            <Upload size={13}/> Import
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className={cn("gap-1.5 h-[36px] bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm font-semibold", isMobile && "w-full")}
+            className={cn("gap-1.5 h-[36px] bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)] shadow-sm font-semibold", isMobile && "w-full text-[11px] px-2")}
             onClick={() => setIsExportCenterOpen(true)}
           >
-            <Download size={14} className="text-slate-400" /> Export
+            <Download size={13} className="text-[var(--color-muted-foreground)]" /> Export
             {selectedSkus.size > 0 && <span className="ml-0.5 bg-[var(--color-primary)] text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">{selectedSkus.size}</span>}
           </Button>
           {!isMobile && <Button size="sm" className="gap-1.5 ml-1 h-[36px] font-semibold" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={14}/> Add Product</Button>}
         </div>
         {isMobile && (
-          <Button size="sm" className="w-full gap-1.5 h-[38px] shadow-lg shadow-[var(--color-primary)]/20" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={16}/> Add New Product</Button>
+          <Button size="sm" className="w-full gap-1.5 h-[40px] shadow-lg shadow-[var(--color-primary)]/20 font-bold" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={16}/> Add New Product</Button>
         )}
       </div>
 
@@ -857,14 +884,14 @@ export default function MasterTab({ isMobile }) {
           {!isMobile && <div className="w-px h-6 bg-slate-200 mx-1" />}
 
           {/* Search */}
-          <div className={cn("flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 h-[32px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 transition-all bg-[var(--color-card)]", isMobile && "h-[38px]")}>
-            <Search size={14} className="text-slate-400" />
+          <div className={cn("flex items-center gap-1.5 border border-[var(--color-border)] rounded-lg px-2.5 h-[32px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 transition-all bg-[var(--color-card)]", isMobile && "h-[38px]")}>
+            <Search size={14} className="text-[var(--color-muted-foreground)]" />
             <input
               type="text"
               placeholder="Search product, SKU..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="bg-transparent text-xs w-full outline-none text-slate-700 placeholder:text-slate-400"
+              className="bg-transparent text-xs w-full outline-none text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)]/50"
             />
           </div>
 
@@ -997,7 +1024,7 @@ export default function MasterTab({ isMobile }) {
                 {/* ── Row 1: base cols (rowSpan=2) + group parent headers ── */}
                 <tr>
                   <th colSpan={BASE_COLS.length}
-                    className="px-3 pt-2 pb-1 text-center border-b border-b-transparent sticky z-30 bg-slate-100 shadow-[inset_-1px_0_0_var(--color-border)]"
+                    className="px-3 pt-2 pb-1 text-center border-b border-b-transparent sticky z-30 bg-[var(--color-muted)] shadow-[inset_-1px_0_0_var(--color-border)]"
                     style={{ left: 0, minWidth: BASE_COLS.reduce((sum, c) => sum + (c.width || 0), 0) }}>
                     <div className="flex items-center justify-center gap-2">
                        <span className="text-[11px] font-bold tracking-wider uppercase">Identity</span>
@@ -1034,7 +1061,7 @@ export default function MasterTab({ isMobile }) {
                 <tr>
                   {BASE_COLS.map((col) => (
                     <th key={col.id}
-                      className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
+                      className={cn("px-4 py-2.5 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)] bg-[var(--color-muted)]",
                         col.sticky && "sticky z-20 shadow-[inset_-1px_0_0_var(--color-border)]")}
                        style={{width:col.width, minWidth:col.width, textAlign:col.align||'left', left:col.sticky? col.stickyLeft :undefined}}>
                       <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
@@ -1051,7 +1078,7 @@ export default function MasterTab({ isMobile }) {
                     const gc        = GC[g.color];
                     return shownCols.map((col, idx) => (
                       <th key={col.id}
-                        className={cn("px-4 py-3 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)]",
+                        className={cn("px-4 py-2.5 text-left whitespace-nowrap select-none border-b-2 border-[var(--color-border)]",
                           idx===0 && "border-l border-[var(--color-border)]", gc.row2)}
                         style={{width:col.width, minWidth:col.width, textAlign:col.align||'left'}}>
                         <span onClick={()=>col.sortable&&handleSort(col.id)} className={cn("text-[10.5px] font-semibold tracking-wider uppercase text-[var(--color-muted-foreground)]/80", col.sortable&&"cursor-pointer hover:text-[var(--color-primary)] transition-colors")}>
@@ -1091,12 +1118,12 @@ export default function MasterTab({ isMobile }) {
                   <tr>
                     <td colSpan={visibleCols.length} className="py-24 text-center">
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
+                        <div className="w-12 h-12 rounded-2xl bg-[var(--color-muted)] flex items-center justify-center text-[var(--color-muted-foreground)]/30">
                           <Search size={24} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-900">No products found</p>
-                          <p className="text-xs text-slate-500 mt-1">Try adjusting your filters or search terms to find what you're looking for.</p>
+                          <p className="text-sm font-bold text-[var(--color-foreground)]">No products found</p>
+                          <p className="text-xs text-[var(--color-muted-foreground)] mt-1">Try adjusting your filters or search terms to find what you're looking for.</p>
                         </div>
                         <Button
                           variant="default"
@@ -1126,19 +1153,21 @@ export default function MasterTab({ isMobile }) {
                         const isRefField = !!REF_MAP[col.id];
                         return (
                           <td key={`${sku.id}-${col.id}`}
-                            onClick={isActive ? undefined : (e) => {
+                            tabIndex={-1}
+                            onMouseDown={isActive ? undefined : (e) => {
                               e.stopPropagation();
-                              e.preventDefault();
+                              e.currentTarget.focus();
                               setSelectedCell({skuId: sku.id, colId: col.id});
                               if (isRefField && canInline) {
                                 startInlineEdit(sku, col.id);
                                 setSelectedCell(null);
                               }
                             }}
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
                             onDoubleClick={(isActive || !canInline || isRefField) ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
                             className={cn(
-                              "transition-all relative group/cell",
-                              "border-b border-[var(--color-border)] px-4 py-3 cursor-default align-top",
+                              "transition-all relative group/cell outline-none",
+                              "border-b border-[var(--color-border)] px-4 py-2.5 cursor-default align-middle",
                               isActive && "z-20",
                               isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-30 after:absolute after:inset-0 after:bg-[var(--color-primary)]/10 after:pointer-events-none shadow-sm",
                                col.sticky && "sticky z-40 bg-[var(--color-card)]",
