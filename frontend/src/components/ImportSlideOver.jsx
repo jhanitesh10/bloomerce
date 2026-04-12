@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
-import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, XCircle, Search } from 'lucide-react';
+import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, XCircle, Search, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { skuApi, refApi } from '../api';
@@ -309,34 +309,55 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm animate-[fade-in_0.2s_ease]" onClick={() => !isImporting && onClose()} />
+      <div className="fixed inset-0 z-[90] bg-slate-950/40 backdrop-blur-sm animate-[fade-in_0.2s_ease]" onClick={() => !isImporting && onClose()} />
 
-      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
+      <div className="fixed inset-y-0 right-0 z-[100] flex flex-col w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
 
         <div className="flex flex-col border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
-          <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center justify-between px-5 py-3.5">
             <div className="flex items-center gap-3">
-              <button onClick={() => !isImporting && onClose()} disabled={isImporting} className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] transition-colors">
+              <button 
+                onClick={() => !isImporting && onClose()} 
+                disabled={isImporting} 
+                className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+                title="Close"
+              >
                 <X size={18} />
               </button>
               <div>
-                <h2 className="text-base font-semibold text-[var(--color-foreground)] leading-tight">Import SKU Data</h2>
+                <h2 className="text-sm sm:text-base font-semibold text-[var(--color-foreground)] leading-tight">Import SKU Data</h2>
                 <span className="text-[10px] text-[var(--color-muted-foreground)] hidden sm:inline">Upload CSV and map fields to your database</span>
               </div>
             </div>
 
             {(file || hasRestoredData) && !importStats && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={isImporting}>Start Over</Button>
-                <Button size="sm" onClick={executeImport} disabled={isImporting || !mappedSkuCode || activeMappingsCount===0} className="gap-1.5 h-9">
+              <div className="flex gap-1.5 sm:gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleReset} 
+                  disabled={isImporting}
+                  className="gap-1.5 px-2 sm:px-3 h-9"
+                >
+                  <RefreshCcw size={14} />
+                  <span className="hidden sm:inline">Start Over</span>
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={executeImport} 
+                  disabled={isImporting || !mappedSkuCode || activeMappingsCount===0} 
+                  className="gap-1.5 h-9 px-3 sm:px-5 shadow-lg shadow-[var(--color-primary)]/20 text-white"
+                >
                   {isImporting ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Save size={14}/>}
-                  {isImporting ? 'Importing' : <><span className="hidden sm:inline">Run Import</span><span className="sm:hidden">Import</span></>}
+                  {isImporting ? 'Importing' : <><span className="hidden sm:inline">Run Import</span><span className="sm:hidden text-xs">Import</span></>}
                 </Button>
               </div>
             )}
 
             {importStats && (
-              <Button size="sm" onClick={onClose} className="px-5">Close and View Data</Button>
+              <Button size="sm" onClick={onClose} className="ml-auto h-8 px-4 text-xs bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 font-bold uppercase tracking-wider">
+                Close Results
+              </Button>
             )}
           </div>
 

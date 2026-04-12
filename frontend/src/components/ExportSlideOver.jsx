@@ -143,23 +143,29 @@ export default function ExportSlideOver({ onClose, skus = [], filtered = [], pag
   const previewData = targetData.slice(0, 3);
 
   const content = (
-    <div className={cn("flex flex-col h-full", !isEmbedded && "fixed inset-y-0 right-0 z-50 w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]")}>
+    <div className={cn("flex flex-col h-full", !isEmbedded && "fixed inset-y-0 right-0 z-[100] w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]")}>
       {/* Header (Only if not embedded or as sub-header) */}
       <div className="flex flex-col border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 w-full">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {!isEmbedded && (
-              <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors">
+              <button 
+                onClick={onClose} 
+                className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors shrink-0"
+                title="Close"
+              >
                 <X size={18} />
               </button>
             )}
-            <div>
-              <h2 className="text-base font-semibold text-[var(--color-foreground)] leading-tight">Export Data Catalog</h2>
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-semibold text-[var(--color-foreground)] leading-tight truncate">Export Data Catalog</h2>
               <span className="text-[10px] text-[var(--color-muted-foreground)] hidden sm:inline">Select and map columns for your CSV download</span>
             </div>
           </div>
-          <Button onClick={handleExport} className="gap-2 shrink-0 h-9">
-            <Download size={14} /> <span className="hidden sm:inline">Download {targetData.length} SKUs Catalog</span><span className="sm:hidden">Export</span>
+          <Button onClick={handleExport} className="gap-2 shrink-0 h-9 px-3 sm:px-4 shadow-lg shadow-[var(--color-primary)]/20 text-white">
+            <Download size={14} /> 
+            <span className="hidden sm:inline">Download {targetData.length} SKUs</span>
+            <span className="sm:hidden font-bold text-[11px]">Download ({targetData.length})</span>
           </Button>
         </div>
       </div>
@@ -336,7 +342,7 @@ export default function ExportSlideOver({ onClose, skus = [], filtered = [], pag
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm animate-[fade-in_0.2s_ease]" onClick={onClose} />
+      <div className="fixed inset-0 z-[90] bg-slate-950/40 backdrop-blur-sm animate-[fade-in_0.2s_ease]" onClick={onClose} />
       {content}
     </>
   );

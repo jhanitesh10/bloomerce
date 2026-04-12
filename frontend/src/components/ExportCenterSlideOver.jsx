@@ -14,25 +14,32 @@ export default function ExportCenterSlideOver({ onClose, skus = [], filtered = [
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
+      <div className="fixed inset-0 z-[90] bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
       
-      <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-in slide-in-from-right duration-300">
+      <div className="fixed inset-y-0 right-0 z-[100] flex flex-col w-full md:max-w-2xl bg-[var(--color-background)] border-l border-[var(--color-border)] shadow-2xl animate-in slide-in-from-right duration-300">
         
         {/* Header */}
         <div className="flex flex-col bg-[var(--color-card)] border-b border-[var(--color-border)] shrink-0">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shadow-inner">
-                 <Share2 size={20} />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-[var(--color-foreground)] leading-tight">Export Center</h2>
-                <p className="text-[10px] text-[var(--color-muted-foreground)] font-bold uppercase tracking-widest">Manage Assets & Data</p>
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 w-full">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button 
+                onClick={onClose} 
+                className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors shrink-0"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shadow-inner shrink-0">
+                   <Share2 size={18} className="sm:size-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm sm:text-base font-bold text-[var(--color-foreground)] leading-tight">Export Center</h2>
+                  <p className="text-[9px] sm:text-[10px] text-[var(--color-muted-foreground)] font-bold uppercase tracking-widest hidden sm:block">Manage Assets & Data</p>
+                  <p className="text-[9px] text-[var(--color-muted-foreground)] font-bold uppercase tracking-widest sm:hidden">Assets & Data</p>
+                </div>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-[var(--color-muted)] rounded-full transition-colors text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
-              <X size={20} />
-            </button>
           </div>
 
           {/* Tabs */}

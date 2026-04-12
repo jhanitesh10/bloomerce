@@ -520,7 +520,15 @@ export default function MasterTab({ isMobile }) {
     return va < vb ? (sortDir === 'asc' ? -1 : 1) : va > vb ? (sortDir === 'asc' ? 1 : -1) : 0;
   }), [skus, search, statusFilter, filters, references, sortCol, sortDir]);
 
-  const selectedSkus = []; // Selected functionality removed for now
+  const [selectedSkus, setSelectedSkus] = useState(new Set());
+  const toggleSelected = useCallback((skuId) => {
+    setSelectedSkus(prev => {
+      const n = new Set(prev);
+      if (n.has(skuId)) n.delete(skuId);
+      else n.add(skuId);
+      return n;
+    });
+  }, []);
 
   const totalPages    = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated     = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -764,17 +772,25 @@ export default function MasterTab({ isMobile }) {
           <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Products Master</h2>
           <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Click any cell to edit inline · Hover image to open full form</p>
         </div>
-        <div className={cn("flex items-center gap-2", isMobile && "w-full justify-start")}>
-          <Button variant="outline" size="sm" className={cn("gap-1.5 h-[34px]", isMobile && "flex-1")} onClick={()=>setIsImportOpen(true)}><Upload size={14}/> Import</Button>
+        <div className={cn("flex flex-wrap items-center gap-2", isMobile ? "w-full" : "")}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={cn("gap-1.5 h-[36px] font-semibold", isMobile && "w-full")} 
+            onClick={()=>setIsImportOpen(true)}
+          >
+            <Upload size={14}/> Import
+          </Button>
           <Button
             variant="outline"
             size="sm"
-            className={cn("gap-1.5 h-[34px] bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm", isMobile && "flex-1")}
+            className={cn("gap-1.5 h-[36px] bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm font-semibold", isMobile && "w-full")}
             onClick={() => setIsExportCenterOpen(true)}
           >
             <Download size={14} className="text-slate-400" /> Export
+            {selectedSkus.size > 0 && <span className="ml-0.5 bg-[var(--color-primary)] text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">{selectedSkus.size}</span>}
           </Button>
-          {!isMobile && <Button size="sm" className="gap-1.5 ml-1 h-[34px]" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={14}/> Add Product</Button>}
+          {!isMobile && <Button size="sm" className="gap-1.5 ml-1 h-[36px] font-semibold" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={14}/> Add Product</Button>}
         </div>
         {isMobile && (
           <Button size="sm" className="w-full gap-1.5 h-[38px] shadow-lg shadow-[var(--color-primary)]/20" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={16}/> Add New Product</Button>
