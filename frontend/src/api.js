@@ -42,4 +42,9 @@ export const uploadApi = {
   }
 };
 
+export const salesApi = {
+  getAll: () => api.get('/sales').then(res => res.data),
+  bulkImport: (data) => api.post('/sales/bulk-import', data).then(res => res.data),
+};
+
 export default api;

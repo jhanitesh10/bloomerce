@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import MasterTab from './components/MasterTab';
+import SalesDashboard from './components/SalesDashboard';
 import {
   Layers,
   Package,
@@ -229,16 +230,7 @@ function App() {
               <Button className="mt-2" variant="secondary">Contact Support</Button>
             </div>
           )}
-          {activeTab === 'sales' && (
-            <div className="flex flex-col items-center justify-center flex-1 h-full max-w-2xl mx-auto text-center gap-4 py-12 px-6">
-              <div className="w-20 h-20 bg-[var(--color-muted)] rounded-3xl flex items-center justify-center text-[var(--color-muted-foreground)]">
-                <BarChart3 size={40} />
-              </div>
-              <h2 className="text-2xl font-bold text-[var(--color-foreground)] tracking-tight">Sales Analysis</h2>
-              <p className="text-[var(--color-muted-foreground)] text-sm">The analytics engine is being fine-tuned to provide deep insights into your business performance. Coming soon.</p>
-              <Button className="mt-2" variant="secondary">Request Early Access</Button>
-            </div>
-          )}
+          {activeTab === 'sales' && <SalesDashboard isMobile={isMobile} />}
         </div>
       </main>
     </div>
