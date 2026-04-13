@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Filter, ChevronDown, Search, Check, 
   ImageIcon, StickyNote, IndianRupee, Tag, 
@@ -30,7 +31,7 @@ export default function TopFilterBar({
   if (!filters) return null;
 
   return (
-    <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-3 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-3">
+    <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-3 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-3 z-[50]">
       
       {/* Row 1: Controls */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:overflow-visible sm:flex-wrap sm:pb-0 sm:mx-0 sm:px-0">
@@ -114,7 +115,7 @@ export default function TopFilterBar({
 
       {/* Row 2: Active Chips & Result Actions */}
       {isAnyFilterActive && (
-        <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border)]/50 animate-in fade-in slide-in-from-top-1 duration-300">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-3 border-t border-[var(--color-border)]/50 animate-in fade-in slide-in-from-top-1 duration-300 gap-3">
           
           {/* Left: Active Chips */}
           <div className="flex flex-wrap items-center gap-1.5 flex-1">
@@ -159,7 +160,7 @@ export default function TopFilterBar({
           </div>
 
           {/* Right: Results & Clear */}
-          <div className="flex items-center gap-3 pl-4 border-l border-[var(--color-border)]/50 ml-auto">
+          <div className="flex items-center justify-between sm:justify-end gap-3 sm:pl-4 sm:border-l border-[var(--color-border)]/50 sm:ml-auto w-full sm:w-auto pt-1 sm:pt-0">
             <div className="flex items-center gap-2 px-3 h-[34px] bg-[var(--color-muted)] border border-[var(--color-border)] rounded-xl shadow-sm">
                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-muted-foreground)]">Matches</span>
                <span className="text-sm font-bold text-[var(--color-primary)] tabular-nums">{matchCount}</span>
@@ -183,15 +184,47 @@ export default function TopFilterBar({
 function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, disabled }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  // Measure position when opening or when window changes
+  const updateCoords = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 8, // 8px margin
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      window.addEventListener('resize', updateCoords);
+      // Also update on any scroll in the app to keep it pinned
+      window.addEventListener('scroll', updateCoords, true);
+      return () => {
+        window.removeEventListener('resize', updateCoords);
+        window.removeEventListener('scroll', updateCoords, true);
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        // Also check if click is inside the portal content
+        const portalContent = document.getElementById(`portal-${label}`);
+        if (portalContent && portalContent.contains(e.target)) return;
+        setIsOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [label]);
 
   const filtered = useMemo(() => 
     options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
@@ -209,6 +242,7 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
   return (
     <div className="relative" ref={containerRef}>
       <button
+        ref={triggerRef}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
@@ -229,8 +263,17 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
         <ChevronDown size={14} className={cn("text-[var(--color-muted-foreground)] transition-transform", isOpen && "rotate-180")} />
       </button>
 
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-2xl z-[150] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
+      {isOpen && createPortal(
+        <div 
+          id={`portal-${label}`}
+          style={{ 
+            position: 'fixed', 
+            top: coords.top, 
+            left: coords.left,
+            minWidth: '240px'
+          }}
+          className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[9999] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top"
+        >
           <div className="p-3 bg-[var(--color-muted)] border-b border-[var(--color-border)] flex items-center gap-2">
             <Search size={14} className="text-[var(--color-muted-foreground)]" />
             <input 
@@ -271,7 +314,8 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
               Clear Selection
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

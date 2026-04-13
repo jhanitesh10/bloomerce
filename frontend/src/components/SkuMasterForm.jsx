@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DynamicReferenceSelect from './DynamicReferenceSelect';
 import { skuApi, uploadApi, refApi } from '../api';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, getDirectImageUrl } from '@/lib/utils';
 import {
   X, Save, UploadCloud, RefreshCw, Trash2, Link, ArrowLeft,
   Package, Tag, FileText, BarChart2, Layers, Info, StickyNote,
@@ -33,22 +33,6 @@ function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className 
     />
   );
 }
-
-// ─── Helper to resolve Google Drive links ────────────────────────
-const getDirectImageUrl = (url) => {
-  if (!url) return '';
-  // Support various Google Drive URL formats (view links, direct links, etc.)
-  // We look for the common /d/FILE_ID pattern or the ?id=FILE_ID pattern
-  const gdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
-                  url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
-                  url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                  
-  if (gdMatch && gdMatch[1]) {
-    // lh3.googleusercontent.com/d/ID is the most direct and reliable format for <img> tags
-    return `https://lh3.googleusercontent.com/d/${gdMatch[1]}`;
-  }
-  return url;
-};
 
 // ─── Image uploader with URL support ──────────────────────────────
 function ImageBlock({ value, onChange }) {

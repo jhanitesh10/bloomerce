@@ -17,7 +17,7 @@ import CopyButton from './CopyButton';
 import { skuApi, refApi } from '../api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, getDirectImageUrl } from '@/lib/utils';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const STATUS_VARIANTS = { active:'success', inactive:'destructive', draft:'draft', development:'development', 'in development':'development' };
@@ -640,11 +640,14 @@ export default function MasterTab({ isMobile }) {
           <SquarePen size={15} />
         </button>
       );
-      case 'primary_image_url': return (
-        <div className="w-10 h-10 mx-auto rounded-xl overflow-hidden border border-[var(--color-border)]">
-          {val ? <img src={val} alt="sku" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center bg-[var(--color-muted)]"><ImageIcon size={16} className="text-[var(--color-muted-foreground)]"/></div>}
-        </div>
-      );
+      case 'primary_image_url': {
+        const directUrl = getDirectImageUrl(val);
+        return (
+          <div className="w-10 h-10 mx-auto rounded-xl overflow-hidden border border-[var(--color-border)]">
+            {directUrl ? <img src={directUrl} alt="sku" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center bg-[var(--color-muted)]"><ImageIcon size={16} className="text-[var(--color-muted-foreground)]"/></div>}
+          </div>
+        );
+      }
       case 'barcode': {
         const barcodeVal = sku.sku_code || sku.barcode || '';
         return (
