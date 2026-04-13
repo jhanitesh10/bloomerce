@@ -443,14 +443,10 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       const updatedUrl = res.catalog_url;
       set('catalog_url', updatedUrl);
       setShowDrivePreview(false);
+      
+      // We no longer auto-save and close the form here.
+      // This allows the user to continue editing other fields before clicking the main "Save" button.
 
-      if (initialData?.id) {
-        // Auto-save if editing existing product - USING preparePayload to avoid 422 errors
-        console.log("Drive Flow: Auto-saving edited SKU", initialData.id);
-        const payload = preparePayload({ ...form, catalog_url: updatedUrl });
-        await skuApi.update(initialData.id, payload);
-        if (onSaved) onSaved();
-      }
     } catch (err) {
       console.error("Drive Flow Error (Create):", err);
       const msg = err.response?.data?.detail || err.message || "Unknown error";
