@@ -469,20 +469,34 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
         # 3. Create missing references (Auto-create logic)
         for ref_type, labels in unique_refs.items():
             for l in labels:
-                if (ref_type, l.lower()) not in ref_map:
-                    slug = re.sub(r'[^a-z0-9]+', '_', l.lower()).strip('_')
+                if not l: continue
+                clean_l = l.strip()
+                if (ref_type, clean_l.lower()) not in ref_map:
+                    slug = re.sub(r'[^a-z0-9]+', '_', clean_l.lower()).strip('_')
                     unique_suffix = uuid.uuid4().hex[:6]
                     new_key = f"{ref_type.lower()}_{slug}_{unique_suffix}"
                     
-                    new_ref = models.ReferenceData(
-                        reference_data_type=ref_type,
-                        label=l,
-                        key=new_key,
-                        is_active=True
-                    )
-                    db.add(new_ref)
-                    db.flush()
-                    ref_map[(ref_type, l.lower())] = new_ref.id
+                    try:
+                        new_ref = models.ReferenceData(
+                            reference_data_type=ref_type,
+                            label=clean_l,
+                            key=new_key,
+                            is_active=True
+                        )
+                        db.add(new_ref)
+                        db.flush()
+                        ref_map[(ref_type, clean_l.lower())] = new_ref.id
+                    except Exception as e:
+                        db.rollback()
+                        logger.warning(f"Failed to auto-create reference {ref_type}:{clean_l}: {e}")
+                        # If creation failed, maybe it was created by another worker; try fetching again
+                        existing_after_fail = db.query(models.ReferenceData).filter(
+                            models.ReferenceData.reference_data_type == ref_type,
+                            func.lower(models.ReferenceData.label) == clean_l.lower(),
+                            models.ReferenceData.deleted_at == None
+                        ).first()
+                        if existing_after_fail:
+                            ref_map[(ref_type, clean_l.lower())] = existing_after_fail.id
 
         # 4. Batch resolve existing SKUs by sku_code
         incoming_sku_codes = [s.sku_code for s in data.skus if s.sku_code]

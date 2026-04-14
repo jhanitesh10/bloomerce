@@ -198,6 +198,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
              return lowerH === fId.toLowerCase() || 
                     lowerH === label || 
                     lowerH === fId.toLowerCase().replace(/_reference_id|_label/g, "") ||
+                    lowerH === fId.toLowerCase().replace(/_reference_id/g, "_label") ||
                     lowerH === label.replace(/\s+/g, "_");
           });
           initialMapping[fId] = match || "";
@@ -262,50 +263,50 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   const mappedSkuCode = mappings['sku_code'];
 
-  // Helper to get or create a reference ID from a label
-  const resolveReference = async (type, label, parentId = null, workingRefs = []) => {
-    if (!label || !label.trim()) return null;
-    const cleanLabel = label.trim();
-    
-    // 1. Check workingRefs (which includes preloaded + dynamic creations)
-    const existing = workingRefs.find(r => r.label.toLowerCase() === cleanLabel.toLowerCase() && (parentId ? Number(r.parent_reference_id) === Number(parentId) : true));
-    if (existing) return existing.id;
-
-    // 2. Create if not found
-    try {
-      const newRef = await refApi.create({
-        reference_data_type: type,
-        label: cleanLabel,
-        key: `${type.toLowerCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        parent_reference_id: parentId
-      });
-      // Update working memory instantly
-      workingRefs.push(newRef);
-      return newRef.id;
-    } catch (err) {
-      console.error(`Failed to create reference ${type}:${cleanLabel}`, err);
-      return null;
-    }
-  };
-
   const executeImport = async () => {
-    if(!mappedSkuCode) return alert("You must map a column to 'SKU Code' because it is mandatory.");
+    // Check if 'sku_code' or 'barcode' is mapped
+    if (!mappings['sku_code'] && !mappings['barcode']) {
+      return alert("You must map a column to 'SKU Code' or 'Barcode' because it is mandatory.");
+    }
 
     setIsImporting(true);
+    setImportProgress(0);
+    setImportStats(null);
+    setImportErrors([]);
+
     let success = 0;
-    let skipped = 0;
     let failed = 0;
+    let skipped = 0;
     let errorsCollected = [];
     const BATCH_SIZE = 50;
 
-    // Use a mutable working copy to cache new creations across batches
-    const workingRefs = { ...refLists };
+    // Label mapping helper for backend
+    const mapToLabelFields = (backendRow) => {
+      const labelMap = {
+        brand_reference_id: 'brand_label',
+        category_reference_id: 'category_label',
+        sub_category_reference_id: 'sub_category_label',
+        status_reference_id: 'status_label',
+        net_quantity_unit_reference_id: 'net_quantity_unit_label',
+        size_reference_id: 'size_label',
+        color: 'color_label',
+        bundle_type: 'bundle_type_label',
+        pack_type: 'pack_type_label'
+      };
+      
+      const payload = { ...backendRow };
+      Object.entries(labelMap).forEach(([oldK, newK]) => {
+        if (payload[oldK] !== undefined && payload[oldK] !== null) {
+          payload[newK] = payload[oldK];
+          delete payload[oldK];
+        }
+      });
+      return payload;
+    };
 
     for (let i = 0; i < csvData.length; i += BATCH_SIZE) {
       const end = Math.min(i + BATCH_SIZE, csvData.length);
       const batchNum = i / BATCH_SIZE + 1;
-      setProgressStatus(`Processing batch ${batchNum}...`);
-
       const chunk = csvData.slice(i, end);
       const batchPayload = [];
 
@@ -322,15 +323,12 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         }
 
         const backendRow = { ...mappedRow };
-
-        // Sanitize numeric fields
-        const numericAndIdFields = [
+        const numericFields = [
           'mrp', 'purchase_cost', 'package_weight', 'raw_product_weight',
-          'net_quantity', 'tax_percent',
-          'brand_reference_id', 'category_reference_id', 'sub_category_reference_id',
-          'status_reference_id', 'net_quantity_unit_reference_id', 'size_reference_id'
+          'net_quantity', 'tax_percent'
         ];
-        numericAndIdFields.forEach(k => {
+        
+        numericFields.forEach(k => {
           const raw = backendRow[k];
           if (raw === "" || raw === undefined || raw === null) {
             backendRow[k] = null;
@@ -342,48 +340,12 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
         if (!backendRow.product_name) backendRow.product_name = backendRow.sku_code;
         
-        batchPayload.push(backendRow);
+        // Convert reference IDs to labels so backend handles resolution
+        batchPayload.push(mapToLabelFields(backendRow));
       });
 
       if (batchPayload.length > 0) {
         try {
-          // 1. Resolve all references for this batch
-          setProgressStatus(`Batch ${batchNum}: Resolving references...`);
-          for (const row of batchPayload) {
-            // Priority 1: Simple References
-            if (row.brand_reference_id) { 
-              row.brand_reference_id = await resolveReference('BRAND', row.brand_reference_id, null, workingRefs.BRAND);
-            }
-            if (row.category_reference_id) { 
-              row.category_reference_id = await resolveReference('CATEGORY', row.category_reference_id, null, workingRefs.CATEGORY);
-            }
-            if (row.status_reference_id) { 
-              row.status_reference_id = await resolveReference('STATUS', row.status_reference_id, null, workingRefs.STATUS);
-            }
-            if (row.color) {
-              const colorId = await resolveReference('COLOR', row.color, null, workingRefs.COLOR);
-              const resolvedColor = workingRefs.COLOR.find(r => r.id === colorId);
-              // Color is stored as a string label in the DB/Schema, not an ID
-              row.color = resolvedColor ? resolvedColor.label : row.color;
-            }
-            if (row.net_quantity_unit_reference_id) {
-              row.net_quantity_unit_reference_id = await resolveReference('NET_QUANTITY_UNIT', row.net_quantity_unit_reference_id, null, workingRefs.NET_QUANTITY_UNIT);
-            }
-            if (row.size_reference_id) {
-              row.size_reference_id = await resolveReference('SIZE', row.size_reference_id, null, workingRefs.SIZE);
-            }
-
-            // Priority 2: Sub-category (Depends on Category ID)
-            if (row.sub_category_reference_id) {
-              row.sub_category_reference_id = await resolveReference('SUB_CATEGORY', row.sub_category_reference_id, row.category_reference_id, workingRefs.SUB_CATEGORY);
-            }
-
-            // Other labels that backend might handle directly as strings/labels still
-            if (row.bundle_type) { row.bundle_type_label = row.bundle_type; delete row.bundle_type; }
-            if (row.pack_type) { row.pack_type_label = row.pack_type; delete row.pack_type; }
-          }
-
-          // 2. Execute Bulk Import
           setProgressStatus(`Batch ${batchNum}: Importing SKUs...`);
           const result = await skuApi.bulkImport({ skus: batchPayload });
           
