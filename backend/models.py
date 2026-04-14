@@ -59,9 +59,9 @@ class SkuMaster(Base):
     package_size = Column(String(100), nullable=True)
     package_weight = Column(Float, nullable=True)
     raw_product_weight = Column(Float, nullable=True)
-    finished_product_weight = Column(Float, nullable=True)
-    net_content_value = Column(Float, nullable=True)
-    net_content_unit = Column(String(50), nullable=True)
+    net_quantity = Column(Float, nullable=True)
+    net_quantity_unit_reference_id = Column(Integer, ForeignKey('reference_data.id'), nullable=True)
+    size_reference_id = Column(Integer, ForeignKey('reference_data.id'), nullable=True)
 
     # Meta
     metadata_json = Column(JSON, nullable=True)
@@ -76,7 +76,7 @@ class SkuMaster(Base):
     # Audit
     createdAt = Column(DateTime, default=datetime.datetime.utcnow)
     created_by_id = Column(Integer, nullable=True)
-    udpatedAt = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updatedAt = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     updated_by_id = Column(Integer, nullable=True)
     deletedAt = Column(DateTime, nullable=True)
     deleted_by_id = Column(Integer, nullable=True)

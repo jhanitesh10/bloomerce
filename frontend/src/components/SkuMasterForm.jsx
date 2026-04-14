@@ -223,7 +223,7 @@ const TAB_FIELDS = {
   identity:       ['product_name', 'sku_code', 'brand_reference_id', 'product_component_group_code', 'primary_image_url'],
   content:        ['description', 'key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords', 'catalog_url'],
   classification: ['category_reference_id', 'sub_category_reference_id', 'status_reference_id'],
-  pricing:        ['mrp', 'purchase_cost', 'net_content_value', 'net_content_unit', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'],
+  pricing:        ['mrp', 'purchase_cost', 'net_quantity', 'net_quantity_unit_reference_id', 'size_reference_id', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'],
   bundling:       ['bundle_type', 'pack_type'],
   tax:            ['tax_rule_code', 'tax_percent'],
 };
@@ -246,7 +246,8 @@ const EMPTY = {
   category_reference_id: null, sub_category_reference_id: null, status_reference_id: null,
   mrp: '', purchase_cost: '', color: '', raw_product_size: '', package_size: '',
   package_weight: '', raw_product_weight: '', finished_product_weight: '',
-  net_content_value: '', net_content_unit: '', bundle_type: null, pack_type: null,
+  net_quantity: '', net_quantity_unit_reference_id: null, size_reference_id: null,
+  bundle_type: null, pack_type: null,
   tax_rule_code: '', tax_percent: '',
 };
 
@@ -391,10 +392,12 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
   const preparePayload = (formData) => {
     const payload = { ...formData };
     ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight',
-      'finished_product_weight', 'net_content_value', 'tax_percent'].forEach(k => {
+      'net_quantity', 'tax_percent'].forEach(k => {
       // Convert empty strings to null so Pydantic validation (float) passes
       payload[k] = payload[k] === '' ? null : Number(payload[k]) || null;
     });
+    // Remove derived/legacy fields from payload
+    delete payload.finished_product_weight;
     // Force SKU and Barcode to be identical as per user instructions
     payload.barcode = payload.sku_code;
     return payload;
@@ -517,7 +520,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       if (name === 'package_weight' || name === 'raw_product_weight') {
         const pWeight = parseFloat(next.package_weight) || 0;
         const rWeight = parseFloat(next.raw_product_weight) || 0;
-        next.finished_product_weight = (pWeight > 0 || rWeight > 0) ? Number((pWeight + rWeight).toFixed(3)).toString() : '';
+        next.finished_product_weight = (pWeight > 0 || rWeight > 0) ? Math.round(pWeight + rWeight).toString() : '';
       }
       return next;
     });
@@ -968,15 +971,19 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                     </Field>
                   </FieldRow>
                   <FieldRow>
-                    <Field label="Net Content Value">
-                      <input type="number" name="net_content_value" value={form.net_content_value} onChange={handleChange}
+                    <Field label="Net Quantity">
+                      <input type="number" name="net_quantity" value={form.net_quantity} onChange={handleChange}
                         className={inputCls(false)} placeholder="100" min="0" step="0.01" />
                     </Field>
-                    <Field label="Net Content Unit">
-                      <input type="text" name="net_content_unit" value={form.net_content_unit} onChange={handleChange}
-                        className={inputCls(false)} placeholder="ml / g / pcs" />
+                    <Field label="Net Quantity Unit">
+                       <DynamicReferenceSelect label="" referenceType="NET_QUANTITY_UNIT" value={form.net_quantity_unit_reference_id}
+                        onChange={(v) => set('net_quantity_unit_reference_id', v)} placeholder="ml / g / pcs…" />
                     </Field>
                   </FieldRow>
+                  <Field label="Size Specification">
+                    <DynamicReferenceSelect label="" referenceType="SIZE" value={form.size_reference_id}
+                      onChange={(v) => set('size_reference_id', v)} placeholder="Standard / Large / Custom Size…" />
+                  </Field>
                   <FieldRow>
                     <Field label="Color / Shade">
                       <input type="text" name="color" value={form.color} onChange={handleChange}
@@ -1003,8 +1010,8 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                         className={inputCls(false)} placeholder="100" min="0" step="0.01" />
                     </Field>
                     <Field label="Finished Product Weight (g)" hint="Auto-calculated (Raw + Package)">
-                      <input type="number" name="finished_product_weight" value={form.finished_product_weight} onChange={handleChange}
-                        className={inputCls(false)} placeholder="125" min="0" step="0.01" />
+                      <input type="number" name="finished_product_weight" value={form.finished_product_weight} readOnly
+                        className={cn(inputCls(false), "bg-[var(--color-muted)]/50 cursor-not-allowed font-semibold")} placeholder="125" min="0" step="0.01" />
                     </Field>
                   </FieldRow>
                 </>

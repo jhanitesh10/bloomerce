@@ -11,7 +11,9 @@ const REF_MAP = {
   'sub_category_reference_id': 'SUB_CATEGORY',
   'status_reference_id': 'STATUS',
   'bundle_type': 'BUNDLE_TYPE',
-  'pack_type': 'PACK_TYPE'
+  'pack_type': 'PACK_TYPE',
+  'net_quantity_unit_reference_id': 'NET_QUANTITY_UNIT',
+  'size_reference_id': 'SIZE'
 };
 
 /**
@@ -172,19 +174,34 @@ export default function InlineCellEditor({
 
   // ── 3. STANDARD TEXT / NUMBER ───────────────────────────────────────────────
   return (
-    <div className="w-full h-full relative" ref={containerRef}>
+    <div className="w-full h-full relative flex flex-col group/editor animate-editor-in" ref={containerRef}>
+      <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] -m-1 rounded-md border border-[var(--color-primary)]/30 shadow-sm pointer-events-none" />
+      
       <input
         type={col.isNum ? 'number' : 'text'}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => {
-          // Robust saving on blur, but we rely on saveInlineEdit's 
-          // conditional clearing to avoid focus theft.
           onSave(value === '' ? null : value);
         }}
         onKeyDown={handleKey}
-        className={cn(baseOuter, typography)}
+        autoFocus
+        className={cn(
+          "w-full h-full relative z-10 bg-white px-2 rounded border border-[var(--color-primary)]/40 focus:border-[var(--color-primary)] outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] focus:ring-4 focus:ring-[var(--color-primary)]/10",
+          typography
+        )}
       />
+
+      {/* Keyboard Shortcut Hint (Desktop only) */}
+      <div className="absolute top-full left-0 mt-1.5 hidden group-focus-within/editor:flex flex-row items-center gap-2 px-2 py-1 bg-slate-800 text-white rounded-md text-[10px] font-bold z-[100] shadow-xl whitespace-nowrap animate-in fade-in slide-in-from-top-1">
+        <span className="flex items-center gap-1 opacity-80">
+          <kbd className="bg-slate-700 px-1 rounded">Enter</kbd> to save
+        </span>
+        <div className="w-px h-2 bg-white/20" />
+        <span className="flex items-center gap-1 opacity-80">
+          <kbd className="bg-slate-700 px-1 rounded">Esc</kbd> to cancel
+        </span>
+      </div>
     </div>
   );
 }

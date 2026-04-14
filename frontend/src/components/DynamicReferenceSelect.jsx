@@ -37,7 +37,7 @@ export default function DynamicReferenceSelect({
   const lastReportedLabel = useRef(null);
 
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleClickOutside = (event) => {
       const isInsideTrigger = dropdownRef.current && dropdownRef.current.contains(event.target);
       const isInsidePortal = portalRef.current && portalRef.current.contains(event.target);
       
@@ -45,9 +45,17 @@ export default function DynamicReferenceSelect({
         setIsOpen(false);
         if (onBlur) onBlur();
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    };
+
+    // Use a small delay to ensure the opening click isn't caught by this listener
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [onBlur]);
 
   const updateCoords = () => {
@@ -144,9 +152,7 @@ export default function DynamicReferenceSelect({
             : "rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm cursor-pointer hover:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-ring)] focus-within:border-transparent",
           className
         )}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          e.preventDefault(); // Prevent focus on the trigger itself
+        onMouseDown={() => {
           setIsOpen(!isOpen);
         }}
       >

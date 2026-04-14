@@ -1,34 +1,45 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
-import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, XCircle, Search, RefreshCcw } from 'lucide-react';
+import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, XCircle, Search, RefreshCcw, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { skuApi, refApi } from '../api';
+import EmptyState from './EmptyState';
 
 const FIELD_LABELS = {
-  product_name: "Product Name", sku_code: "SKU / EAN / Barcode ID*", barcode: "SKU / EAN / Barcode ID", brand_reference_id: "Brand",
+  product_name: "Product Name", sku_code: "SKU / EAN / Barcode ID*", barcode: "Barcode ID", brand_reference_id: "Brand",
   product_component_group_code: "Component Group Code", primary_image_url: "Image URL",
   description: "Description", key_feature: "Key Features", key_ingredients: "Key Ingredients",
   ingredients: "Ingredients", how_to_use: "How To Use", product_care: "Product Care",
   caution: "Caution", seo_keywords: "SEO Keywords", catalog_url: "Catalog URL",
   category_reference_id: "Category", sub_category_reference_id: "Sub-Category", status_reference_id: "Product Status",
-  mrp: "MRP", purchase_cost: "Purchase Cost", net_content_value: "Net Content Value",
-  net_content_unit: "Net Content Unit", color: "Color", raw_product_size: "Raw Product Size",
+  mrp: "MRP", purchase_cost: "Purchase Cost", net_quantity: "Net Quantity",
+  net_quantity_unit_reference_id: "Net Qty Unit", size_reference_id: "Size Spec",
+  color: "Color", raw_product_size: "Raw Product Size",
   package_size: "Package Size", package_weight: "Package Wt (g)", raw_product_weight: "Raw Product Wt",
-  finished_product_weight: "Finished Product Wt",
+  finished_product_weight: "Fin Wt (calculated)",
   bundle_type: "Bundle Type", pack_type: "Pack Type", tax_rule_code: "Tax Rule Code (HSN)", tax_percent: "Tax Percent",
   product_type: "Product Type", remark: "Remark", metadata_json: "Metadata (JSON)",
   live_platform_reference_id: "Live Platforms"
 };
 
-const SYSTEM_FIELDS = Object.entries(FIELD_LABELS).map(([k, v]) => ({ id: k, label: v }));
+const GROUPS = [
+  { id: 'identity', label: 'Identity', fields: ['product_name', 'sku_code', 'barcode', 'brand_reference_id', 'product_component_group_code', 'primary_image_url'] },
+  { id: 'classification', label: 'Classification', fields: ['status_reference_id', 'category_reference_id', 'sub_category_reference_id'] },
+  { id: 'pricing', label: 'Pricing & Specs', fields: ['mrp', 'purchase_cost', 'net_quantity', 'net_quantity_unit_reference_id', 'size_reference_id', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'] },
+  { id: 'content', label: 'Content', fields: ['description', 'key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords', 'catalog_url'] },
+  { id: 'bundling', label: 'Product & Bundle', fields: ['bundle_type', 'pack_type'] },
+  { id: 'tax', label: 'Tax & Compliance', fields: ['tax_rule_code', 'tax_percent'] }
+];
 
-function CustomFieldSelect({ currentVal, onChange, options, disabledOptions }) {
+const ALL_FIELD_IDS = GROUPS.flatMap(g => g.fields);
+
+function CsvHeaderSelect({ currentVal, onChange, headers }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClick = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
         setIsOpen(false);
@@ -38,62 +49,62 @@ function CustomFieldSelect({ currentVal, onChange, options, disabledOptions }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const selectedOpt = options.find(o => o.id === currentVal);
-  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+  const filtered = headers.filter(h => h.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
       <div
         onClick={() => { setIsOpen(!isOpen); setSearch(''); }}
         className={cn(
-          "w-full bg-white border rounded px-2.5 py-1.5 text-xs focus:outline-none transition-colors cursor-pointer flex justify-between items-center",
+          "w-full bg-white border rounded-lg px-3 py-2 text-sm focus:outline-none transition-all cursor-pointer flex justify-between items-center shadow-sm",
           currentVal ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-foreground)]" : "border-[var(--color-border)] text-[var(--color-muted-foreground)]"
         )}
       >
-        <span className="truncate">{selectedOpt ? selectedOpt.label : "-- Skip Column --"}</span>
+        <span className="truncate">{currentVal || "-- Skip Field --"}</span>
         <ChevronRight size={14} className={cn("transition-transform text-[var(--color-muted-foreground)]", isOpen && "rotate-90")} />
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-[var(--color-card)] border border-[var(--color-border)] shadow-lg rounded-md overflow-hidden">
-          <div className="p-1.5 border-b border-[var(--color-border)] flex items-center gap-1.5">
-            <Search size={12} className="text-[var(--color-muted-foreground)]" />
+        <div className="absolute z-50 top-full mt-1 w-full bg-[var(--color-card)] border border-[var(--color-border)] shadow-xl rounded-xl overflow-hidden animate-[fade-in_0.1s_ease]">
+          <div className="p-2 border-b border-[var(--color-border)] flex items-center gap-2">
+            <Search size={14} className="text-[var(--color-muted-foreground)]" />
             <input
               autoFocus
               type="text"
-              placeholder="Search field..."
+              placeholder="Search CSV column..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="bg-transparent border-none outline-none text-xs w-full text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)]"
+              className="bg-transparent border-none outline-none text-sm w-full text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)]"
             />
           </div>
-          <div className="max-h-48 overflow-y-auto p-1">
+          <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
             <div
               onClick={() => { onChange(""); setIsOpen(false); }}
-              className="px-2 py-1.5 text-xs text-[var(--color-muted-foreground)] cursor-pointer hover:bg-[var(--color-muted)] rounded transition-colors"
+              className="px-3 py-2 text-sm text-[var(--color-muted-foreground)] cursor-pointer hover:bg-[var(--color-muted)] rounded-lg transition-colors flex items-center gap-2"
             >
-              -- Skip Column --
+              <XCircle size={14} /> -- Skip Field --
             </div>
-            {filtered.map(sf => {
-              const isDisabled = disabledOptions.includes(sf.id) && currentVal !== sf.id;
-              return (
-                <div
-                  key={sf.id}
-                  onClick={() => {
-                    if(isDisabled) return;
-                    onChange(sf.id);
-                    setIsOpen(false);
-                  }}
-                  className={cn(
-                    "px-2 py-1.5 text-xs rounded transition-colors",
-                    isDisabled ? "opacity-40 cursor-not-allowed text-[var(--color-muted-foreground)]" : "cursor-pointer hover:bg-[var(--color-muted)] text-[var(--color-foreground)]",
-                    currentVal === sf.id && "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium"
-                  )}
-                >
-                  {sf.label}
-                </div>
-              );
-            })}
+            {filtered.map(h => (
+              <div
+                key={h}
+                onClick={() => {
+                  onChange(h);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer hover:bg-[var(--color-muted)] text-[var(--color-foreground)] flex items-center gap-2",
+                  currentVal === h && "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium"
+                )}
+              >
+                <div className={cn("w-1.5 h-1.5 rounded-full", currentVal === h ? "bg-[var(--color-primary)]" : "bg-transparent")} />
+                {h}
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <div className="p-4 text-center text-xs text-[var(--color-muted-foreground)] italic">
+                No matching columns found
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -123,7 +134,16 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   const [mappings, setMappings] = useState(() => {
     try {
       const saved = localStorage.getItem('bloomerce_import_mappings');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Safety check: Ensure keys are platform field IDs, not legacy CSV headers
+        const firstKey = Object.keys(parsed)[0];
+        if (firstKey && !FIELD_LABELS[firstKey]) {
+          console.warn("Legacy mappings detected, resetting...");
+          return {};
+        }
+        return parsed;
+      }
     } catch(e) {}
     return {};
   });
@@ -131,8 +151,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [progressStatus, setProgressStatus] = useState("");
-  const [importStats, setImportStats] = useState(null); // { success, skipped, failed, total }
+  const [importStats, setImportStats] = useState(null);
   const [importErrors, setImportErrors] = useState([]);
+  const [expandedGroups, setExpandedGroups] = useState(new Set(['identity']));
 
   const fileRef = useRef(null);
 
@@ -170,14 +191,16 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         setCsvData(results.data);
 
         const initialMapping = {};
-        headers.forEach(h => {
-          const lowerH = h.toLowerCase().trim();
-          const match = SYSTEM_FIELDS.find(sf =>
-            sf.id.toLowerCase() === lowerH ||
-            sf.label.split('*')[0].toLowerCase() === lowerH ||
-            sf.id === lowerH.replace(/\s+/g, '_')
-          );
-          initialMapping[h] = match ? match.id : "";
+        ALL_FIELD_IDS.forEach(fId => {
+          const label = FIELD_LABELS[fId].toLowerCase().replace("*", "").trim();
+          const match = headers.find(h => {
+             const lowerH = h.toLowerCase().trim();
+             return lowerH === fId.toLowerCase() || 
+                    lowerH === label || 
+                    lowerH === fId.toLowerCase().replace(/_reference_id|_label/g, "") ||
+                    lowerH === label.replace(/\s+/g, "_");
+          });
+          initialMapping[fId] = match || "";
         });
         setMappings(initialMapping);
       }
@@ -202,17 +225,42 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   };
 
   const activeMappingsCount = Object.values(mappings).filter(Boolean).length;
-  const mappedSkuCode = Object.values(mappings).includes('sku_code');
+
+  const toggleGroup = (id) => {
+    setExpandedGroups(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  const autoMapGroup = (groupFields) => {
+    const newMappings = { ...mappings };
+    groupFields.forEach(fId => {
+      const label = FIELD_LABELS[fId].toLowerCase().replace("*", "").trim();
+      const match = csvHeaders.find(h => {
+        const lowerH = h.toLowerCase().trim();
+        return lowerH === fId.toLowerCase() || 
+               lowerH === label || 
+               lowerH === fId.toLowerCase().replace(/_reference_id|_label/g, "") ||
+               lowerH === label.replace(/\s+/g, "_");
+      });
+      if (match) newMappings[fId] = match;
+    });
+    setMappings(newMappings);
+  };
 
   const getMappedRow = (rawRow) => {
     const newRow = {};
-    Object.entries(mappings).forEach(([csvH, sysF]) => {
-      if(sysF && rawRow[csvH] !== undefined) {
-         newRow[sysF] = rawRow[csvH];
+    Object.entries(mappings).forEach(([fId, csvH]) => {
+      if(csvH && rawRow[csvH] !== undefined) {
+         newRow[fId] = rawRow[csvH];
       }
     });
     return newRow;
   };
+
+  const mappedSkuCode = mappings['sku_code'];
 
   const executeImport = async () => {
     if(!mappedSkuCode) return alert("You must map a column to 'SKU Code' because it is mandatory.");
@@ -250,16 +298,16 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         if (backendRow.pack_type) { backendRow.pack_type_label = backendRow.pack_type; delete backendRow.pack_type; }
 
         const numericAndIdFields = [
-          'brand_reference_id', 'category_reference_id', 'sub_category_reference_id', 'status_reference_id',
-          'mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'finished_product_weight',
-          'net_content_value', 'tax_percent'
+          'brand_reference_id', 'category_reference_id', 'sub_category_reference_id', 'status_reference_id', 'net_quantity_unit_reference_id', 'size_reference_id',
+          'mrp', 'purchase_cost', 'package_weight', 'raw_product_weight',
+          'net_quantity', 'tax_percent'
         ];
 
         numericAndIdFields.forEach(k => {
           if (backendRow[k] === "") backendRow[k] = null;
         });
 
-        ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'finished_product_weight', 'net_content_value', 'tax_percent'].forEach(k => {
+        ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'net_quantity', 'tax_percent'].forEach(k => {
           if(backendRow[k]) {
              const num = Number(backendRow[k]);
              backendRow[k] = isNaN(num) ? null : num;
@@ -305,7 +353,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   const previewRows = useMemo(() => {
     return csvData.slice(0,3).map(r => getMappedRow(r));
   }, [csvData, mappings]);
-  const activeCols = Object.values(mappings).filter(Boolean);
+  const activeCols = Object.keys(mappings).filter(id => mappings[id]);
 
   return (
     <>
@@ -524,54 +572,79 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
           {(file || hasRestoredData) && !importStats && (
             <>
               <div className="px-5 sm:px-6 py-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-1">
-                  <h3 className="text-sm font-semibold">2. Map CSV Columns to System Fields</h3>
-                  <span className="text-[11px] sm:text-xs text-[var(--color-muted-foreground)]">{activeMappingsCount} of {csvHeaders.length} columns mapped</span>
-                </div>
+                <h3 className="text-sm font-semibold mb-3">2. Configure Fields & Map Headers</h3>
+                  <div className="border border-[var(--color-border)] rounded-xl bg-[var(--color-card)] overflow-hidden shadow-sm flex flex-col">
+                    <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-[var(--color-muted)] border-b border-[var(--color-border)] text-[11px] font-semibold tracking-wide uppercase text-[var(--color-muted-foreground)]">
+                      <div className="col-span-1 text-center">In</div>
+                      <div className="col-span-11">System Attribute & CSV Column Mapping</div>
+                    </div>
 
-                {!mappedSkuCode && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-medium mb-4">
-                    <AlertCircle size={14} className="flex-shrink-0"/>
-                    Mapping 'SKU Code' is required
-                  </div>
-                )}
-
-                <div className="border border-[var(--color-border)] rounded-xl bg-[var(--color-card)] overflow-hidden">
-                  <div className="hidden sm:grid grid-cols-12 gap-4 px-4 py-2 bg-[var(--color-muted)] border-b border-[var(--color-border)] text-[11px] font-semibold tracking-wide uppercase text-[var(--color-muted-foreground)]">
-                    <div className="col-span-6">CSV File Column</div>
-                    <div className="col-span-1 border-l border-r border-[var(--color-border)] flex justify-center"><ChevronRight size={14}/></div>
-                    <div className="col-span-5">Bloomerce System Field</div>
-                  </div>
-
-                  <div className="overflow-y-auto max-h-[450px]">
-                    {csvHeaders.map((header, idx) => {
-                      const currentVal = mappings[header] || "";
-                      return (
-                        <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-4 px-4 py-3 sm:py-2 hover:bg-[var(--color-muted)]/30 border-b border-[var(--color-border)] last:border-0 sm:items-center transition-colors">
-                          <div className="sm:col-span-6 flex items-center justify-between sm:block">
-                            <div className="text-xs text-[var(--color-foreground)] font-bold sm:font-medium truncate" title={header}>
-                              {header}
+                    <div className="overflow-y-auto max-h-[450px] no-scrollbar">
+                      {GROUPS.map(group => {
+                        const isExpanded = expandedGroups.has(group.id);
+                        const groupMappedCount = group.fields.filter(f => mappings[f]).length;
+                        const allMapped = groupMappedCount === group.fields.length;
+                        
+                        return (
+                          <div key={group.id} className="border-b border-[var(--color-border)] last:border-0">
+                            <div 
+                              className={cn(
+                                "flex items-center justify-between px-4 py-2.5 cursor-pointer bg-[var(--color-card)] hover:bg-[var(--color-muted)]/50 transition-colors",
+                              )}
+                              onClick={() => toggleGroup(group.id)}
+                            >
+                              <div className="flex items-center gap-3">
+                                {isExpanded ? <ChevronDown size={14} className="text-[var(--color-muted-foreground)]"/> : <ChevronRight size={14} className="text-[var(--color-muted-foreground)]"/>}
+                                <span className="text-sm font-medium">{group.label}</span>
+                                <span className="text-[10px] font-semibold bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-2 py-0.5 rounded-full">
+                                  {groupMappedCount} / {group.fields.length}
+                                </span>
+                              </div>
+                              <label className="flex items-center gap-2 text-xs" onClick={e => e.stopPropagation()}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={allMapped} 
+                                  onChange={() => autoMapGroup(group.fields)} 
+                                  className="w-3.5 h-3.5 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" 
+                                />
+                                <span className="text-[var(--color-muted-foreground)] uppercase tracking-wider text-[10px] font-bold">Auto-map</span>
+                              </label>
                             </div>
-                            <span className="sm:hidden text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase tracking-wider bg-[var(--color-muted)] px-1.5 py-0.5 rounded">CSV Column</span>
-                          </div>
 
-                          <div className="hidden sm:col-span-1 sm:flex justify-center text-[var(--color-muted-foreground)] opacity-50">
-                             <ChevronRight size={14}/>
+                            {isExpanded && (
+                              <div className="bg-[var(--color-background)]">
+                                {group.fields.map(fId => (
+                                  <div key={fId} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] items-center transition-colors">
+                                    <div className="col-span-1 flex items-center justify-center">
+                                      {mappings[fId] ? (
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                                      ) : fId === 'sku_code' ? (
+                                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Mandatory" />
+                                      ) : (
+                                        <div className="w-2 h-2 rounded-full bg-slate-200" />
+                                      )}
+                                    </div>
+                                    <div className="col-span-11 grid grid-cols-11 gap-4 items-center">
+                                      <div className="col-span-5 text-xs text-[var(--color-foreground)] font-medium truncate">
+                                        {FIELD_LABELS[fId]}
+                                      </div>
+                                      <div className="col-span-6">
+                                        <CsvHeaderSelect
+                                          currentVal={mappings[fId] || ""}
+                                          onChange={(val) => setMappings({ ...mappings, [fId]: val })}
+                                          headers={csvHeaders}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-
-                          <div className="sm:col-span-5 relative">
-                            <CustomFieldSelect
-                              currentVal={currentVal}
-                              onChange={(val) => setMappings({ ...mappings, [header]: val })}
-                              options={SYSTEM_FIELDS}
-                              disabledOptions={Object.values(mappings).filter(Boolean)}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
               </div>
 
               <div className="px-5 sm:px-6 py-6 pb-12 bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] shrink-0">
@@ -602,9 +675,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                             {activeCols.map((sysId, colIdx) => {
                               const val = row[sysId];
                               return (
-                                <td key={colIdx} className="px-3 py-2 text-[11px] whitespace-nowrap border-r border-[var(--color-border)] last:border-0 max-w-[150px] truncate text-[var(--color-foreground)]" title={val}>
-                                  {val !== undefined && val !== null && val !== "" ? val : <span className="opacity-40">—</span>}
-                                </td>
+<td key={colIdx} className="px-3 py-2 text-[11px] whitespace-nowrap border-r border-[var(--color-border)] last:border-0 max-w-[150px] truncate text-[var(--color-foreground)]" title={val}>
+  {val !== undefined && val !== null && val !== "" ? val : <EmptyState />}
+</td>
                               );
                             })}
                           </tr>

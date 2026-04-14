@@ -112,7 +112,7 @@ def seed_mock_data():
             brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[0].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[2].id],
             mrp=499.00, purchase_cost=148.00, color="Rose Pink",
-            raw_product_size="15x5x5 cm", package_weight=25.0, net_content_value=100.0, net_content_unit="ml",
+            raw_product_size="15x5x5 cm", package_weight=25.0, net_quantity=100.0,
             description="A gentle sulphate-free face wash with rose extract for a radiant glow.",
             key_ingredients="Rose Water, Aloe Vera, Vitamin E",
             how_to_use="Apply on wet face, massage gently, rinse.",
@@ -123,7 +123,7 @@ def seed_mock_data():
             product_name="Bloomerce Aloe Vera Soothing Gel", sku_code="BL-ALG-002", barcode="8901234567002",
             brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[1].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=299.00, purchase_cost=80.00, net_content_value=150.0, net_content_unit="ml",
+            mrp=299.00, purchase_cost=80.00, net_quantity=150.0,
             description="Pure aloe vera gel for deep hydration and skin soothing.",
             key_ingredients="Aloe Vera, Cucumber Extract, Hyaluronic Acid", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300&q=80",
@@ -132,7 +132,7 @@ def seed_mock_data():
             product_name="Bloomerce Charcoal Deep Cleanse Mask", sku_code="BL-CHM-003", barcode="8901234567003",
             brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[3].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id],
-            mrp=599.00, purchase_cost=195.00, net_content_value=100.0, net_content_unit="g",
+            mrp=599.00, purchase_cost=195.00, net_quantity=100.0,
             description="Activated charcoal mask for deep pore cleansing and blackhead removal.",
             key_ingredients="Activated Charcoal, Kaolin Clay, Tea Tree Oil", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=300&q=80",
@@ -141,7 +141,7 @@ def seed_mock_data():
             product_name="Bloomerce Vitamin C Night Serum", sku_code="BL-NSR-004", barcode="8901234567004",
             brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[2].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id, P[3].id],
-            mrp=899.00, purchase_cost=260.00, net_content_value=30.0, net_content_unit="ml",
+            mrp=899.00, purchase_cost=260.00, net_quantity=30.0,
             description="High potency Vitamin C serum for overnight brightening and anti-ageing.",
             key_ingredients="15% Vitamin C, Niacinamide, Hyaluronic Acid", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=300&q=80",
@@ -151,7 +151,7 @@ def seed_mock_data():
             brand_reference_id=B[0].id, category_reference_id=C[3].id, sub_category_reference_id=SC[7].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[2].id, P[3].id],
             mrp=199.00, purchase_cost=42.00, color="Clear",
-            net_content_value=4.0, net_content_unit="g",
+            net_quantity=4.0,
             description="SPF 50 lip balm with shea butter for long-lasting sun protection.",
             key_ingredients="Shea Butter, SPF 50, Vitamin E", tax_percent=12.0,
             primary_image_url="https://images.unsplash.com/photo-1586495777744-4e6232bf2b33?w=300&q=80",
@@ -160,7 +160,7 @@ def seed_mock_data():
             product_name="Glow Republic Hyaluronic Acid Toner", sku_code="GR-HAT-006", barcode="8901234567006",
             brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[1].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[2].id, P[3].id],
-            mrp=650.00, purchase_cost=180.00, net_content_value=200.0, net_content_unit="ml",
+            mrp=650.00, purchase_cost=180.00, net_quantity=200.0,
             description="Alcohol-free toner with hyaluronic acid for intense hydration.",
             key_ingredients="Hyaluronic Acid, Niacinamide, Rose Hip", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=300&q=80",
@@ -169,7 +169,7 @@ def seed_mock_data():
             product_name="Glow Republic Retinol Anti-Ageing Serum", sku_code="GR-RAS-007", barcode="8901234567007",
             brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[2].id,
             status_reference_id=S[1].id, live_platform_reference_id=[P[0].id],
-            mrp=1299.00, purchase_cost=380.00, net_content_value=30.0, net_content_unit="ml",
+            mrp=1299.00, purchase_cost=380.00, net_quantity=30.0,
             description="Encapsulated retinol serum for wrinkle reduction and cell renewal.",
             key_ingredients="0.5% Retinol, Ceramides, Peptides", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=300&q=80",
@@ -178,7 +178,7 @@ def seed_mock_data():
             product_name="Glow Republic Brightening Papaya Scrub", sku_code="GR-BPS-008", barcode="8901234567008",
             brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[3].id,
             status_reference_id=S[2].id, live_platform_reference_id=[],
-            mrp=349.00, purchase_cost=90.00, net_content_value=100.0, net_content_unit="g",
+            mrp=349.00, purchase_cost=90.00, net_quantity=100.0,
             description="Papaya enzyme scrub for gentle exfoliation and even skin tone.",
             key_ingredients="Papaya Extract, Walnut Shell Powder, Lactic Acid", tax_percent=18.0,
         ),
@@ -187,7 +187,7 @@ def seed_mock_data():
             brand_reference_id=B[2].id, category_reference_id=C[1].id, sub_category_reference_id=SC[4].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[2].id, P[3].id, P[4].id],
             mrp=449.00, purchase_cost=130.00, color="Amber",
-            net_content_value=250.0, net_content_unit="ml",
+            net_quantity=250.0,
             description="Sulphate-free shampoo with Moroccan argan oil for frizz-free shiny hair.",
             key_ingredients="Argan Oil, Keratin, Biotin", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1585751119414-ef2636f8aede?w=300&q=80",
@@ -196,7 +196,7 @@ def seed_mock_data():
             product_name="PureNatura Deep Repair Conditioner", sku_code="PN-DRC-010", barcode="8901234567010",
             brand_reference_id=B[2].id, category_reference_id=C[1].id, sub_category_reference_id=SC[5].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=399.00, purchase_cost=110.00, net_content_value=250.0, net_content_unit="ml",
+            mrp=399.00, purchase_cost=110.00, net_quantity=250.0,
             description="Intensive repair conditioner for dry, damaged, and colour-treated hair.",
             key_ingredients="Keratin Protein, Coconut Milk, Shea Butter", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1526045612212-70caf35c14df?w=300&q=80",
@@ -206,7 +206,7 @@ def seed_mock_data():
             brand_reference_id=B[2].id, category_reference_id=C[2].id, sub_category_reference_id=SC[6].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[3].id],
             mrp=349.00, purchase_cost=95.00, color="Lavender",
-            net_content_value=400.0, net_content_unit="ml",
+            net_quantity=400.0,
             description="Non-greasy moisturising body lotion with calming lavender oil.",
             key_ingredients="Lavender Oil, Shea Butter, Vitamin B5", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=300&q=80",
@@ -215,7 +215,7 @@ def seed_mock_data():
             product_name="Bloomerce Niacinamide 10% Serum", sku_code="BL-NIA-012", barcode="8901234567012",
             brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[2].id,
             status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=599.00, purchase_cost=155.00, net_content_value=30.0, net_content_unit="ml",
+            mrp=599.00, purchase_cost=155.00, net_quantity=30.0,
             description="10% Niacinamide + 1% Zinc serum for pore minimising and oil control.",
             key_ingredients="10% Niacinamide, 1% Zinc PCA", tax_percent=18.0,
             primary_image_url="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80",
@@ -224,7 +224,7 @@ def seed_mock_data():
             product_name="Glow Republic Sunscreen SPF 60 PA+++", sku_code="GR-SS6-013", barcode="8901234567013",
             brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[1].id,
             status_reference_id=S[1].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=499.00, purchase_cost=140.00, net_content_value=50.0, net_content_unit="ml",
+            mrp=499.00, purchase_cost=140.00, net_quantity=50.0,
             description="Lightweight, non-greasy sunscreen SPF 60 PA+++ broad spectrum protection.",
             key_ingredients="Zinc Oxide, Titanium Dioxide, Vitamin C", tax_percent=12.0,
         ),
@@ -232,7 +232,7 @@ def seed_mock_data():
             product_name="PureNatura Onion Hair Oil", sku_code="PN-OHO-014", barcode="8901234567014",
             brand_reference_id=B[2].id, category_reference_id=C[1].id, sub_category_reference_id=SC[4].id,
             status_reference_id=S[2].id, live_platform_reference_id=[],
-            mrp=299.00, purchase_cost=75.00, net_content_value=200.0, net_content_unit="ml",
+            mrp=299.00, purchase_cost=75.00, net_quantity=200.0,
             description="Cold-pressed onion seed oil for hair fall control and scalp nourishment.",
             key_ingredients="Onion Seed Oil, Castor Oil, Bhringraj",
             tax_percent=18.0, remark="Pending final label artwork approval",
@@ -242,7 +242,7 @@ def seed_mock_data():
             brand_reference_id=B[0].id, category_reference_id=C[3].id, sub_category_reference_id=SC[7].id,
             status_reference_id=S[2].id, live_platform_reference_id=[P[1].id, P[2].id],
             mrp=349.00, purchase_cost=88.00, color="Coral Red",
-            net_content_value=8.0, net_content_unit="ml",
+            net_quantity=8.0,
             description="Buildable, blendable tint for lips and cheeks with a dewy finish.",
             key_ingredients="Damask Rose Extract, Jojoba Oil, Vitamin E",
             tax_percent=12.0, remark="Launch batch — QC ongoing",
@@ -291,8 +291,7 @@ except Exception as e:
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "*" # Fallback for other dev environments
+    "http://localhost:3000"
 ]
 
 app.add_middleware(
@@ -438,7 +437,8 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
         # 1. Collect all unique labels to resolve
         unique_refs = {
             "BRAND": set(), "CATEGORY": set(), "SUB_CATEGORY": set(),
-            "STATUS": set(), "BUNDLE_TYPE": set(), "PACK_TYPE": set()
+            "STATUS": set(), "BUNDLE_TYPE": set(), "PACK_TYPE": set(),
+            "NET_QUANTITY_UNIT": set(), "SIZE": set()
         }
         
         for s in data.skus:
@@ -448,6 +448,8 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
             if s.status_label: unique_refs["STATUS"].add(safe_label(s.status_label))
             if s.bundle_type_label: unique_refs["BUNDLE_TYPE"].add(safe_label(s.bundle_type_label))
             if s.pack_type_label: unique_refs["PACK_TYPE"].add(safe_label(s.pack_type_label))
+            if s.net_quantity_unit_label: unique_refs["NET_QUANTITY_UNIT"].add(safe_label(s.net_quantity_unit_label))
+            if s.size_label: unique_refs["SIZE"].add(safe_label(s.size_label))
 
         # 2. Batch resolve existing references
         ref_map = {} # (type, label_lower) -> id
@@ -514,9 +516,12 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
                     
                     if s_data.bundle_type_label: payload["bundle_type"] = ref_map.get(("BUNDLE_TYPE", safe_label(s_data.bundle_type_label).lower()))
                     if s_data.pack_type_label: payload["pack_type"] = ref_map.get(("PACK_TYPE", safe_label(s_data.pack_type_label).lower()))
+                    
+                    if s_data.net_quantity_unit_label: payload["net_quantity_unit_reference_id"] = ref_map.get(("NET_QUANTITY_UNIT", safe_label(s_data.net_quantity_unit_label).lower()))
+                    if s_data.size_label: payload["size_reference_id"] = ref_map.get(("SIZE", safe_label(s_data.size_label).lower()))
 
                     # Remove local label fields
-                    for k in ["brand_label", "category_label", "sub_category_label", "status_label", "bundle_type_label", "pack_type_label"]:
+                    for k in ["brand_label", "category_label", "sub_category_label", "status_label", "bundle_type_label", "pack_type_label", "net_quantity_unit_label", "size_label"]:
                         if k in payload: del payload[k]
 
                     # CRITICAL: Sanitize empty strings to None to prevent DB syntax errors

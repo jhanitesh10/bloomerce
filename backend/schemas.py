@@ -55,9 +55,9 @@ class SkuMasterBase(BaseModel):
     package_size: Optional[str] = None
     package_weight: Optional[float] = None
     raw_product_weight: Optional[float] = None
-    finished_product_weight: Optional[float] = None
-    net_content_value: Optional[float] = None
-    net_content_unit: Optional[str] = None
+    net_quantity: Optional[float] = None
+    net_quantity_unit_reference_id: Optional[int] = None
+    size_reference_id: Optional[int] = None
 
     metadata_json: Optional[Union[Dict[str, Any], List[Any]]] = None
     remark: Optional[str] = None
@@ -77,7 +77,7 @@ class SkuMasterCreate(SkuMasterBase):
 class SkuMaster(SkuMasterBase):
     id: int
     createdAt: datetime
-    udpatedAt: datetime
+    updatedAt: datetime
     deletedAt: Optional[datetime] = None
     deleted_by_id: Optional[int] = None
 
@@ -108,6 +108,8 @@ class SkuImportRow(SkuMasterBase):
     status_label: Optional[str] = None
     bundle_type_label: Optional[str] = None
     pack_type_label: Optional[str] = None
+    net_quantity_unit_label: Optional[str] = None
+    size_label: Optional[str] = None
 
 class BulkImportRequest(BaseModel):
     skus: List[SkuImportRow]

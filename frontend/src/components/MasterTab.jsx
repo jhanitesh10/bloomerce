@@ -9,6 +9,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import SkuMasterForm from './SkuMasterForm';
 import InlineCellEditor from './InlineCellEditor';
+import EmptyState from './EmptyState';
 import ExportCenterSlideOver from './ExportCenterSlideOver';
 import ImportSlideOver from './ImportSlideOver';
 import TopFilterBar from './TopFilterBar';
@@ -54,13 +55,15 @@ const GROUPS = [
     cols: [
       { id: 'mrp',            label: 'MRP (₹)',  width: 100, align: 'right', sortable: true, isNum: true },
       { id: 'purchase_cost',  label: 'Cost (₹)', width: 100, align: 'right', isNum: true },
-      { id: 'net_content',           label: 'Net Content',  width: 120, align: 'right', noInline: true },
+      { id: 'net_quantity',          label: 'Net Qty',  width: 120, align: 'right' },
+      { id: 'net_quantity_unit_reference_id', label: 'Unit',  width: 100 },
+      { id: 'size_reference_id',     label: 'Size Spec',    width: 140 },
       { id: 'color',                 label: 'Color',        width: 110 },
       { id: 'raw_product_size',      label: 'Raw Size',     width: 110 },
       { id: 'package_size',          label: 'Pack Size',    width: 110 },
       { id: 'package_weight',        label: 'Pack Wt (g)',  width: 105, align: 'right' },
       { id: 'raw_product_weight',    label: 'Raw Wt (g)',   width: 105, align: 'right' },
-      { id: 'finished_product_weight', label: 'Fin Wt (g)', width: 105, align: 'right' },
+      { id: 'finished_product_weight', label: 'Fin Wt (g)', width: 105, align: 'right', noInline: true },
     ],
   },
   {
@@ -99,35 +102,35 @@ const GROUPS = [
 // ── Group colour tokens ───────────────────────────────────────────────────────
 // ── Group colour tokens ───────────────────────────────────────────────────────
 const GC = {
-  violet:  { 
-    row1: 'bg-[var(--color-primary)]/5  text-[var(--color-primary)]  border-[var(--color-primary)]/20',  
-    row2: 'bg-[var(--color-primary)]/[0.03]',  
-    td: 'bg-[var(--color-primary)]/[0.01]',  
-    pill: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20'  
+  violet:  {
+    row1: 'bg-[var(--color-primary)]/5  text-[var(--color-primary)]  border-[var(--color-primary)]/20',
+    row2: 'bg-[var(--color-primary)]/[0.03]',
+    td: 'bg-[var(--color-primary)]/[0.01]',
+    pill: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20'
   },
-  emerald: { 
-    row1: 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20 dark:text-emerald-400', 
-    row2: 'bg-emerald-500/[0.03]', 
-    td: 'bg-emerald-500/[0.01]', 
-    pill: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20' 
+  emerald: {
+    row1: 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20 dark:text-emerald-400',
+    row2: 'bg-emerald-500/[0.03]',
+    td: 'bg-emerald-500/[0.01]',
+    pill: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
   },
-  blue:    { 
-    row1: 'bg-blue-500/5    text-blue-600    border-blue-500/20    dark:text-blue-400',    
-    row2: 'bg-blue-500/[0.03]',    
-    td: 'bg-blue-500/[0.01]',    
-    pill: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20'    
+  blue:    {
+    row1: 'bg-blue-500/5    text-blue-600    border-blue-500/20    dark:text-blue-400',
+    row2: 'bg-blue-500/[0.03]',
+    td: 'bg-blue-500/[0.01]',
+    pill: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20'
   },
-  amber:   { 
-    row1: 'bg-amber-500/5   text-amber-600   border-amber-500/20   dark:text-amber-400',   
-    row2: 'bg-amber-500/[0.03]',   
-    td: 'bg-amber-500/[0.01]',   
-    pill: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'   
+  amber:   {
+    row1: 'bg-amber-500/5   text-amber-600   border-amber-500/20   dark:text-amber-400',
+    row2: 'bg-amber-500/[0.03]',
+    td: 'bg-amber-500/[0.01]',
+    pill: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
   },
-  orange:  { 
-    row1: 'bg-orange-500/5  text-orange-600  border-orange-500/20  dark:text-orange-400',  
-    row2: 'bg-orange-500/[0.03]',  
-    td: 'bg-orange-500/[0.01]',  
-    pill: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20'  
+  orange:  {
+    row1: 'bg-orange-500/5  text-orange-600  border-orange-500/20  dark:text-orange-400',
+    row2: 'bg-orange-500/[0.03]',
+    td: 'bg-orange-500/[0.01]',
+    pill: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20'
   },
 };
 
@@ -173,7 +176,9 @@ const REF_MAP    = {
   sub_category_reference_id: 'SUB_CATEGORY',
   status_reference_id: 'STATUS',
   bundle_type: 'BUNDLE_TYPE',
-  pack_type: 'PACK_TYPE'
+  pack_type: 'PACK_TYPE',
+  net_quantity_unit_reference_id: 'NET_QUANTITY_UNIT',
+  size_reference_id: 'SIZE'
 };
 const FILTER_TABS = [
   { key: 'all',               icon: LayoutGrid, label: (c, t) => `All (${t})` },
@@ -196,7 +201,7 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
        textareaRef.current.focus();
        textareaRef.current.setSelectionRange(val.length, val.length);
     }
-    onDraftChange(val); 
+    onDraftChange(val);
   }, []);
 
   const handleChange = (newVal) => {
@@ -217,11 +222,11 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
   return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       {/* Backdrop for focus */}
-      <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" 
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
       />
-      
+
       <div
         className="note-popover relative w-full max-w-[520px] bg-[var(--color-card)] rounded-3xl shadow-[0_30px_90px_var(--color-shadow)] border border-[var(--color-border)] overflow-hidden animate-[scale-in_0.2s_ease-out] text-left"
         onClick={e => e.stopPropagation()}
@@ -262,13 +267,13 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
           />
 
           <div className="flex items-center justify-between mt-6">
-             <button 
+             <button
                 onClick={onClose}
                 className="text-[12px] font-bold text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors px-2"
               >
                 Discard Changes
               </button>
-            
+
             <div className="flex items-center gap-4">
               <span className="text-[11px] text-[var(--color-muted-foreground)] font-bold italic hidden sm:block opacity-60">
                 {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + Enter to Save
@@ -361,8 +366,8 @@ function SkuCard({ sku, references, onEdit, onNote }) {
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function MasterTab({ isMobile }) {
   const [skus,           setSkus]           = useState([]);
-  const [references,     setReferences]     = useState({ BRAND:{}, CATEGORY:{}, STATUS:{}, SUB_CATEGORY:{}, BUNDLE_TYPE:{}, PACK_TYPE:{} });
-  const [refLists,       setRefLists]       = useState({ BRAND:[], CATEGORY:[], STATUS:[], SUB_CATEGORY:[], BUNDLE_TYPE:[], PACK_TYPE:[] });
+  const [references,     setReferences]     = useState({ BRAND:{}, CATEGORY:{}, STATUS:{}, SUB_CATEGORY:{}, BUNDLE_TYPE:{}, PACK_TYPE:{}, NET_QUANTITY_UNIT:{}, SIZE:{} });
+  const [refLists,       setRefLists]       = useState({ BRAND:[], CATEGORY:[], STATUS:[], SUB_CATEGORY:[], BUNDLE_TYPE:[], PACK_TYPE:[], NET_QUANTITY_UNIT:[], SIZE:[] });
   const [loading,        setLoading]        = useState(true);
   const [search,         setSearch]         = useState('');
   const [statusFilter,   setStatusFilter]   = useState('all');
@@ -439,13 +444,15 @@ export default function MasterTab({ isMobile }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [skuData, brands, cats, statuses, bundles, packs] = await Promise.all([
+      const [skuData, brands, cats, statuses, bundles, packs, nqUnits, sizes] = await Promise.all([
         skuApi.getAll(),
         refApi.getAll('BRAND'),
         refApi.getAll('CATEGORY'),
         refApi.getAll('STATUS'),
         refApi.getAll('BUNDLE_TYPE'),
-        refApi.getAll('PACK_TYPE')
+        refApi.getAll('PACK_TYPE'),
+        refApi.getAll('NET_QUANTITY_UNIT'),
+        refApi.getAll('SIZE')
       ]);
       let subcats = [];
       try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
@@ -457,7 +464,9 @@ export default function MasterTab({ isMobile }) {
         STATUS: toMap(statuses),
         SUB_CATEGORY: toMap(subcats),
         BUNDLE_TYPE: toMap(bundles),
-        PACK_TYPE: toMap(packs)
+        PACK_TYPE: toMap(packs),
+        NET_QUANTITY_UNIT: toMap(nqUnits),
+        SIZE: toMap(sizes)
       });
       setRefLists({
         BRAND: brands,
@@ -465,20 +474,22 @@ export default function MasterTab({ isMobile }) {
         STATUS: statuses,
         SUB_CATEGORY: subcats,
         BUNDLE_TYPE: bundles,
-        PACK_TYPE: packs
+        PACK_TYPE: packs,
+        NET_QUANTITY_UNIT: nqUnits,
+        SIZE: sizes
       });
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }, []);
 
   const saveInlineEdit = useCallback(async (skuId, colId, value) => {
-    if (savingRef.current) return; 
+    if (savingRef.current) return;
     savingRef.current = true;
     const parsed = value === '' ? null : value;
-    
+
     // Only clear if this specific cell is still the active editor
     setInlineEdit(prev => (prev?.skuId === skuId && prev?.colId === colId) ? null : prev);
-    
+
     if (parsed !== undefined) {
       setSkus(prev => prev.map(s => s.id === skuId ? { ...s, [colId]: parsed } : s));
       try { await skuApi.update(skuId, { [colId]: parsed }); }
@@ -610,6 +621,7 @@ export default function MasterTab({ isMobile }) {
     }
     setPage(1);
   }, [sortCol]);
+
   const statusCounts  = useMemo(() => skus.reduce((acc, s) => { const l = references.STATUS[s.status_reference_id]?.toLowerCase()||'unknown'; acc[l]=(acc[l]||0)+1; return acc; }, {}), [skus, references]);
   const pageNums      = Array.from({ length: totalPages }, (_, i) => i+1).filter(n => n===1||n===totalPages||Math.abs(n-page)<=1).reduce((acc,n,i,arr)=>{if(i>0&&n-arr[i-1]>1)acc.push('…');acc.push(n);return acc;},[]);
 
@@ -619,185 +631,204 @@ export default function MasterTab({ isMobile }) {
     return map;
   }, []);
 
-  // ── Cell renderer ───────────────────────────────────────────────────────────
-  const renderCell = (col, sku, openFullEdit) => {
-    if (inlineEdit?.skuId===sku.id && inlineEdit?.colId===col.id) {
+// ── Cell renderer ───────────────────────────────────────────────────────────
+const renderCell = (col, sku, openFullEdit) => {
+  const isEditing = inlineEdit?.skuId === sku.id && inlineEdit?.colId === col.id;
+  const isSelected = selectedCell?.skuId === sku.id && selectedCell?.colId === col.id;
+
+  if (isEditing) {
+    return (
+      <InlineCellEditor
+        col={col}
+        sku={sku}
+        initialValue={sku[col.id]}
+        refLists={refLists}
+        onSave={(val) => saveInlineEdit(sku.id, col.id, val)}
+        onCancel={cancelInlineEdit}
+      />
+    );
+  }
+  const val = sku[col.id];
+  switch (col.id) {
+    case 'actions': return (
+      <button onClick={openFullEdit} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] text-[var(--color-muted-foreground)] transition-all mx-auto focus:opacity-100" title="Edit Full Product">
+        <SquarePen size={15} />
+      </button>
+    );
+    case 'primary_image_url': {
+      const directUrl = getDirectImageUrl(val);
       return (
-        <InlineCellEditor
-          col={col}
-          sku={sku}
-          initialValue={sku[col.id]}
-          refLists={refLists}
-          onSave={(val) => saveInlineEdit(sku.id, col.id, val)}
-          onCancel={cancelInlineEdit}
-        />
+        <div className="w-10 h-10 mx-auto rounded-xl overflow-hidden border border-[var(--color-border)]">
+          {directUrl ? <img src={directUrl} alt="sku" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center bg-[var(--color-muted)]"><ImageIcon size={16} className="text-[var(--color-muted-foreground)]"/></div>}
+        </div>
       );
     }
-    const val = sku[col.id];
-    switch (col.id) {
-      case 'actions': return (
-        <button onClick={openFullEdit} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] text-[var(--color-muted-foreground)] transition-all mx-auto focus:opacity-100" title="Edit Full Product">
-          <SquarePen size={15} />
-        </button>
-      );
-      case 'primary_image_url': {
-        const directUrl = getDirectImageUrl(val);
-        return (
-          <div className="w-10 h-10 mx-auto rounded-xl overflow-hidden border border-[var(--color-border)]">
-            {directUrl ? <img src={directUrl} alt="sku" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center bg-[var(--color-muted)]"><ImageIcon size={16} className="text-[var(--color-muted-foreground)]"/></div>}
-          </div>
-        );
-      }
-      case 'barcode': {
-        const barcodeVal = sku.sku_code || sku.barcode || '';
-        return (
-          <div className="flex items-center justify-between gap-1 group/item">
-            <span className="font-mono text-xs font-semibold text-[var(--color-foreground)] truncate">
-              {barcodeVal}
-            </span>
-            {barcodeVal && (
-              <CopyButton 
-                value={barcodeVal} 
-                className="opacity-100 md:opacity-0 group-hover/item:opacity-100" 
-                title="Copy SKU/Barcode" 
-              />
-            )}
-          </div>
-        );
-      }
-      case 'product_name': return (
-        <div className="flex items-center justify-between gap-2 group/item min-w-0">
-          <div className="flex flex-col gap-1 min-w-0 flex-1">
-            <span className="font-medium text-[var(--color-foreground)]/85 text-[13.5px] leading-snug whitespace-normal break-words line-clamp-2" title={val}>
-              {val || <span className="text-[var(--color-muted-foreground)] font-normal italic text-[11px]">Unnamed Product</span>}
-            </span>
-          </div>
-          {val && (
-            <CopyButton 
-              value={val} 
-              className="opacity-100 md:opacity-0 group-hover/item:opacity-100 flex-shrink-0" 
-              title="Copy Product Name" 
+    case 'barcode': {
+      const barcodeVal = sku.sku_code || sku.barcode || '';
+      return (
+        <div className="flex items-center justify-between gap-1 group/item">
+          <span className="font-mono text-xs font-semibold text-[var(--color-foreground)] truncate">
+            {barcodeVal || <EmptyState isLine />}
+          </span>
+          {barcodeVal && (
+            <CopyButton
+              value={barcodeVal}
+              className="opacity-100 md:opacity-0 group-hover/item:opacity-100"
+              title="Copy SKU/Barcode"
             />
           )}
         </div>
       );
-      case 'status_reference_id': {
-        const lbl = references.STATUS[val];
-        return (
-          <div className="flex items-center justify-between gap-1 w-full group/ref bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg px-2 py-1 shadow-sm hover:border-[var(--color-primary)]/50 transition-all">
-            {lbl ? <StatusBadge label={lbl}/> : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>}
-            <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-70 group-hover/ref:text-[var(--color-primary)] transition-colors" />
-          </div>
-        );
-      }
-      case 'brand_reference_id': return (
-        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/20 border border-[var(--color-border)]/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
-          <span className="text-[13px] font-bold text-[var(--color-foreground)] truncate">{references.BRAND[val] || '—'}</span>
-          <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-70 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+    }
+    case 'product_name': return (
+      <div className="flex items-center justify-between gap-2 group/item min-w-0">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <span className="font-medium text-[var(--color-foreground)]/85 text-[13.5px] leading-snug whitespace-normal break-words line-clamp-2" title={val}>
+            {val || <span className="text-[var(--color-muted-foreground)] font-normal italic text-[11px]">Unnamed Product</span>}
+          </span>
+        </div>
+        {val && (
+          <CopyButton
+            value={val}
+            className="opacity-100 md:opacity-0 group-hover/item:opacity-100 flex-shrink-0"
+            title="Copy Product Name"
+          />
+        )}
+      </div>
+    );
+    case 'status_reference_id': {
+      const lbl = references.STATUS[val];
+      return (
+        <div className="flex items-center justify-between gap-1 w-full group/ref bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg px-2 py-1 shadow-sm hover:border-[var(--color-primary)]/50 transition-all">
+          {lbl ? <StatusBadge label={lbl}/> : <EmptyState isLine />}
+          <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-70 group-hover/ref:text-[var(--color-primary)] transition-colors" />
         </div>
       );
-      case 'category_reference_id': return (
-        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/10 border border-[var(--color-border)]/40 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
-          <span className="text-[13px] text-[var(--color-foreground)] truncate">{references.CATEGORY[val] || '—'}</span>
-          <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-60 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+    }
+    case 'brand_reference_id': return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/20 border border-[var(--color-border)]/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
+        <span className="text-[13px] font-bold text-[var(--color-foreground)] truncate">{references.BRAND[val] || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-70 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'category_reference_id': return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/10 border border-[var(--color-border)]/40 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
+        <span className="text-[13px] text-[var(--color-foreground)] truncate">{references.CATEGORY[val] || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-60 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'sub_category_reference_id': return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/10 border border-[var(--color-border)]/40 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
+        <span className="text-[13px] text-[var(--color-muted-foreground)] truncate">{references.SUB_CATEGORY[val] || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-60 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'bundle_type':               return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-amber-50/20 border border-amber-200/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-amber-400/50 hover:bg-white transition-all">
+        <span className="text-[13px] font-medium text-amber-900 truncate">{references.BUNDLE_TYPE[val] || val || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-amber-500/60 group-hover/ref:text-amber-600 transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'pack_type':                 return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-amber-50/10 border border-amber-200/30 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-amber-400/50 hover:bg-white transition-all">
+        <span className="text-[13px] text-amber-800/80 truncate">{references.PACK_TYPE[val] || val || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-amber-500/50 group-hover/ref:text-amber-600 transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'net_quantity_unit_reference_id': return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-emerald-50/20 border border-emerald-200/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-emerald-400/50 hover:bg-white transition-all">
+        <span className="text-[13px] font-medium text-emerald-900 truncate">{references.NET_QUANTITY_UNIT[val] || val || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-emerald-500/60 group-hover/ref:text-emerald-600 transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'size_reference_id': return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-emerald-50/10 border border-emerald-200/30 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-emerald-400/50 hover:bg-white transition-all">
+        <span className="text-[13px] text-emerald-800/80 truncate">{references.SIZE[val] || val || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-emerald-500/50 group-hover/ref:text-emerald-600 transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'finished_product_weight': {
+      const pWeight = parseFloat(sku.package_weight) || 0;
+      const rWeight = parseFloat(sku.raw_product_weight) || 0;
+      const total = (pWeight > 0 || rWeight > 0) ? Math.round(pWeight + rWeight) : null;
+      return total != null ? <span className="text-sm font-bold text-[var(--color-primary)] tabular-nums">{total}</span> : <EmptyState />;
+    }
+    case 'tax_percent':  return val != null ? <span className="text-sm text-[var(--color-muted-foreground)] opacity-70">{`${val}%`}</span> : <EmptyState />;
+    case 'catalog_url':  return val ? (
+      <div className="flex items-center justify-center gap-1 group/item">
+        <a
+          href={val}
+          target="_blank"
+          rel="noreferrer"
+          onClick={e=>e.stopPropagation()}
+          className="flex items-center justify-center p-1.5 rounded-lg hover:bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-all shadow-sm border border-[var(--color-primary)]/20"
+          title="Open in Google Drive"
+        >
+          <ExternalLink size={14} />
+        </a>
+        <CopyButton
+          value={val}
+          className="opacity-100 md:opacity-0 group-hover/item:opacity-100"
+          title="Copy Drive Link"
+        />
+      </div>
+    ) : <EmptyState />;
+    case 'createdAt': {
+      if (!val) return <EmptyState />;
+      const d = new Date(val);
+      return (
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">{d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          <span className="text-[10px] text-[var(--color-muted-foreground)] tabular-nums opacity-70 uppercase">{d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
         </div>
       );
-      case 'sub_category_reference_id': return (
-        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-[var(--color-muted)]/10 border border-[var(--color-border)]/40 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-card)] transition-all">
-          <span className="text-[13px] text-[var(--color-muted-foreground)] truncate">{references.SUB_CATEGORY[val] || '—'}</span>
-          <ChevronDown size={14} className="text-[var(--color-muted-foreground)] opacity-60 group-hover/ref:text-[var(--color-primary)] transition-colors flex-shrink-0" />
+    }
+
+    case 'remark': return (
+      <div className="flex items-center justify-center w-full h-full">
+        <button
+          onClick={(e) => { e.stopPropagation(); setActiveNoteSkuId(prev => prev === sku.id ? null : sku.id); }}
+          className={cn(
+            "note-trigger p-2 rounded-lg transition-all relative",
+            val ? "text-[var(--color-primary)] bg-[var(--color-primary)]/10" : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+          )}
+          title={val || "Add Note"}
+        >
+          <StickyNote size={15} fill={val ? "currentColor" : "none"} fillOpacity={0.2} />
+          {val && <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full border border-white" />}
+        </button>
+      </div>
+    );
+
+    default:
+      if (val==null||val==='') return <EmptyState />;
+      if (col.isNum)    return (
+        <div className="group/item flex items-center justify-end gap-1.5">
+          <span className="font-semibold text-sm tabular-nums text-[var(--color-foreground)]">₹{Number(val).toLocaleString('en-IN')}</span>
+          <CopyButton value={val} className="opacity-100 md:opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.labelValue || col.label}`} />
         </div>
       );
-      case 'bundle_type':               return (
-        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-amber-50/20 border border-amber-200/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-amber-400/50 hover:bg-white transition-all">
-          <span className="text-[13px] font-medium text-amber-900 truncate">{references.BUNDLE_TYPE[val] || val || '—'}</span>
-          <ChevronDown size={14} className="text-amber-500/60 group-hover/ref:text-amber-600 transition-colors flex-shrink-0" />
+      if (col.isMono)   return (
+        <div className="group/item flex items-center justify-between gap-1.5">
+          <span className="font-mono text-xs text-[var(--color-muted-foreground)] truncate">{val}</span>
+          <CopyButton value={val} className="opacity-100 md:opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.label}`} />
         </div>
       );
-      case 'pack_type':                 return (
-        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-amber-50/10 border border-amber-200/30 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-amber-400/50 hover:bg-white transition-all">
-          <span className="text-[13px] text-amber-800/80 truncate">{references.PACK_TYPE[val] || val || '—'}</span>
-          <ChevronDown size={14} className="text-amber-500/50 group-hover/ref:text-amber-600 transition-colors flex-shrink-0" />
-        </div>
-      );
-      case 'net_content':  return <span className="text-sm text-[var(--color-muted-foreground)]">{sku.net_content_value ? `${sku.net_content_value} ${sku.net_content_unit||''}` : '—'}</span>;
-      case 'tax_percent':  return <span className="text-sm text-[var(--color-muted-foreground)]">{val!=null ? `${val}%` : '—'}</span>;
-      case 'catalog_url':  return val ? (
-        <div className="flex items-center justify-center gap-1 group/item">
-          <a
-            href={val}
-            target="_blank"
-            rel="noreferrer"
-            onClick={e=>e.stopPropagation()}
-            className="flex items-center justify-center p-1.5 rounded-lg hover:bg-[var(--color-primary)]/10 text-[var(--color-primary)] transition-all shadow-sm border border-[var(--color-primary)]/20"
-            title="Open in Google Drive"
-          >
-            <ExternalLink size={14} />
-          </a>
-          <CopyButton 
-            value={val} 
-            className="opacity-100 md:opacity-0 group-hover/item:opacity-100" 
-            title="Copy Drive Link" 
+      if (col.isContent) return (
+        <div className="group/item relative max-w-full flex items-start justify-between gap-1">
+          <span className="text-[10.5px] text-[var(--color-muted-foreground)]/60 line-clamp-3 leading-relaxed cursor-help hover:text-[var(--color-foreground)] transition-colors flex-1" title={val}>
+            {val}
+          </span>
+          <CopyButton
+            value={val}
+            className="opacity-100 md:opacity-0 group-hover/item:opacity-100 flex-shrink-0"
+            title={`Copy ${col.label}`}
           />
         </div>
-      ) : <span className="text-xs text-[var(--color-muted-foreground)]">—</span>;
-      case 'createdAt': {
-        if (!val) return <span className="text-sm text-[var(--color-muted-foreground)]">—</span>;
-        const d = new Date(val);
-        return (
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">{d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-            <span className="text-[10px] text-[var(--color-muted-foreground)] tabular-nums opacity-70 uppercase">{d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-          </div>
-        );
-      }
-
-      case 'remark': return (
-        <div className="flex items-center justify-center w-full h-full">
-          <button
-            onClick={(e) => { e.stopPropagation(); setActiveNoteSkuId(prev => prev === sku.id ? null : sku.id); }}
-            className={cn(
-              "note-trigger p-2 rounded-lg transition-all relative",
-              val ? "text-[var(--color-primary)] bg-[var(--color-primary)]/10" : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-            )}
-            title={val || "Add Note"}
-          >
-            <StickyNote size={15} fill={val ? "currentColor" : "none"} fillOpacity={0.2} />
-            {val && <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full border border-white" />}
-          </button>
-        </div>
       );
-
-      default:
-
-        if (val==null||val==='') return <span className="text-sm text-[var(--color-muted-foreground)]">—</span>;
-        if (col.isNum)    return (
-          <div className="group/item flex items-center justify-end gap-1.5">
-            <span className="font-semibold text-sm tabular-nums">₹{Number(val).toLocaleString('en-IN')}</span>
-            <CopyButton value={val} className="opacity-100 md:opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.labelValue || col.label}`} />
-          </div>
-        );
-        if (col.isMono)   return (
-          <div className="group/item flex items-center justify-between gap-1.5">
-            <span className="font-mono text-xs text-[var(--color-muted-foreground)] truncate">{val}</span>
-            <CopyButton value={val} className="opacity-100 md:opacity-0 group-hover/item:opacity-100 h-6 w-6" iconSize={12} title={`Copy ${col.label}`} />
-          </div>
-        );
-        if (col.isContent) return (
-          <div className="group/item relative max-w-full flex items-start justify-between gap-1">
-            <span className="text-[10.5px] text-[var(--color-muted-foreground)]/60 line-clamp-3 leading-relaxed cursor-help hover:text-[var(--color-foreground)] transition-colors flex-1" title={val}>
-              {val}
-            </span>
-            <CopyButton 
-              value={val} 
-              className="opacity-100 md:opacity-0 group-hover/item:opacity-100 flex-shrink-0" 
-              title={`Copy ${col.label}`} 
-            />
-          </div>
-        );
-        return <span className="text-sm text-[var(--color-muted-foreground)]">{val}</span>;
-    }
-  };
+      return <span className={cn("text-sm transition-colors", isSelected ? "text-[var(--color-primary)] font-semibold" : "text-[var(--color-foreground)]")}>{val}</span>;
+  }
+};
 
 
   // Expand / Collapse All
@@ -819,10 +850,10 @@ export default function MasterTab({ isMobile }) {
           )}
         </div>
         <div className={cn("flex flex-wrap items-center gap-2", isMobile ? "grid grid-cols-2" : "")}>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={cn("gap-1.5 h-[36px] font-semibold transition-all", isMobile && "w-full text-[11px] px-2 h-[38px] active:scale-95")} 
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn("gap-1.5 h-[36px] font-semibold transition-all", isMobile && "w-full text-[11px] px-2 h-[38px] active:scale-95")}
             onClick={()=>setIsImportOpen(true)}
           >
             <Upload size={13}/> Import
@@ -1140,7 +1171,6 @@ export default function MasterTab({ isMobile }) {
                           <td key={`${sku.id}-${col.id}`}
                             tabIndex={-1}
                             onMouseDown={isActive ? undefined : (e) => {
-                              e.stopPropagation();
                               e.currentTarget.focus();
                               setSelectedCell({skuId: sku.id, colId: col.id});
                               if (isRefField && canInline) {
@@ -1148,21 +1178,21 @@ export default function MasterTab({ isMobile }) {
                                 setSelectedCell(null);
                               }
                             }}
-                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                            onClick={(e) => { e.preventDefault(); }}
                             onDoubleClick={(isActive || !canInline || isRefField) ? undefined : () => { startInlineEdit(sku, col.id); setSelectedCell(null); }}
                             className={cn(
-                              "transition-all relative group/cell outline-none",
+                              "transition-all relative group/cell outline-none animate-in fade-in duration-300",
                               "border-b border-[var(--color-border)] py-2.5 cursor-default align-middle",
                               (col.id === 'actions' || col.id === 'primary_image_url') ? "px-2" : "px-4",
                               isActive && "z-20",
-                              isSelected && "outline outline-2 outline-[var(--color-primary)] outline-offset-[-2px] z-30 after:absolute after:inset-0 after:bg-[var(--color-primary)]/10 after:pointer-events-none shadow-sm",
-                               col.sticky && "sticky z-40 bg-[var(--color-card)]",
+                              isSelected && "cell-active z-30 outline-none animate-focus-pulse",
+                              col.sticky && "sticky z-40 bg-[var(--color-card)]",
                                col.sticky && !col.isRight && "shadow-[inset_-1px_0_0_transparent] after:absolute after:inset-y-0 after:right-0 after:w-[1px] after:bg-[var(--color-border)]",
                               col.sticky && col.isRight && "right-0 shadow-[inset_1px_0_0_var(--color-border)]",
                               /* Ensure open popover is above everything */
                               isNoteActive && col.id === 'remark' && "z-[50] overflow-visible",
                               /* Ensure base columns have a right border when scrolling */
-                              col.sticky && !col.isRight && (col.id === 'barcode' ? "!shadow-[inset_-1px_0_0_var(--color-border)]" : ""),
+                              col.sticky && !col.isRight && (col.id === 'brand_reference_id' ? "!shadow-[inset_-1px_0_0_var(--color-border)]" : ""),
                               gc && !isActive && !isSelected && gc.td,
                               isFirstGroupCol && "border-l border-[var(--color-border)]",
                             )}
@@ -1246,7 +1276,7 @@ export default function MasterTab({ isMobile }) {
         />
       )}
       {isImportOpen && <ImportSlideOver skus={skus} refLists={refLists} onClose={()=>setIsImportOpen(false)} onImportComplete={()=>{setIsImportOpen(false);loadAll();}} />}
-      
+
       {/* Global Note Editor */}
       {activeNoteSkuId && (() => {
          const sku = skus.find(s => s.id === activeNoteSkuId);

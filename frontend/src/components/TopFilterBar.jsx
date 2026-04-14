@@ -187,6 +187,7 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
+  const portalRef = useRef(null);
 
   // Measure position when opening or when window changes
   const updateCoords = () => {
@@ -214,16 +215,24 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
   }, [isOpen]);
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        // Also check if click is inside the portal content
-        const portalContent = document.getElementById(`portal-${label}`);
-        if (portalContent && portalContent.contains(e.target)) return;
+    const handleClickOutside = (e) => {
+      const isInsideTrigger = containerRef.current && containerRef.current.contains(e.target);
+      const isInsidePortal = portalRef.current && portalRef.current.contains(e.target);
+      
+      if (!isInsideTrigger && !isInsidePortal) {
         setIsOpen(false);
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    };
+
+    // Delay attachment so the opening click bubbles through before we start listening
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [label]);
 
   const filtered = useMemo(() => 
@@ -265,7 +274,7 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
 
       {isOpen && createPortal(
         <div 
-          id={`portal-${label}`}
+          ref={portalRef}
           style={{ 
             position: 'fixed', 
             top: coords.top, 
