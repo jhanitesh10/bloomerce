@@ -326,7 +326,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         // Sanitize numeric fields
         const numericAndIdFields = [
           'mrp', 'purchase_cost', 'package_weight', 'raw_product_weight',
-          'net_quantity', 'tax_percent'
+          'net_quantity', 'tax_percent',
+          'brand_reference_id', 'category_reference_id', 'sub_category_reference_id',
+          'status_reference_id', 'net_quantity_unit_reference_id', 'size_reference_id'
         ];
         numericAndIdFields.forEach(k => {
           if (backendRow[k] === "" || backendRow[k] === undefined) {
@@ -358,7 +360,10 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
               row.status_reference_id = await resolveReference('STATUS', row.status_reference_id, null, workingRefs.STATUS);
             }
             if (row.color) {
-              row.color = await resolveReference('COLOR', row.color, null, workingRefs.COLOR);
+              const colorId = await resolveReference('COLOR', row.color, null, workingRefs.COLOR);
+              const resolvedColor = workingRefs.COLOR.find(r => r.id === colorId);
+              // Color is stored as a string label in the DB/Schema, not an ID
+              row.color = resolvedColor ? resolvedColor.label : row.color;
             }
             if (row.net_quantity_unit_reference_id) {
               row.net_quantity_unit_reference_id = await resolveReference('NET_QUANTITY_UNIT', row.net_quantity_unit_reference_id, null, workingRefs.NET_QUANTITY_UNIT);

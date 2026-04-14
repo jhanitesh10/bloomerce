@@ -232,7 +232,19 @@ export default function SalesImportSlideOver({ onClose, onSuccess }) {
       const orders = chunk.map(row => {
         const order = { platform_label: platform };
         Object.entries(mappings).forEach(([csvH, sysK]) => {
-          if (sysK && row[csvH] !== undefined) order[sysK] = row[csvH];
+          if (sysK && row[csvH] !== undefined) {
+             let val = row[csvH];
+             // Sanitize numeric fields: convert empty to null, otherwise parse as number
+             const numericFields = ['quantity', 'unit_selling_price', 'total_amount', 'tax_amount', 'platform_fee'];
+             if (numericFields.includes(sysK)) {
+                if (val === "" || val === undefined) val = null;
+                else {
+                  const num = Number(val);
+                  val = isNaN(num) ? null : num;
+                }
+             }
+             order[sysK] = val;
+          }
         });
         return order;
       });

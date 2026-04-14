@@ -489,7 +489,13 @@ export default function MasterTab({ isMobile }) {
   const saveInlineEdit = useCallback(async (skuId, colId, value) => {
     if (savingRef.current) return;
     savingRef.current = true;
-    const parsed = value === '' ? null : value;
+    let parsed = value === '' ? null : value;
+
+    // Special handling for color: resolve ID to label string if needed
+    if (colId === 'color' && parsed && typeof parsed === 'number') {
+      const colorLabel = references.COLOR[parsed];
+      if (colorLabel) parsed = colorLabel;
+    }
 
     // Only clear if this specific cell is still the active editor
     setInlineEdit(prev => (prev?.skuId === skuId && prev?.colId === colId) ? null : prev);
@@ -500,7 +506,7 @@ export default function MasterTab({ isMobile }) {
       catch (err) { console.error('Save failed:', err); loadAll(); }
     }
     savingRef.current = false;
-  }, [loadAll]);
+  }, [loadAll, references.COLOR]);
 
   const handleNoteClose = useCallback(async () => {
     if (!activeNoteSkuId) return;
@@ -772,7 +778,7 @@ const renderCell = (col, sku, openFullEdit) => {
     case 'net_quantity_unit_reference_id': {
       const label = references.NET_QUANTITY_UNIT[val];
       return (
-        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-emerald-50/20 border border-emerald-200/50 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-emerald-400/50 hover:bg-white transition-all">
+        <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-emerald-50/20 border border-emerald-200/30 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-emerald-400/50 hover:bg-white transition-all">
           <span className={cn("text-[13px] font-medium truncate flex items-center gap-1.5", label ? "text-emerald-900" : "text-amber-600 italic")}>
             {!label && val && <AlertCircle size={10} className="text-amber-500" />}
             {label || val || <EmptyState isLine />}
@@ -794,12 +800,12 @@ const renderCell = (col, sku, openFullEdit) => {
       );
     }
     case 'color': {
-      const label = references.COLOR[val];
+      // Handle both ID (from resolve) and label (from DB)
+      const label = typeof val === 'number' ? references.COLOR[val] : val;
       return (
         <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-emerald-50/5 border border-emerald-200/20 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-emerald-400/50 hover:bg-white transition-all">
           <span className={cn("text-[13px] truncate flex items-center gap-1.5", label ? "text-emerald-800/70" : "text-amber-600 italic font-medium")}>
-            {!label && val && <AlertCircle size={10} className="text-amber-500" />}
-            {label || val || <EmptyState isLine />}
+            {label || <EmptyState isLine />}
           </span>
           <ChevronDown size={14} className="text-emerald-500/40 group-hover/ref:text-emerald-600 transition-colors flex-shrink-0" />
         </div>
