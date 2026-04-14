@@ -262,6 +262,32 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   const mappedSkuCode = mappings['sku_code'];
 
+  // Helper to get or create a reference ID from a label
+  const resolveReference = async (type, label, parentId = null, workingRefs = []) => {
+    if (!label || !label.trim()) return null;
+    const cleanLabel = label.trim();
+    
+    // 1. Check workingRefs (which includes preloaded + dynamic creations)
+    const existing = workingRefs.find(r => r.label.toLowerCase() === cleanLabel.toLowerCase() && (parentId ? Number(r.parent_reference_id) === Number(parentId) : true));
+    if (existing) return existing.id;
+
+    // 2. Create if not found
+    try {
+      const newRef = await refApi.create({
+        reference_data_type: type,
+        label: cleanLabel,
+        key: `${type.toLowerCase()}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        parent_reference_id: parentId
+      });
+      // Update working memory instantly
+      workingRefs.push(newRef);
+      return newRef.id;
+    } catch (err) {
+      console.error(`Failed to create reference ${type}:${cleanLabel}`, err);
+      return null;
+    }
+  };
+
   const executeImport = async () => {
     if(!mappedSkuCode) return alert("You must map a column to 'SKU Code' because it is mandatory.");
 
@@ -272,15 +298,21 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     let errorsCollected = [];
     const BATCH_SIZE = 50;
 
+    // Use a mutable working copy to cache new creations across batches
+    const workingRefs = { ...refLists };
+
     for (let i = 0; i < csvData.length; i += BATCH_SIZE) {
       const end = Math.min(i + BATCH_SIZE, csvData.length);
-      setProgressStatus(`Processing rows ${i + 1} to ${end}...`);
+      const batchNum = i / BATCH_SIZE + 1;
+      setProgressStatus(`Processing batch ${batchNum}...`);
 
       const chunk = csvData.slice(i, end);
       const batchPayload = [];
 
       chunk.forEach(rawRow => {
         const mappedRow = getMappedRow(rawRow);
+        
+        // Handle identity normalization
         if (mappedRow.sku_code) mappedRow.barcode = mappedRow.sku_code;
         else if (mappedRow.barcode) mappedRow.sku_code = mappedRow.barcode;
 
@@ -290,58 +322,85 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         }
 
         const backendRow = { ...mappedRow };
-        if (backendRow.brand_reference_id) { backendRow.brand_label = backendRow.brand_reference_id; delete backendRow.brand_reference_id; }
-        if (backendRow.category_reference_id) { backendRow.category_label = backendRow.category_reference_id; delete backendRow.category_reference_id; }
-        if (backendRow.sub_category_reference_id) { backendRow.sub_category_label = backendRow.sub_category_reference_id; delete backendRow.sub_category_reference_id; }
-        if (backendRow.status_reference_id) { backendRow.status_label = backendRow.status_reference_id; delete backendRow.status_reference_id; }
-        if (backendRow.bundle_type) { backendRow.bundle_type_label = backendRow.bundle_type; delete backendRow.bundle_type; }
-        if (backendRow.pack_type) { backendRow.pack_type_label = backendRow.pack_type; delete backendRow.pack_type; }
-        if (backendRow.color) { backendRow.color_label = backendRow.color; delete backendRow.color; }
-        if (backendRow.net_quantity_unit_reference_id) { backendRow.net_quantity_unit_label = backendRow.net_quantity_unit_reference_id; delete backendRow.net_quantity_unit_reference_id; }
-        if (backendRow.size_reference_id) { backendRow.size_label = backendRow.size_reference_id; delete backendRow.size_reference_id; }
 
+        // Sanitize numeric fields
         const numericAndIdFields = [
           'mrp', 'purchase_cost', 'package_weight', 'raw_product_weight',
           'net_quantity', 'tax_percent'
         ];
-
         numericAndIdFields.forEach(k => {
-          if (backendRow[k] === "") backendRow[k] = null;
-        });
-
-        ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'net_quantity', 'tax_percent'].forEach(k => {
-          if(backendRow[k]) {
-             const num = Number(backendRow[k]);
-             backendRow[k] = isNaN(num) ? null : num;
+          if (backendRow[k] === "" || backendRow[k] === undefined) {
+            backendRow[k] = null;
+          } else {
+            const num = Number(backendRow[k]);
+            backendRow[k] = isNaN(num) ? null : num;
           }
         });
 
         if (!backendRow.product_name) backendRow.product_name = backendRow.sku_code;
+        
         batchPayload.push(backendRow);
       });
 
       if (batchPayload.length > 0) {
         try {
+          // 1. Resolve all references for this batch
+          setProgressStatus(`Batch ${batchNum}: Resolving references...`);
+          for (const row of batchPayload) {
+            // Priority 1: Simple References
+            if (row.brand_reference_id) { 
+              row.brand_reference_id = await resolveReference('BRAND', row.brand_reference_id, null, workingRefs.BRAND);
+            }
+            if (row.category_reference_id) { 
+              row.category_reference_id = await resolveReference('CATEGORY', row.category_reference_id, null, workingRefs.CATEGORY);
+            }
+            if (row.status_reference_id) { 
+              row.status_reference_id = await resolveReference('STATUS', row.status_reference_id, null, workingRefs.STATUS);
+            }
+            if (row.color) {
+              row.color = await resolveReference('COLOR', row.color, null, workingRefs.COLOR);
+            }
+            if (row.net_quantity_unit_reference_id) {
+              row.net_quantity_unit_reference_id = await resolveReference('NET_QUANTITY_UNIT', row.net_quantity_unit_reference_id, null, workingRefs.NET_QUANTITY_UNIT);
+            }
+            if (row.size_reference_id) {
+              row.size_reference_id = await resolveReference('SIZE', row.size_reference_id, null, workingRefs.SIZE);
+            }
+
+            // Priority 2: Sub-category (Depends on Category ID)
+            if (row.sub_category_reference_id) {
+              row.sub_category_reference_id = await resolveReference('SUB_CATEGORY', row.sub_category_reference_id, row.category_reference_id, workingRefs.SUB_CATEGORY);
+            }
+
+            // Other labels that backend might handle directly as strings/labels still
+            if (row.bundle_type) { row.bundle_type_label = row.bundle_type; delete row.bundle_type; }
+            if (row.pack_type) { row.pack_type_label = row.pack_type; delete row.pack_type; }
+          }
+
+          // 2. Execute Bulk Import
+          setProgressStatus(`Batch ${batchNum}: Importing SKUs...`);
           const result = await skuApi.bulkImport({ skus: batchPayload });
+          
           success += (result.success_count || 0);
           failed += (result.failed_count || 0);
           if (result.errors) {
             errorsCollected = [...errorsCollected, ...result.errors];
           }
         } catch (err) {
-          console.error(`Batch at offset ${i} failed:`, err);
+          console.error(`Batch ${batchNum} failed:`, err);
           failed += batchPayload.length;
           errorsCollected.push({ sku_code: "BATCH_ERROR", error: err.message || "Network/System error" });
         }
       }
 
+      // Update progress state
       const prog = Math.min(100, Math.round((end / csvData.length) * 100));
       setImportProgress(prog);
       setImportStats({ success, skipped, failed, total: csvData.length });
       setImportErrors(errorsCollected);
     }
 
-    // After all batches are attempted, cleanup if at least one record was processed
+    // Post-import cleanup
     if (success > 0 || failed > 0) {
       localStorage.removeItem('bloomerce_import_data');
       localStorage.removeItem('bloomerce_import_headers');

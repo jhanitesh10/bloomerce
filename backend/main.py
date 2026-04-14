@@ -288,10 +288,12 @@ except Exception as e:
 # CORS Configuration
 # We explicitly list the frontend origin to support allow_credentials=True, 
 # which is often required for secure browser contexts and cross-origin persistence.
-origins = [
+env_origins = os.getenv("ALLOWED_ORIGINS", "")
+origins = [o.strip() for o in env_origins.split(",") if o.strip()] or [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://bloomerce.vercel.app",
 ]
 
 app.add_middleware(
