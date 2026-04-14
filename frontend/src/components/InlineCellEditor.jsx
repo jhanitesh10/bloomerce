@@ -13,7 +13,8 @@ const REF_MAP = {
   'bundle_type': 'BUNDLE_TYPE',
   'pack_type': 'PACK_TYPE',
   'net_quantity_unit_reference_id': 'NET_QUANTITY_UNIT',
-  'size_reference_id': 'SIZE'
+  'size_reference_id': 'SIZE',
+  'color': 'COLOR'
 };
 
 /**

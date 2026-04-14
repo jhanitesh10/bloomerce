@@ -58,7 +58,7 @@ const GROUPS = [
       { id: 'net_quantity',          label: 'Net Qty',  width: 90, align: 'right' },
       { id: 'net_quantity_unit_reference_id', label: 'Unit',  width: 100 },
       { id: 'size_reference_id',     label: 'Size Spec',    width: 110 },
-      { id: 'color',                 label: 'Color',        width: 100 },
+      { id: 'color',                 label: 'Color',        width: 120 },
       { id: 'raw_product_size',      label: 'Raw Size',     width: 100 },
       { id: 'package_size',          label: 'Pack Size',    width: 100 },
       { id: 'package_weight',        label: 'Pack Wt (g)',  width: 95, align: 'right' },
@@ -178,7 +178,8 @@ const REF_MAP    = {
   bundle_type: 'BUNDLE_TYPE',
   pack_type: 'PACK_TYPE',
   net_quantity_unit_reference_id: 'NET_QUANTITY_UNIT',
-  size_reference_id: 'SIZE'
+  size_reference_id: 'SIZE',
+  color: 'COLOR'
 };
 const FILTER_TABS = [
   { key: 'all',               icon: LayoutGrid, label: (c, t) => `All (${t})` },
@@ -366,8 +367,8 @@ function SkuCard({ sku, references, onEdit, onNote }) {
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function MasterTab({ isMobile }) {
   const [skus,           setSkus]           = useState([]);
-  const [references,     setReferences]     = useState({ BRAND:{}, CATEGORY:{}, STATUS:{}, SUB_CATEGORY:{}, BUNDLE_TYPE:{}, PACK_TYPE:{}, NET_QUANTITY_UNIT:{}, SIZE:{} });
-  const [refLists,       setRefLists]       = useState({ BRAND:[], CATEGORY:[], STATUS:[], SUB_CATEGORY:[], BUNDLE_TYPE:[], PACK_TYPE:[], NET_QUANTITY_UNIT:[], SIZE:[] });
+  const [references,     setReferences]     = useState({ BRAND:{}, CATEGORY:{}, STATUS:{}, SUB_CATEGORY:{}, BUNDLE_TYPE:{}, PACK_TYPE:{}, NET_QUANTITY_UNIT:{}, SIZE:{}, COLOR:{} });
+  const [refLists,       setRefLists]       = useState({ BRAND:[], CATEGORY:[], STATUS:[], SUB_CATEGORY:[], BUNDLE_TYPE:[], PACK_TYPE:[], NET_QUANTITY_UNIT:[], SIZE:[], COLOR:[] });
   const [loading,        setLoading]        = useState(true);
   const [search,         setSearch]         = useState('');
   const [statusFilter,   setStatusFilter]   = useState('all');
@@ -444,7 +445,7 @@ export default function MasterTab({ isMobile }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [skuData, brands, cats, statuses, bundles, packs, nqUnits, sizes] = await Promise.all([
+      const [skuData, brands, cats, statuses, bundles, packs, nqUnits, sizes, colors] = await Promise.all([
         skuApi.getAll(),
         refApi.getAll('BRAND'),
         refApi.getAll('CATEGORY'),
@@ -452,7 +453,8 @@ export default function MasterTab({ isMobile }) {
         refApi.getAll('BUNDLE_TYPE'),
         refApi.getAll('PACK_TYPE'),
         refApi.getAll('NET_QUANTITY_UNIT'),
-        refApi.getAll('SIZE')
+        refApi.getAll('SIZE'),
+        refApi.getAll('COLOR')
       ]);
       let subcats = [];
       try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
@@ -466,7 +468,8 @@ export default function MasterTab({ isMobile }) {
         BUNDLE_TYPE: toMap(bundles),
         PACK_TYPE: toMap(packs),
         NET_QUANTITY_UNIT: toMap(nqUnits),
-        SIZE: toMap(sizes)
+        SIZE: toMap(sizes),
+        COLOR: toMap(colors)
       });
       setRefLists({
         BRAND: brands,
@@ -476,7 +479,8 @@ export default function MasterTab({ isMobile }) {
         BUNDLE_TYPE: bundles,
         PACK_TYPE: packs,
         NET_QUANTITY_UNIT: nqUnits,
-        SIZE: sizes
+        SIZE: sizes,
+        COLOR: colors
       });
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -745,6 +749,12 @@ const renderCell = (col, sku, openFullEdit) => {
       <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-emerald-50/10 border border-emerald-200/30 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-emerald-400/50 hover:bg-white transition-all">
         <span className="text-[13px] text-emerald-800/80 truncate">{references.SIZE[val] || val || <EmptyState isLine />}</span>
         <ChevronDown size={14} className="text-emerald-500/50 group-hover/ref:text-emerald-600 transition-colors flex-shrink-0" />
+      </div>
+    );
+    case 'color': return (
+      <div className="flex items-center justify-between gap-2 w-full group/ref cursor-pointer bg-emerald-50/5 border border-emerald-200/20 rounded-lg px-2.5 py-1.5 shadow-sm hover:border-emerald-400/50 hover:bg-white transition-all">
+        <span className="text-[13px] text-emerald-800/70 truncate">{references.COLOR[val] || val || <EmptyState isLine />}</span>
+        <ChevronDown size={14} className="text-emerald-500/40 group-hover/ref:text-emerald-600 transition-colors flex-shrink-0" />
       </div>
     );
     case 'finished_product_weight': {
