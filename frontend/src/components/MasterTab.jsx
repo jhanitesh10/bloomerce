@@ -37,6 +37,38 @@ function StatusBadge({ label }) {
   return <Badge variant={STATUS_VARIANTS[key] || 'secondary'} className="whitespace-nowrap">{display || 'Unknown'}</Badge>;
 }
 
+// ── Desktop Table Skeleton ────────────────────────────────────────────────────
+function TableSkeleton() {
+  return (
+    <div className="h-[calc(100vh-280px)] w-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+      {/* Header Mimic */}
+      <div className="h-[45px] border-b border-slate-200 bg-slate-50/80 flex items-center px-6 gap-6">
+        <div className="w-5 h-5 rounded-[4px] bg-slate-200/60 animate-pulse shrink-0" />
+        <div className="w-12 h-5 rounded-[4px] bg-slate-200/60 animate-pulse shrink-0" />
+        <div className="w-64 h-5 rounded-[4px] bg-slate-200/60 animate-pulse shrink-0" />
+        <div className="w-32 h-5 rounded-[4px] bg-slate-200/60 animate-pulse shrink-0" />
+        <div className="w-24 h-5 rounded-[4px] bg-slate-200/60 animate-pulse shrink-0 ml-auto" />
+      </div>
+      {/* Row Mimics */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="h-[64px] border-b border-slate-100 flex items-center px-6 gap-6 bg-white shrink-0">
+            <div className="w-5 h-5 rounded-[4px] border border-slate-200 bg-slate-50 animate-pulse shrink-0" />
+            <div className="w-11 h-11 rounded-lg bg-slate-100 animate-pulse shrink-0" />
+            <div className="flex flex-col gap-2 flex-1 max-w-md">
+              <div className="w-[85%] h-3.5 rounded bg-slate-100 animate-pulse" />
+              <div className="w-[45%] h-3.5 rounded bg-slate-100 animate-pulse" />
+            </div>
+            <div className="w-28 h-6 rounded-full bg-slate-50 border border-slate-100 animate-pulse shrink-0" />
+            <div className="w-20 h-5 rounded-md bg-slate-100 animate-pulse shrink-0 ml-auto" />
+            <div className="w-8 h-8 rounded-full bg-slate-50 animate-pulse shrink-0" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Product Name Renderer (Failsafe Centering) ────────────────────────────────
 function ProductNameRenderer(p) {
   return (
@@ -1280,12 +1312,7 @@ export default function MasterTab({ isMobile }) {
         <div className="flex-1 min-h-0 relative group">
           {/* ── Table / Grid Section ── */}
         {loading ? (
-          <div className="h-[calc(100vh-280px)] w-full flex items-center justify-center bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)]">
-             <div className="flex flex-col items-center gap-4">
-                <RefreshCcw size={32} className="text-[var(--color-primary)] animate-spin opacity-50" />
-                <p className="text-sm font-bold text-[var(--color-muted-foreground)]">Loading high-performance catalog...</p>
-             </div>
-          </div>
+          <TableSkeleton />
         ) : filtered.length === 0 ? (
           <div className="h-[calc(100vh-280px)] w-full flex flex-col items-center justify-center bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] gap-4">
              <div className="w-12 h-12 rounded-2xl bg-[var(--color-muted)] flex items-center justify-center text-[var(--color-muted-foreground)]/30">
