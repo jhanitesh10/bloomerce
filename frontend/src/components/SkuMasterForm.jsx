@@ -222,7 +222,7 @@ const TABS = [
 const TAB_FIELDS = {
   identity:       ['product_name', 'sku_code', 'brand_reference_id', 'product_component_group_code', 'primary_image_url'],
   content:        ['description', 'key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords', 'catalog_url'],
-  classification: ['category_reference_id', 'sub_category_reference_id', 'status_reference_id'],
+  classification: ['category_reference_id', 'sub_category_reference_id', 'status_reference_id', 'product_type'],
   pricing:        ['mrp', 'purchase_cost', 'net_quantity', 'net_quantity_unit_reference_id', 'size_reference_id', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'],
   bundling:       ['bundle_type', 'pack_type'],
   tax:            ['tax_rule_code', 'tax_percent'],
@@ -778,6 +778,10 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                   <Field label="Product Status">
                     <DynamicReferenceSelect label="" referenceType="STATUS" value={form.status_reference_id}
                       onChange={(v) => set('status_reference_id', v)} placeholder="Active / Inactive / Draft…" />
+                  </Field>
+                  <Field label="Product Type">
+                    <input type="text" name="product_type" value={form.product_type} onChange={handleChange}
+                      className={inputCls(false)} placeholder="e.g. Finished Good / Raw Material" />
                   </Field>
                 </>
               )}

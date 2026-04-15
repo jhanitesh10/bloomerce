@@ -23,8 +23,8 @@ const FIELD_LABELS = {
 };
 
 const GROUPS = [
-  { id: 'identity', label: 'Identity', fields: ['product_name', 'sku_code', 'barcode', 'brand_reference_id', 'product_component_group_code', 'primary_image_url'] },
-  { id: 'classification', label: 'Classification', fields: ['status_reference_id', 'category_reference_id', 'sub_category_reference_id'] },
+  { id: 'identity', label: 'Identity', fields: ['product_name', 'sku_code', 'barcode', 'primary_image_url'] },
+  { id: 'classification', label: 'Classification', fields: ['status_reference_id', 'brand_reference_id', 'category_reference_id', 'sub_category_reference_id', 'product_type', 'product_component_group_code'] },
   { id: 'pricing', label: 'Pricing & Specs', fields: ['mrp', 'purchase_cost', 'net_quantity', 'net_quantity_unit_reference_id', 'size_reference_id', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'] },
   { id: 'content', label: 'Content', fields: ['description', 'key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords', 'catalog_url'] },
   { id: 'bundling', label: 'Product & Bundle', fields: ['bundle_type', 'pack_type'] },

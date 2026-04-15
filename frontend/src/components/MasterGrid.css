@@ -6,22 +6,22 @@
   --ag-header-foreground-color: var(--color-muted-foreground);
   --ag-header-cell-hover-background-color: var(--color-muted);
   --ag-header-cell-moving-background-color: var(--color-muted);
-  
+
   --ag-background-color: var(--color-card);
   --ag-data-color: var(--color-foreground);
   --ag-odd-row-background-color: var(--color-card);
   --ag-row-hover-color: color-mix(in srgb, var(--color-primary) 3%, transparent);
   --ag-selected-row-background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
-  
+
   --ag-font-family: inherit;
   --ag-font-size: 13.5px;
-  
+
   --ag-grid-size: 6px;
   --ag-list-item-height: 28px;
-  
+
   --ag-range-selection-border-color: var(--color-primary);
   --ag-range-selection-background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  
+
   border: none;
   border-radius: 16px;
   overflow: hidden;
@@ -45,23 +45,176 @@
 .ag-theme-quartz-bloomerce .ag-cell {
   display: flex !important;
   align-items: center !important;
-  padding-left: 14px !important;
-  padding-right: 14px !important;
-  border-right: 1px solid color-mix(in srgb, var(--color-border) 15%, transparent) !important;
+  padding-left: 14px;
+  padding-right: 14px;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent) !important;
   outline: none !important;
+}
+
+/* Tight padding for selection and images */
+.ag-cell.no-padding-cell,
+.ag-header-cell.no-padding-cell {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  justify-content: center !important;
+}
+
+/* Product Name Typography - Simplified for React Renderer */
+.product-name-cell {
+  padding: 0 !important;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent) !important;
+  overflow: visible !important;
+}
+
+.product-name-cell .ag-cell-wrapper {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Distinct separators for pinned sections and groups */
+.ag-cell.ag-cell-last-left-pinned,
+.ag-header-cell.ag-header-cell-last-left-pinned {
+  border-right: 1px solid var(--color-border) !important;
+}
+
+/* Remove AG Grid's default horizontal spacer between sections */
+.ag-horizontal-left-spacer {
+  background-color: transparent !important;
+  border-right: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+}
+
+.ag-pinned-left-header {
+  border-right: 1px solid var(--color-border) !important;
+}
+
+.ag-theme-quartz-bloomerce .ag-header-row {
+  border-bottom: 2px solid var(--color-border);
+  background-color: var(--color-muted);
+}
+
+/* Enable multi-line text truncation within flex cells */
+.ag-theme-quartz-bloomerce .ag-cell-value {
+  width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-wrap !important;
 }
 
 /* Custom Group Headings Styling (Matching the Emerald/Violet theme) */
 .ag-header-group-cell {
-  border-left: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent) !important;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent) !important;
   background-color: color-mix(in srgb, var(--color-primary) 4%, var(--color-muted)) !important;
 }
 
-/* Specific Group Colors Sync */
-.header-identity { background-color: rgba(139, 92, 246, 0.05) !important; color: #8b5cf6 !important; }
-.header-pricing { background-color: rgba(16, 185, 129, 0.05) !important; color: #10b981 !important; }
-.header-bundling { background-color: rgba(245, 158, 11, 0.05) !important; color: #f59e0b !important; }
-.header-content { background-color: rgba(249, 115, 22, 0.05) !important; color: #f97316 !important; }
+/* Custom Header Group Layout Fix */
+.ag-header-group-cell-label {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+.ag-header-group-cell-no-group {
+    display: none !important;
+}
+
+/* Specific Group Colors Sync with Full Height Padding */
+.ag-group-header-violet { background-color: rgba(139, 92, 246, 0.08) !important; color: #8b5cf6 !important; }
+.ag-group-header-emerald { background-color: rgba(16, 185, 129, 0.08) !important; color: #10b981 !important; }
+.ag-group-header-amber { background-color: rgba(245, 158, 11, 0.08) !important; color: #f59e0b !important; }
+.ag-group-header-orange { background-color: rgba(249, 115, 22, 0.08) !important; color: #f97316 !important; }
+.ag-group-header-blue { background-color: rgba(59, 130, 246, 0.08) !important; color: #3b82f6 !important; }
+
+/* Framework Ghost Cloaking - Suppress internal selection columns from eating space */
+.ag-header-cell[col-id="ag-Grid-SelectionColumn"],
+.ag-cell[col-id="ag-Grid-SelectionColumn"],
+[col-id="selection"] {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* Inline Text & Number Editor Styling */
+.ag-theme-quartz-bloomerce .ag-cell-inline-editing {
+  height: calc(100% - 2px) !important;
+  margin: 1px !important;
+  padding: 0 !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent) !important;
+  background-color: var(--color-card) !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--color-primary) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ag-theme-quartz-bloomerce .ag-input-wrapper,
+.ag-theme-quartz-bloomerce .ag-input-wrapper:focus-within {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
+.ag-theme-quartz-bloomerce .ag-input-field-input,
+.ag-theme-quartz-bloomerce .ag-input-field-input:focus {
+  width: 100% !important;
+  height: auto !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 14px !important;
+  font-family: inherit;
+  font-size: 13.5px;
+  background: transparent !important;
+  color: var(--color-foreground) !important;
+  line-height: normal !important;
+}
+
+/* Reference Editor Container */
+.ag-popup-editor {
+    border-radius: 8px !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.ag-custom-reference-container {
+    width: 100%;
+    min-width: 180px;
+    background: var(--color-card);
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    border: 1px solid var(--color-primary);
+    overflow: hidden;
+}
+
+.ag-custom-component-popup {
+    animation: dropdown-fade-in 0.15s ease-out;
+}
+
+@keyframes dropdown-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 /* Custom Scrollbar */
 .ag-body-viewport {

@@ -15,7 +15,9 @@ export default function DynamicReferenceSelect({
   parentId = null,
   className,
   autoOpen = false,
-  variant = 'default' // 'default' or 'flat'
+  variant = 'default', // 'default' or 'flat'
+  usePortal = true,
+  hideTrigger = false
 }) {
   const [options, setOptions] = useState(preloadedOptions || []);
   const [isOpen, setIsOpen] = useState(autoOpen);
@@ -70,12 +72,17 @@ export default function DynamicReferenceSelect({
   };
 
   useEffect(() => {
+    let raf, timer;
     if (isOpen) {
       updateCoords();
+      raf = requestAnimationFrame(updateCoords);
+      timer = setTimeout(updateCoords, 50);
       window.addEventListener('scroll', updateCoords, true);
       window.addEventListener('resize', updateCoords);
     }
     return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
       window.removeEventListener('scroll', updateCoords, true);
       window.removeEventListener('resize', updateCoords);
     };
@@ -143,103 +150,132 @@ export default function DynamicReferenceSelect({
       )}
 
       {/* Trigger */}
-      <div
-        ref={triggerRef}
-        className={cn(
-          "flex items-center justify-between w-full transition-all",
-          variant === 'flat' 
-            ? "bg-transparent border-none ring-0 px-0 py-0 h-full cursor-pointer" 
-            : "rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm cursor-pointer hover:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-ring)] focus-within:border-transparent",
-          className
-        )}
-        onMouseDown={() => {
-          setIsOpen(!isOpen);
-        }}
-      >
-        <span className={cn("truncate", !selectedOption && "text-[var(--color-muted-foreground)]")}>
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
-        <ChevronsUpDown size={15} className="text-[var(--color-muted-foreground)] flex-shrink-0 ml-1" />
-      </div>
-
-      {/* Portal for Dropdown */}
-      {isOpen && createPortal(
-        <div 
-          ref={portalRef}
-          className="fixed z-[10000] bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col animate-dropdown-enter"
-          style={{ 
-            top: coords.top + 6, 
-            left: coords.left, 
-            width: Math.max(coords.width, 240),
-            maxWidth: '400px'
+      {!hideTrigger && (
+        <div
+          ref={triggerRef}
+          className={cn(
+            "flex items-center justify-between w-full transition-all",
+            variant === 'flat' 
+              ? "bg-transparent border-none ring-0 px-0 py-0 h-full cursor-pointer" 
+              : "rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm cursor-pointer hover:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-ring)] focus-within:border-transparent",
+            className
+          )}
+          onMouseDown={() => {
+            setIsOpen(!isOpen);
           }}
-          onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* Search container */}
-          <div className="px-3 pt-3 pb-2">
-            <div className="relative flex items-center group">
-              <SearchIcon size={14} className="absolute left-3 text-[var(--color-muted-foreground)] opacity-40 group-focus-within:text-[var(--color-primary)] transition-colors" />
-              <input
-                type="text"
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[var(--color-border)] bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60 text-[var(--color-foreground)]"
-                placeholder={`Search or add ${referenceType.toLowerCase()}...`}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                autoFocus
-              />
-            </div>
+          <span className={cn("truncate", !selectedOption && "text-[var(--color-muted-foreground)]")}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronsUpDown size={15} className="text-[var(--color-muted-foreground)] flex-shrink-0 ml-1" />
+        </div>
+      )}
+
+      {/* Dropdown Content */}
+      {isOpen && (
+        usePortal ? createPortal(
+          <div 
+            ref={portalRef}
+            className="fixed z-[10000] bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col animate-dropdown-enter"
+            style={{ 
+              top: coords.top + 6, 
+              left: coords.left, 
+              width: Math.max(coords.width, 240),
+              maxWidth: '400px'
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {renderDropdownCore()}
+          </div>,
+          document.body
+        ) : (
+          <div 
+            ref={portalRef}
+            className={cn(
+               "z-[1000] bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.25)] overflow-hidden flex flex-col animate-dropdown-enter",
+               hideTrigger ? "relative w-full border-none shadow-none" : "absolute left-0 mt-1"
+            )}
+            style={!hideTrigger ? { 
+              top: '100%',
+              width: 'max(100%, 240px)',
+              maxWidth: '400px'
+            } : {}}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {renderDropdownCore()}
           </div>
-
-          {/* Options list */}
-          <div className="max-h-72 overflow-y-auto custom-scrollbar p-1">
-            {loading && (
-              <div className="py-8 flex flex-col items-center justify-center gap-2 text-[var(--color-muted-foreground)]">
-                <div className="w-4 h-4 border-2 border-[var(--color-primary)]/30 border-t-[var(--color-primary)] rounded-full animate-spin" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
-              </div>
-            )}
-
-            {!loading && filteredOptions.length === 0 && !showCreateOption && (
-              <div className="py-10 text-center">
-                <p className="text-xs text-[var(--color-muted-foreground)] px-4">No results for "{search}"</p>
-              </div>
-            )}
-
-            {!loading && filteredOptions.map(opt => {
-              const isSelected = Number(value) === Number(opt.id);
-              return (
-                <div
-                  key={opt.id}
-                  className={cn(
-                    "flex items-center justify-between px-3 py-2.5 text-[13px] rounded-lg cursor-pointer transition-all mx-1 mb-0.5",
-                    isSelected
-                      ? "bg-[var(--color-primary)]/8 text-[var(--color-primary)] font-semibold"
-                      : "text-[var(--color-foreground)]/80 hover:bg-slate-50 hover:text-[var(--color-foreground)]"
-                  )}
-                  onClick={() => { onChange(opt.id, opt.label); setIsOpen(false); setSearch(""); }}
-                >
-                  <span className="truncate">{opt.label}</span>
-                  {isSelected && <Check size={14} className="text-[var(--color-primary)] flex-shrink-0" strokeWidth={3} />}
-                </div>
-              );
-            })}
-
-            {showCreateOption && !loading && (
-              <div
-                className="flex items-center gap-2.5 px-4 py-3 mt-1 text-[13px] cursor-pointer text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 border-t border-[var(--color-border)] font-bold transition-all"
-                onClick={(e) => { e.stopPropagation(); handleCreate(); }}
-              >
-                <div className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
-                  <Plus size={12} strokeWidth={3} />
-                </div>
-                <span>Create new "{search}"</span>
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body
+        )
       )}
     </div>
   );
+
+  function renderDropdownCore() {
+    return (
+      <>
+        {/* Search container */}
+        <div className="px-3 pt-3 pb-2 w-full text-left">
+          <div className="relative flex items-center group w-full">
+            <SearchIcon size={14} className="absolute left-3 text-[var(--color-muted-foreground)] opacity-40 group-focus-within:text-[var(--color-primary)] transition-colors" />
+            <input
+              type="text"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[var(--color-border)] bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all placeholder:text-[var(--color-muted-foreground)]/60 text-[var(--color-foreground)]"
+              placeholder={`Search or add ${referenceType.toLowerCase()}...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {/* Options list */}
+        <div className="max-h-72 overflow-y-auto custom-scrollbar p-1 w-full text-left">
+          {loading && (
+            <div className="py-8 flex flex-col items-center justify-center gap-2 text-[var(--color-muted-foreground)]">
+              <div className="w-4 h-4 border-2 border-[var(--color-primary)]/30 border-t-[var(--color-primary)] rounded-full animate-spin" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Loading...</span>
+            </div>
+          )}
+
+          {!loading && filteredOptions.length === 0 && !showCreateOption && (
+            <div className="py-10 text-center">
+              <p className="text-xs text-[var(--color-muted-foreground)] px-4">No results for "{search}"</p>
+            </div>
+          )}
+
+          {!loading && filteredOptions.map(opt => {
+            const isSelected = Number(value) === Number(opt.id);
+            return (
+              <div
+                key={opt.id}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2.5 text-[13px] rounded-lg cursor-pointer transition-all mx-1 mb-0.5",
+                  isSelected
+                    ? "bg-[var(--color-primary)]/8 text-[var(--color-primary)] font-semibold"
+                    : "text-[var(--color-foreground)]/80 hover:bg-slate-50 hover:text-[var(--color-foreground)]"
+                )}
+                onClick={() => { onChange(opt.id, opt.label); setIsOpen(false); setSearch(""); }}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check size={14} className="text-[var(--color-primary)] flex-shrink-0" strokeWidth={3} />}
+              </div>
+            );
+          })}
+
+          {showCreateOption && !loading && (
+            <div
+              className="flex items-center gap-2.5 px-4 py-3 mt-1 text-[13px] cursor-pointer text-[var(--color-primary)] bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 border-t border-[var(--color-border)] font-bold transition-all"
+              onClick={(e) => { e.stopPropagation(); handleCreate(); }}
+            >
+              <div className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
+                <Plus size={12} strokeWidth={3} />
+              </div>
+              <span>Create new "{search}"</span>
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
 }
+

@@ -207,15 +207,19 @@ export default function InlineCellEditor({
                   typography
                 )}
               />
-              {/* Keyboard Shortcut Hint (Floats below the portal container) */}
-              <div className="absolute top-[calc(100%+8px)] left-0 flex flex-row items-center gap-2 px-2.5 py-1.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold z-[1001] shadow-2xl whitespace-nowrap animate-in fade-in slide-in-from-top-2">
-                <span className="flex items-center gap-1.5">
-                  <span className="bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Enter</span> to save
-                </span>
-                <div className="w-px h-2.5 bg-white/20" />
-                <span className="flex items-center gap-1.5">
-                  <span className="bg-slate-700 px-1.5 py-0.5 rounded text-[9px]">Esc</span> to cancel
-                </span>
+              {/* Keyboard Shortcut Hint (Premium Pill) */}
+              <div className="absolute top-[calc(100%+12px)] left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 bg-slate-900/95 backdrop-blur-md text-white rounded-full text-[11px] font-medium z-[1001] shadow-2xl border border-white/5 whitespace-nowrap animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <span className="bg-slate-700/80 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight border border-white/10 shadow-sm leading-none">Enter</span>
+                  <span className="text-slate-100 opacity-90">to save</span>
+                </div>
+                
+                <div className="w-px h-3 bg-white/10" />
+                
+                <div className="flex items-center gap-2">
+                  <span className="bg-slate-700/80 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight border border-white/10 shadow-sm leading-none">Esc</span>
+                  <span className="text-slate-100 opacity-90">to cancel</span>
+                </div>
               </div>
             </div>
           )}

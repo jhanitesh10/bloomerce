@@ -2,16 +2,15 @@ import {
   Plus, Search, Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   ArrowUpDown, LayoutGrid, Rocket, FileEdit, Download, Upload,
   SquarePen, Check, X, Filter, Maximize2, Minimize2, StickyNote, Send, Trash2, RefreshCcw, ExternalLink,
-  AlertCircle, Copy, Layers, Command, MoreVertical
+  AlertCircle, Copy, Layers, Command, MoreVertical, Info, IndianRupee
 } from 'lucide-react';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-quartz.css';
 import './MasterGrid.css';
+import DynamicReferenceSelect from './DynamicReferenceSelect';
 
 // Register all community modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -35,7 +34,18 @@ const STATUS_VARIANTS = { active:'success', inactive:'destructive', draft:'draft
 function StatusBadge({ label }) {
   const key = label?.toLowerCase();
   const display = (key === 'in development' || key === 'development') ? 'New Launch' : label;
-  return <Badge variant={STATUS_VARIANTS[key] || 'secondary'}>{display || 'Unknown'}</Badge>;
+  return <Badge variant={STATUS_VARIANTS[key] || 'secondary'} className="whitespace-nowrap">{display || 'Unknown'}</Badge>;
+}
+
+// ── Product Name Renderer (Failsafe Centering) ────────────────────────────────
+function ProductNameRenderer(p) {
+  return (
+    <div className="flex flex-col justify-center h-full w-full py-1">
+      <div className="line-clamp-2 leading-[1.5] text-[#475569] font-medium text-[13.5px] whitespace-normal">
+        {p.value || '-'}
+      </div>
+    </div>
+  );
 }
 
 
@@ -45,46 +55,56 @@ const REMARKS_COL = { id: 'remark', label: 'Notes', width: 62, align: 'center', 
 // ── Column groups (collapsed → only first col shown) ──────────────────────────
 const GROUPS = [
   {
-    id: 'classification', label: 'Classification', color: 'violet',
+    id: 'classification',
+    label: 'Classification',
+    color: 'violet',
     cols: [
-      { id: 'status_reference_id',       label: 'Status',         width: 140 },
+      { id: 'status_reference_id',       label: 'Status',         width: 170 },
       { id: 'category_reference_id',     label: 'Category',       width: 180 },
       { id: 'sub_category_reference_id', label: 'Sub-Category',   width: 200 },
     ],
   },
   {
-    id: 'pricing_specs', label: 'Pricing & Specs', color: 'emerald',
+    id: 'pricing_specs',
+    label: 'Pricing & Specs',
+    color: 'emerald',
     cols: [
-      { id: 'mrp',            label: 'MRP (₹)',  width: 85, align: 'right', sortable: true, isNum: true },
-      { id: 'purchase_cost',  label: 'Cost (₹)', width: 85, align: 'right', isNum: true },
-      { id: 'net_quantity',          label: 'Net Qty',  width: 90, align: 'right' },
-      { id: 'net_quantity_unit_reference_id', label: 'Unit',  width: 100 },
-      { id: 'size_reference_id',     label: 'Size Spec',    width: 110 },
-      { id: 'color',                 label: 'Color',        width: 120 },
-      { id: 'raw_product_size',      label: 'Raw Size',     width: 100 },
-      { id: 'package_size',          label: 'Pack Size',    width: 100 },
-      { id: 'package_weight',        label: 'Pack Wt (g)',  width: 95, align: 'right' },
-      { id: 'raw_product_weight',    label: 'Raw Wt (g)',   width: 95, align: 'right' },
-      { id: 'finished_product_weight', label: 'Fin Wt (g)', width: 95, align: 'right', noInline: true },
+      { id: 'mrp',            label: 'MRP (₹)',      width: 140, align: 'right', sortable: true, isNum: true },
+      { id: 'purchase_cost',  label: 'Cost (₹)',     width: 140, align: 'right', isNum: true },
+      { id: 'net_quantity',   label: 'Net Qty',      width: 120, align: 'right', isNum: true },
+      { id: 'net_quantity_unit_reference_id', label: 'Unit', width: 140 },
+      { id: 'size_reference_id', label: 'Size Spec', width: 140 },
+      { id: 'color',          label: 'Color',        width: 120 },
+      { id: 'raw_product_size',      label: 'Raw Size',     width: 120 },
+      { id: 'package_size',          label: 'Pack Size',    width: 120 },
+      { id: 'raw_product_weight',    label: 'Raw Wt (g)',   width: 110, align: 'right', isNum: true },
+      { id: 'package_weight',        label: 'Pack Wt (g)',  width: 110, align: 'right', isNum: true },
+      { id: 'finished_product_weight', label: 'Fin Wt (g)', width: 110, align: 'right', isNum: true },
     ],
   },
   {
-    id: 'bundling', label: 'Product & Bundle', color: 'amber',
+    id: 'bundling',
+    label: 'Product & Bundle',
+    color: 'amber',
     cols: [
-      { id: 'bundle_type',                  label: 'Bundle Type',  width: 120 },
-      { id: 'pack_type',                    label: 'Pack Type',    width: 115 },
-      { id: 'product_component_group_code', label: 'Group Code',   width: 120, isMono: true },
+      { id: 'bundle_type', label: 'Bundle Type', width: 200 },
+      { id: 'pack_type',   label: 'Pack Type',   width: 180 },
+      { id: 'product_component_group_code', label: 'Shared Component', width: 180, isMono: true },
     ],
   },
   {
-     id: 'tax', label: 'Tax & Compliance', color: 'blue',
-     cols: [
-      { id: 'tax_percent',    label: 'Tax %',    width: 65,  align: 'right' },
-      { id: 'tax_rule_code',  label: 'Tax Rule (HSN)', width: 105, isMono: true },
-     ]
+    id: 'tax',
+    label: 'Tax & Compliance',
+    color: 'orange',
+    cols: [
+      { id: 'tax_percent',    label: 'Tax %',    width: 110, align: 'right', isNum: true },
+      { id: 'tax_rule_code',  label: 'Tax Rule (HSN)', width: 140, isMono: true },
+    ],
   },
   {
-    id: 'content', label: 'Content', color: 'orange',
+    id: 'content',
+    label: 'Content',
+    color: 'blue',
     cols: [
       { id: 'description',  label: 'Description',  width: 260, isContent: true },
       { id: 'key_feature',  label: 'Key Features', width: 260, isContent: true },
@@ -94,14 +114,19 @@ const GROUPS = [
       { id: 'product_care', label: 'Product Care', width: 260, isContent: true },
       { id: 'caution',      label: 'Caution',      width: 220, isContent: true },
       { id: 'seo_keywords', label: 'SEO Keywords', width: 200, isContent: true },
-      { id: 'createdAt',    label: 'Published',    width: 140, sortable: true, noInline: true },
-      { id: 'catalog_url',  label: 'Catalog URL',  width: 140, noInline: true },
-
+      { id: 'catalog_url',  label: 'Catalog URL',  width: 250, isContent: true },
     ],
   },
 ];
 
-// ── Group colour tokens ───────────────────────────────────────────────────────
+const BASE_COLS = [
+  { id: 'primary_image_url', label: 'Img', width: 55 },
+  { id: 'product_name',      label: 'Product Name', width: 250, sortable: true },
+  { id: 'sku_code',          label: 'SKU/Barcode',  width: 160 },
+];
+
+const NON_INLINE = new Set(['id', 'createdAt', 'catalog_url', 'finished_product_weight']);
+
 // ── Group colour tokens ───────────────────────────────────────────────────────
 const GC = {
   violet:  {
@@ -364,6 +389,118 @@ function SkuCard({ sku, references, onEdit, onNote }) {
   );
 }
 
+// ── Custom Header Group Component ──────────────────────────────────────────
+function ColumnGroupHeader({ displayName, columnGroup, api, color }) {
+  const isExpanded = columnGroup.isExpanded();
+  const children = columnGroup.getLeafColumns();
+  const hiddenCount = children.length - 1;
+  const toggle = () => api.setColumnGroupOpened(columnGroup.getGroupId(), !isExpanded);
+
+  // Map of group colors to UI tokens
+  const THEME = {
+    violet:  '#8b5cf6',
+    emerald: '#10b981',
+    blue:    '#3b82f6',
+    amber:   '#f59e0b',
+    orange:  '#f97316'
+  };
+  const hex = THEME[color] || '#64748b';
+
+  return (
+    <div className="flex flex-col items-center justify-center w-full h-full p-0 gap-1.5 overflow-hidden text-center">
+      <span className="font-[800] uppercase tracking-[0.08em] text-[10px] whitespace-nowrap overflow-hidden text-ellipsis w-full px-1" style={{ color: hex }}>
+        {displayName}
+      </span>
+      <button
+        onClick={toggle}
+        style={{
+          backgroundColor: isExpanded ? `${hex}15` : `${hex}25`,
+          color: hex,
+        }}
+        className={cn(
+          "flex items-center justify-center gap-1.5 px-2 min-h-[22px] rounded-md text-[9px] font-bold tracking-wide transition-all active:scale-95",
+          isExpanded ? "hover:bg-opacity-20" : "hover:bg-opacity-30"
+        )}
+      >
+        {isExpanded ? (
+          <><Minimize2 size={11} /> Collapse</>
+        ) : (
+          <><Maximize2 size={11} /> Expand ({hiddenCount})</>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ── Custom Reference Cell Renderer ──────────────────────────────────────────
+function ReferenceCellRenderer({ value, references, referenceKey }) {
+  const label = references[referenceKey]?.[value] || value || 'Select...';
+  const isEmpty = !value;
+
+  if (referenceKey === 'STATUS') {
+     return (
+       <div className="flex items-center justify-between w-[calc(100%-8px)] h-[34px] px-2.5 rounded-xl border border-slate-200 group cursor-pointer transition-colors bg-white hover:border-slate-300 shadow-sm mx-auto">
+         <div className="scale-90 origin-left flex-shrink-0 min-w-0"><StatusBadge label={label} /></div>
+         <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0 ml-2" />
+       </div>
+     );
+  }
+
+  if (referenceKey === 'BUNDLE_TYPE' || referenceKey === 'PACK_TYPE') {
+     return (
+       <div className="flex items-center justify-between w-[95%] max-w-[180px] h-[34px] px-3 rounded-xl border border-amber-200 bg-amber-50/30 group cursor-pointer transition-colors hover:border-amber-300">
+         <span className="text-amber-600 font-bold italic flex items-center gap-1.5 text-xs">
+            <Info size={12} className="text-amber-500 opacity-80" /> {label}
+         </span>
+         <ChevronDown size={14} className="text-amber-400 group-hover:text-amber-600 transition-colors flex-shrink-0" />
+       </div>
+     );
+  }
+
+  // Default generic styled pill (e.g., Brand, Category)
+  return (
+    <div className="flex items-center justify-between w-[95%] max-w-[180px] h-[34px] px-3 rounded-xl border border-slate-200 group cursor-pointer transition-colors bg-white hover:border-slate-300">
+      <span className={cn(
+        "truncate font-bold text-xs",
+        isEmpty ? "text-slate-400 italic font-normal" : "text-slate-800"
+      )}>
+        {label}
+      </span>
+      <ChevronDown size={14} className="text-slate-400 opacity-60 group-hover:opacity-100 transition-all flex-shrink-0 ml-2" />
+    </div>
+  );
+}
+
+// ── Custom Reference Cell Editor (wraps DynamicReferenceSelect) ─────────────
+const ReferenceCellEditor = React.forwardRef((props, ref) => {
+  const [val, setVal] = useState(props.value);
+
+  React.useImperativeHandle(ref, () => ({
+    getValue: () => val,
+    isPopup: () => true
+  }));
+
+  return (
+    <div className="ag-custom-reference-container">
+      <DynamicReferenceSelect
+        referenceType={props.referenceType}
+        value={val}
+        onChange={(newId) => {
+          setVal(newId);
+          props.stopEditing();
+        }}
+        onBlur={() => props.stopEditing()}
+        autoOpen={true}
+        variant="flat"
+        className="!border-none !ring-0"
+        preloadedOptions={props.preloadedOptions}
+        usePortal={false}
+        hideTrigger={true}
+      />
+    </div>
+  );
+});
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function MasterTab({ isMobile }) {
   const [skus,           setSkus]           = useState([]);
@@ -420,7 +557,15 @@ export default function MasterTab({ isMobile }) {
 
   // -- AG Grid State & Hooks --
   const [gridApi, setGridApi] = useState(null);
-  const onGridReady = useCallback((params) => setGridApi(params.api), []);
+  const onGridReady = useCallback((params) => {
+    setGridApi(params.api);
+    // Expand identity group by default
+    setTimeout(() => {
+      params.api.setColumnGroupOpened('identity', true);
+      // Sync initial expanded state
+      setExpandedGroups(new Set(['identity']));
+    }, 100);
+  }, []);
 
   // Sync active note ID to localStorage — validate against loaded SKUs to avoid broken popovers
   useEffect(() => {
@@ -462,11 +607,11 @@ export default function MasterTab({ isMobile }) {
       ]);
       let subcats = [];
       try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
-      const toMap = arr => (arr || []).reduce((a, r) => ({ 
-        ...a, 
+      const toMap = arr => (arr || []).reduce((a, r) => ({
+        ...a,
         [r.id]: r.label,
         [r.key]: r.label,
-        [String(r.id)]: r.label 
+        [String(r.id)]: r.label
       }), {});
       setSkus(skuData || []);
       setReferences({
@@ -531,9 +676,36 @@ export default function MasterTab({ isMobile }) {
     setActiveNoteSkuId(null);
   }, [activeNoteSkuId, skus, saveInlineEdit]);
 
-  const toggleGroup      = useCallback(gid => setExpandedGroups(prev => { const n = new Set(prev); n.has(gid) ? n.delete(gid) : n.add(gid); return n; }), []);
-  const startInlineEdit   = useCallback((sku, colId) => { if (NON_INLINE.has(colId)) return; savingRef.current = false; setInlineEdit({ skuId: sku.id, colId }); }, []);
-  const cancelInlineEdit  = useCallback(() => { savingRef.current = false; setInlineEdit(null); }, []);
+
+  const handleDuplicate = async (sku) => {
+    try {
+      const { id, createdAt, updatedAt, ...rest } = sku;
+      const copy = {
+        ...rest,
+        sku_code: sku.sku_code ? `${sku.sku_code}-COPY` : null,
+        product_name: `${sku.product_name} (Copy)`
+      };
+      await skuApi.create(copy);
+      loadAll();
+    } catch (err) {
+      console.error('Duplicate failed:', err);
+    }
+  };
+
+
+
+  const handleBulkDelete = async () => {
+    if (!selectedSkus.size || !window.confirm(`Delete ${selectedSkus.size} products?`)) return;
+    try {
+      setLoading(true);
+      await Promise.all(Array.from(selectedSkus).map(id => skuApi.delete(id)));
+      setSelectedSkus(new Set());
+      loadAll();
+    } catch (err) {
+      console.error('Bulk delete failed:', err);
+      setLoading(false);
+    }
+  };
 
   // ── Global Event Listeners ──────────────────────────────────────────────────
   useEffect(() => { loadAll(); }, [loadAll]);
@@ -553,49 +725,112 @@ export default function MasterTab({ isMobile }) {
      }
   }, [loadAll]);
 
+  const handleExpandAllGroupings = useCallback((expanded) => {
+    if (!gridApi) return;
+    const allGroupIds = ['identity', ...GROUPS.map(g => g.id)];
+    allGroupIds.forEach(groupId => {
+      gridApi.setColumnGroupOpened(groupId, expanded);
+    });
+    // Sync state immediately for the toggle button
+    if (expanded) setExpandedGroups(new Set(allGroupIds));
+    else setExpandedGroups(new Set());
+  }, [gridApi]);
+
+  const onColumnGroupOpened = useCallback((params) => {
+    const { columnGroup, opened } = params;
+    const id = columnGroup?.getGroupId();
+    if (!id) return;
+
+    setExpandedGroups(prev => {
+      const isCurrentlyIn = prev.has(id);
+      if (opened === isCurrentlyIn) return prev; // No change needed
+
+      const next = new Set(prev);
+      if (opened) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
   const columnDefs = useMemo(() => {
     const baseCols = [
       {
         headerName: 'Identity',
-        pinned: 'left',
-        lockPinned: true,
+        groupId: 'identity',
+        headerGroupComponent: ColumnGroupHeader,
         children: [
-          {
-            headerCheckboxSelection: true,
-            checkboxSelection: true,
-            width: 45,
-            pinned: 'left',
-            suppressHeaderMenuButton: true,
-          },
           {
             headerName: 'Img',
             field: 'primary_image_url',
-            width: 55,
+            width: 70,
             pinned: 'left',
+            lockPinned: true,
+            checkboxSelection: false,
+            headerCheckboxSelection: false,
+            resizable: false,
+            suppressMovable: true,
+            cellClass: 'no-padding-cell flex items-center justify-center',
             cellRenderer: (p) => p.value ? (
-               <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 mt-2">
+               <div className="w-11 h-11 rounded-lg overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center bg-white">
                  <img src={p.value} className="w-full h-full object-cover" />
                </div>
-            ) : <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center mt-2 text-slate-300"><ImageIcon size={14}/></div>
+            ) : (
+               <div className="w-11 h-11 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-sm">
+                 <ImageIcon size={26}/>
+               </div>
+            )
           },
           {
             headerName: 'Product Name',
             field: 'product_name',
-            width: 250,
+            minWidth: 260,
+            flex: 2,
             pinned: 'left',
-            sortable: true,
-            filter: true,
+            lockPinned: true,
             editable: true,
-            cellClass: 'font-bold text-slate-900',
+            headerCheckboxSelection: true,
+            cellRenderer: ProductNameRenderer,
+            cellClass: 'product-name-cell'
           },
           {
             headerName: 'SKU/Barcode',
             field: 'sku_code',
-            width: 160,
+            width: 170,
             pinned: 'left',
             editable: true,
-            cellClass: 'font-mono text-[11px] text-slate-500',
-            valueGetter: p => p.data.sku_code || p.data.barcode || '—'
+            columnGroupShow: 'open',
+            cellClass: 'font-mono text-[11px] text-slate-600',
+            valueGetter: p => p.data.sku_code || p.data.barcode || '-',
+            cellRenderer: (p) => {
+              const val = p.valueFormatted || p.value;
+              return (
+                <div className="flex items-center justify-between w-full group">
+                  <span className="truncate font-medium">{val}</span>
+                  {val && val !== '-' && (
+                    <CopyButton
+                      value={val}
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0 bg-white shadow-sm border border-slate-100 rounded text-slate-400 hover:text-indigo-600"
+                      iconSize={11}
+                    />
+                  )}
+                </div>
+              );
+            }
+          },
+          {
+            headerName: 'Brand',
+            field: 'brand_reference_id',
+            width: 150,
+            pinned: 'left',
+            editable: true,
+            columnGroupShow: 'open',
+            cellRenderer: ReferenceCellRenderer,
+            cellRendererParams: { references, referenceKey: 'BRAND' },
+            cellEditor: ReferenceCellEditor,
+            cellEditorParams: { referenceType: 'BRAND', preloadedOptions: refLists['BRAND'] },
+            cellEditorPopup: true,
+            singleClickEdit: true,
+            cellClass: 'cursor-pointer p-0 font-bold text-indigo-600'
           }
         ]
       }
@@ -603,66 +838,127 @@ export default function MasterTab({ isMobile }) {
 
     const groupCols = GROUPS.map(g => ({
       headerName: g.label,
+      groupId: g.id,
+      headerGroupComponent: ColumnGroupHeader,
+      headerGroupComponentParams: { color: g.color },
       marryChildren: true,
       headerClass: `ag-group-header-${g.color}`,
-      children: g.cols.map(c => {
+      children: g.cols.map((c, idx) => {
         const isRef = !!REF_MAP[c.id];
         const refKey = REF_MAP[c.id];
-        
+
         return {
           headerName: c.label,
           field: c.id,
-          width: c.width || 120,
-          editable: !c.noInline,
-          sortable: !!c.sortable,
+          columnGroupShow: idx === 0 ? undefined : 'open',
+          width: c.width,
+          align: c.align,
+          sortable: c.sortable || false,
+          editable: c.id !== 'createdAt' && c.id !== 'catalog_url' && c.id !== 'finished_product_weight',
+          pinned: c.sticky ? 'left' : null,
+          wrapText: c.isContent ? true : false,
+          autoHeight: false,
+          headerClass: `ag-group-header-${g.color}`,
           cellClass: cn(
             c.align === 'right' && 'text-right',
             c.isMono && 'font-mono text-[11px]',
             c.isNum && 'tabular-nums font-semibold',
-            isRef && 'cursor-pointer hover:bg-slate-50/50'
+            isRef && 'cursor-pointer p-0'
           ),
-          valueFormatter: p => {
-             if (isRef && references[refKey]) return references[refKey][p.value] || p.value || '—';
-             if (c.id === 'mrp' || c.id === 'purchase_cost') return p.value ? `₹${Number(p.value).toLocaleString('en-IN')}` : '—';
-             return p.value || '—';
+          valueGetter: (p) => {
+            if (c.id === 'finished_product_weight') {
+              const raw = Number(p.data.raw_product_weight) || 0;
+              const pkg = Number(p.data.package_weight) || 0;
+              return raw + pkg;
+            }
+            return p.data[c.id];
           },
-          cellEditor: isRef ? 'agSelectCellEditor' : (c.isNum ? 'agNumberCellEditor' : 'agTextCellEditor'),
-          cellEditorParams: isRef ? {
-             values: refLists[refKey]?.map(r => r.id) || [],
-             useFormatter: true,
-          } : {},
-          cellRenderer: c.id === 'status_reference_id' ? (p) => {
+          valueFormatter: p => {
+             if (isRef && references[refKey]) return references[refKey][p.value] || p.value || '-';
+             if (c.id.endsWith('_weight') || c.id === 'finished_product_weight') return p.value ? `${p.value} g` : '-';
+             return p.value || '-';
+          },
+          cellRenderer: isRef ? ReferenceCellRenderer : (c.id === 'status_reference_id' ? (p) => {
              const lbl = references.STATUS[p.value];
              return <StatusBadge label={lbl} />;
-          } : undefined
+          } : (c.id === 'mrp' || c.id === 'purchase_cost' ? (p) => (
+             <div className="flex items-center gap-1.5 w-full justify-end font-semibold">
+               {p.value !== '-' && (
+                 <span className="text-slate-400">
+                   <IndianRupee size={12} strokeWidth={3} />
+                 </span>
+               )}
+               <span>{p.value !== '-' ? Number(p.value).toLocaleString('en-IN') : '-'}</span>
+             </div>
+          ) : (c.id === 'catalog_url' ? (p) => (
+             <div className="flex items-center justify-center w-full min-h-[44px]">
+               {p.value ? (
+                 <a
+                   href={p.value}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="w-10 h-10 flex items-center justify-center bg-white border border-indigo-100 rounded-full text-indigo-600 shadow-sm hover:shadow-md hover:border-indigo-300 hover:scale-110 transition-all duration-200"
+                   onClick={(e) => e.stopPropagation()}
+                 >
+                   <ExternalLink size={18} strokeWidth={2.5} />
+                 </a>
+               ) : (
+                 <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+               )}
+             </div>
+          ) : (c.isMono ? (p) => {
+              const val = p.valueFormatted || p.value;
+              return (
+                <div className="flex items-center justify-between w-full group">
+                  <span className="truncate">{val || '-'}</span>
+                  {val && val !== '-' && (
+                    <CopyButton
+                      value={val}
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0 bg-white shadow-sm border border-slate-100 rounded text-slate-400 hover:text-indigo-600 ml-2"
+                      iconSize={11}
+                    />
+                  )}
+                </div>
+              );
+           } : undefined)))),
+          cellRendererParams: isRef ? { references, referenceKey: refKey } : {},
+          cellEditor: isRef ? ReferenceCellEditor : (c.isNum ? 'agNumberCellEditor' : 'agTextCellEditor'),
+          cellEditorParams: isRef ? { referenceType: refKey, preloadedOptions: refLists[refKey] } : {},
+          cellEditorPopup: isRef,
+          singleClickEdit: isRef,
         };
       })
     }));
 
-    return [...baseCols, ...groupCols, [
-        {
-          headerName: 'Actions',
-          pinned: 'right',
-          lockPinned: true,
-          width: 80,
-          cellRenderer: (p) => (
-            <div className="flex items-center gap-1 mt-1.5">
-               <button 
-                  onClick={() => { setEditingSku(p.data); setIsFormOpen(true); }}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
-               >
-                 <SquarePen size={15} />
-               </button>
-               <button 
-                  onClick={() => setActiveNoteSkuId(p.data.id)}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
-               >
-                 <StickyNote size={15} />
-               </button>
-            </div>
-          )
-        }
-    ][0]];
+    return [...baseCols, ...groupCols, {
+        headerName: '',
+        pinned: 'right',
+        lockPinned: true,
+        children: [
+          {
+            headerName: 'Actions',
+            pinned: 'right',
+            lockPinned: true,
+            width: 100,
+            cellRenderer: (p) => (
+              <div className="flex items-center gap-1 mt-1.5">
+                 <button
+                    onClick={() => { setEditingSku(p.data); setIsFormOpen(true); }}
+                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
+                 >
+                   <SquarePen size={15} />
+                 </button>
+                 <button
+                    onClick={() => setActiveNoteSkuId(p.data.id)}
+                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
+                 >
+                   <StickyNote size={15} />
+                 </button>
+              </div>
+            )
+          }
+        ]
+    }];
   }, [references, refLists, isMobile]);
 
   const defaultColDef = useMemo(() => ({
@@ -686,15 +982,6 @@ export default function MasterTab({ isMobile }) {
   }, [activeNoteSkuId, handleNoteClose]);
 
   // Flatten visible columns for data rows
-  const visibleCols = useMemo(() => {
-    const cols = [...BASE_COLS];
-    for (const g of GROUPS) {
-      const expanded = expandedGroups.has(g.id);
-      cols.push(...(expanded ? g.cols : [g.cols[0]]));
-    }
-    cols.push(REMARKS_COL);
-    return cols;
-  }, [expandedGroups]);
 
 
   const filtered = useMemo(() => skus.filter(s => {
@@ -912,23 +1199,28 @@ export default function MasterTab({ isMobile }) {
             <>
               <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
 
-              {/* Expand / Collapse All */}
-              <div className="flex items-center border border-[var(--color-border)] rounded-md overflow-hidden bg-[var(--color-card)] shadow-sm">
-                <button
-                  onClick={() => setExpandedGroups(new Set(allGroupIds))}
-                  disabled={isAllExpanded}
-                  className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold border-r border-[var(--color-border)] transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
-                >
-                  <Maximize2 size={13}/> Expand All
-                </button>
-                <button
-                  onClick={() => setExpandedGroups(new Set())}
-                  disabled={isAllCollapsed}
-                  className="flex items-center gap-1.5 px-3 h-[32px] text-xs font-semibold transition-colors text-[var(--color-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40 disabled:hover:bg-[var(--color-card)]"
-                >
-                  <Minimize2 size={13}/> Collapse All
-                </button>
-              </div>
+              <button
+                onClick={() => handleExpandAllGroupings(expandedGroups.size === 0)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3.5 h-[32px] text-xs font-bold transition-all border rounded-lg active:scale-95 shadow-sm",
+                  expandedGroups.size > 0
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100"
+                    : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)]/30 hover:text-[var(--color-foreground)]"
+                )}
+                title={expandedGroups.size > 0 ? "Collapse all groups" : "Expand all groups"}
+              >
+                {expandedGroups.size > 0 ? (
+                  <>
+                    <Minimize2 size={13} className="text-indigo-500" />
+                    <span>Collapse All</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 size={13} />
+                    <span>Expand All</span>
+                  </>
+                )}
+              </button>
             </>
           )}
         </div>
@@ -985,8 +1277,8 @@ export default function MasterTab({ isMobile }) {
           )}
         </div>
       ) : (
-      {/* ── Table / Grid Section ── */}
-      <div className="flex-1 min-h-0 relative group">
+        <div className="flex-1 min-h-0 relative group">
+          {/* ── Table / Grid Section ── */}
         {loading ? (
           <div className="h-[calc(100vh-280px)] w-full flex items-center justify-center bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)]">
              <div className="flex flex-col items-center gap-4">
@@ -1024,6 +1316,7 @@ export default function MasterTab({ isMobile }) {
                 setSelectedSkus(new Set(selected.map(s => s.id)));
               }}
               onCellValueChanged={onCellValueChanged}
+              onColumnGroupOpened={onColumnGroupOpened}
               rowSelection="multiple"
               suppressRowClickSelection={true}
               enableRangeSelection={true}
@@ -1031,7 +1324,7 @@ export default function MasterTab({ isMobile }) {
               stopEditingWhenCellsLoseFocus={true}
               animateRows={false}
               headerHeight={45}
-              rowHeight={52}
+              rowHeight={64}
               getContextMenuItems={() => [
                 'copy',
                 'separator',
@@ -1044,6 +1337,8 @@ export default function MasterTab({ isMobile }) {
                   icon: '<span class="lucide lucide-copy"></span>'
                 }
               ]}
+              rowSelection="multiple"
+              suppressRowClickSelection={false}
               gridOptions={{
                 suppressCellFocus: false,
                 ensureDomOrder: true,
@@ -1062,9 +1357,9 @@ export default function MasterTab({ isMobile }) {
               </div>
               <div className="w-[1px] h-8 bg-[var(--color-border)]" />
               <div className="flex gap-2">
-                <Button 
-                   variant="ghost" 
-                   size="sm" 
+                <Button
+                   variant="ghost"
+                   size="sm"
                    className="h-9 gap-2 text-violet-600 hover:bg-violet-500/10 font-bold"
                    onClick={() => {
                       const selected = gridApi.getSelectedRows();
@@ -1073,74 +1368,38 @@ export default function MasterTab({ isMobile }) {
                 >
                   <Copy size={14} /> Duplicate ({selectedSkus.size}x)
                 </Button>
-                <Button 
-                   variant="ghost" 
-                   size="sm" 
+                <Button
+                   variant="ghost"
+                   size="sm"
                    className="h-9 gap-2 text-red-600 hover:bg-red-500/10 font-bold"
                    onClick={handleBulkDelete}
                 >
                   <Trash2 size={14} /> Delete Selection
-                </Button>
-              </div>
-              <button 
-                onClick={() => { gridApi.deselectAll(); setSelectedSkus(new Set()); }}
-                className="p-1.5 hover:bg-[var(--color-muted)] rounded-full transition-colors"
-              >
-                <X size={16} className="text-[var(--color-muted-foreground)]" />
-              </button>
+              </Button>
             </div>
           </div>
-        )}
-        )}
+        </div>
+      )}
+    </div>
+  )}
+
+      {/* Status Bar (Replace Pagination) */}
+      <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm mt-3">
+        <div className="flex gap-4 items-center">
+          <span className="text-sm font-medium text-slate-600">Showing all {filtered.length} SKUs</span>
+          <div className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold uppercase tracking-wider">Spreadsheet Mode (All)</div>
+        </div>
+        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Bloomerce Unified Catalog</div>
       </div>
 
-      {/* Pagination View Controls (Bottom Bar) */}
-      <div className="flex items-center justify-between bg-[var(--color-card)] p-3 rounded-xl border border-[var(--color-border)] shadow-sm">
-        <div className="flex gap-4 items-center overflow-x-auto no-scrollbar py-1">
-          <span>Showing {Math.min((page-1)*pageSize+1,filtered.length)}–{Math.min(page*pageSize,filtered.length)} of {filtered.length}</span>
-          <select
-            value={pageSize}
-            onChange={e=>{setPageSize(Number(e.target.value));setPage(1);}}
-            className="border border-[var(--color-border)] rounded-md bg-[var(--color-card)] text-[var(--color-foreground)] text-xs px-1.5 py-1 outline-none cursor-pointer"
-          >
-            {PAGE_SIZE_OPTIONS.map(n=><option key={n} value={n}>{n} / page</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={()=>setPage(p=>Math.max(1,p-1))}
-            disabled={page===1}
-            className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft size={15}/>
-          </button>
-
-          <div className="flex items-center gap-1">
-            {pageNums.map((n,i)=>n==='…'
-              ? <span key={`g${i}`} className="px-1 text-xs text-[var(--color-muted-foreground)]">…</span>
-              : <button
-                  key={n}
-                  onClick={()=>setPage(n)}
-                  className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-lg border text-xs transition-colors",
-                    page===n ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white font-semibold" : "border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
-                  )}
-                >
-                  {n}
-                </button>)}
-          </div>
-
-          <button
-            onClick={()=>setPage(p=>Math.min(totalPages,p+1))}
-            disabled={page===totalPages}
-            className="flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronRight size={15}/>
-          </button>
-        </div>
-      </div>
-
-      {isFormOpen && <SkuMasterForm initialData={editingSku} statusOptions={refLists.STATUS} onClose={()=>setIsFormOpen(false)} onSaved={()=>{setIsFormOpen(false);loadAll();}}/>}
+      {isFormOpen && (
+        <SkuMasterForm
+          initialData={editingSku}
+          statusOptions={refLists.STATUS}
+          onClose={()=>setIsFormOpen(false)}
+          onSaved={()=>{setIsFormOpen(false);loadAll();}}
+        />
+      )}
       {isExportCenterOpen && (
         <ExportCenterSlideOver
           onClose={() => setIsExportCenterOpen(false)}
@@ -1150,7 +1409,14 @@ export default function MasterTab({ isMobile }) {
           references={references}
         />
       )}
-      {isImportOpen && <ImportSlideOver skus={skus} refLists={refLists} onClose={()=>setIsImportOpen(false)} onImportComplete={()=>{setIsImportOpen(false);loadAll();}} />}
+      {isImportOpen && (
+        <ImportSlideOver
+          skus={skus}
+          refLists={refLists}
+          onClose={()=>setIsImportOpen(false)}
+          onImportComplete={()=>{setIsImportOpen(false);loadAll();}}
+        />
+      )}
 
       {/* Global Note Editor */}
       {activeNoteSkuId && (() => {
