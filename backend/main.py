@@ -426,9 +426,9 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
     # Set up dedicated import logger
     logger = logging.getLogger("bulk_import")
     if not logger.handlers:
-        fh = logging.FileHandler("import_errors.log")
-        fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        logger.addHandler(fh)
+        sh = logging.StreamHandler()
+        sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logger.addHandler(sh)
         logger.setLevel(logging.INFO)
 
     logger.info(f"Bulk Import: Starting for {len(data.skus)} rows")
@@ -596,9 +596,9 @@ def bulk_import_sales(data: schemas.BulkSalesImportRequest, db: Session = Depend
     
     logger = logging.getLogger("sales_import")
     if not logger.handlers:
-        fh = logging.FileHandler("sales_import_errors.log")
-        fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        logger.addHandler(fh)
+        sh = logging.StreamHandler()
+        sh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logger.addHandler(sh)
         logger.setLevel(logging.INFO)
 
     logger.info(f"Sales Bulk Import: Starting for {len(data.orders)} rows")

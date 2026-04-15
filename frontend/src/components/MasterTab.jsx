@@ -31,14 +31,14 @@ import { cn, getDirectImageUrl } from '@/lib/utils';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const STATUS_VARIANTS = { active:'success', inactive:'destructive', draft:'draft', development:'development', 'in development':'development' };
-function StatusBadge({ label }) {
+const StatusBadge = ({ label }) => {
   const key = label?.toLowerCase();
   const display = (key === 'in development' || key === 'development') ? 'New Launch' : label;
   return <Badge variant={STATUS_VARIANTS[key] || 'secondary'} className="whitespace-nowrap">{display || 'Unknown'}</Badge>;
 }
 
 // ── Desktop Table Skeleton ────────────────────────────────────────────────────
-function TableSkeleton() {
+const TableSkeleton = () => {
   return (
     <div className="h-[calc(100vh-280px)] w-full flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
       {/* Header Mimic */}
@@ -70,7 +70,7 @@ function TableSkeleton() {
 }
 
 // ── Product Name Renderer (Failsafe Centering) ────────────────────────────────
-function ProductNameRenderer(p) {
+const ProductNameRenderer = (p) => {
   return (
     <div className="flex flex-col justify-center h-full w-full py-1">
       <div className="line-clamp-2 leading-[1.5] text-[#475569] font-medium text-[13.5px] whitespace-normal">
