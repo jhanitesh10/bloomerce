@@ -18,6 +18,7 @@ function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className 
   useEffect(() => {
     if (ref.current) {
       ref.current.style.height = 'auto';
+      // Limit to scrollHeight but constrained by CSS maxHeight if set
       ref.current.style.height = ref.current.scrollHeight + 'px';
     }
   }, [value]);
@@ -30,9 +31,10 @@ function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className 
       placeholder={placeholder}
       rows={rows}
       className={cn(
-        "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] focus:border-transparent transition-all leading-relaxed",
+        "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] focus:border-transparent transition-all leading-relaxed custom-scrollbar",
         className
       )}
+      style={{ maxHeight: '200px', overflowY: 'auto' }}
     />
   );
 }
@@ -355,7 +357,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('identity');
-  const [notesOpen, setNotesOpen] = useState(() => Boolean(initialData?.remark));
+  const [notesOpen, setNotesOpen] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [generatingUrl, setGeneratingUrl] = useState(false);
   const [showDrivePreview, setShowDrivePreview] = useState(false);
@@ -802,7 +804,8 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                 onClick={() => setNotesOpen(!notesOpen)}
                 className={cn(
                   "p-2 rounded-lg transition-all",
-                  notesOpen ? "bg-amber-100 text-amber-700" : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+                  notesOpen ? "bg-amber-100 text-amber-700 shadow-inner" : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]",
+                  !notesOpen && form.remark && "text-amber-600 bg-amber-500/10 ring-1 ring-amber-500/20"
                 )}
                 title="Internal Notes"
               >

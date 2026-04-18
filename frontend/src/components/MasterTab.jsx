@@ -160,6 +160,14 @@ const GROUPS = [
       { id: 'catalog_url',  label: 'Catalog URL',  width: 250, isContent: true },
     ],
   },
+  {
+    id: 'operations',
+    label: 'Operations',
+    color: 'orange',
+    cols: [
+      { id: 'remark', label: 'Internal Notes', width: 300, isContent: true },
+    ],
+  },
 ];
 
 const BASE_COLS = [
@@ -301,9 +309,9 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
         onClick={e => e.stopPropagation()}
       >
         <div className="bg-[var(--color-muted)]/50 px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-             <div className="w-2.5 h-2.5 bg-[var(--color-primary)] rounded-full animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
-             <span className="text-[12px] font-black uppercase tracking-[0.15em] text-[var(--color-muted-foreground)]">Edit SKU Remark</span>
+          <div className="flex items-center gap-2.5 text-amber-600">
+             <StickyNote size={18} />
+             <span className="text-[12px] font-black uppercase tracking-[0.15em] text-amber-600">Internal Operational Notes</span>
           </div>
           <div className="flex items-center gap-2">
             {val && (
@@ -321,14 +329,14 @@ function NotePopover({ sku, onSave, onClose, onDraftChange }) {
           </div>
         </div>
 
-        <div className="p-6 bg-[var(--color-card)]">
+        <div className="p-6 bg-[var(--color-card)] relative">
           <textarea
             autoFocus
             ref={textareaRef}
             value={val}
             onChange={e => handleChange(e.target.value)}
             placeholder="Add internal product remarks or operational notes here..."
-            className="w-full h-48 p-5 text-[14px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 focus:bg-[var(--color-card)] focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/5 focus:border-[var(--color-primary)] transition-all resize-none text-[var(--color-foreground)] leading-relaxed placeholder:opacity-40"
+            className="w-full min-h-[300px] max-h-[60vh] p-5 text-[14px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-muted)]/20 focus:bg-[var(--color-card)] focus:outline-none focus:ring-4 focus:ring-[var(--color-primary)]/5 focus:border-[var(--color-primary)] transition-all overflow-y-auto text-[var(--color-foreground)] leading-relaxed placeholder:opacity-40 custom-scrollbar"
             onKeyDown={e => {
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSave();
               if (e.key === 'Escape') onClose();
@@ -993,7 +1001,13 @@ export default function MasterTab({ isMobile }) {
                  </button>
                  <button
                     onClick={() => setActiveNoteSkuId(p.data.id)}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-amber-600 transition-colors"
+                    className={cn(
+                      "p-1.5 rounded-lg transition-colors border border-transparent",
+                      p.data.remark
+                        ? "text-amber-600 bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20"
+                        : "text-slate-400 hover:bg-slate-100 hover:text-amber-600"
+                    )}
+                    title={p.data.remark ? "View/Edit Note" : "Add Note"}
                  >
                    <StickyNote size={15} />
                  </button>
