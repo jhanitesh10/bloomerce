@@ -1,6 +1,7 @@
 import os
 import uuid
 import json
+import logging
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -12,13 +13,19 @@ from sqlalchemy.orm.attributes import flag_modified
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
 import re
 
 import models
 import schemas
 from database import engine, get_db, SessionLocal
+import ai_service
 from drive_service import DriveService
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("main")
 
 from sqlalchemy.exc import IntegrityError
 # Table creation is handled in the lifespan to avoid crashing on module load in serverless environments
@@ -586,6 +593,70 @@ def unlink_component(id: int, type: str, db: Session = Depends(get_db)):
     flag_modified(sku, "product_component_group_code")
     db.commit()
     return {"status": "success"}
+
+# --- AI Generation Enpoints ---
+
+class AIContentRequest(BaseModel):
+    product_name: str
+    brand: str
+    category: str
+    image_url: Optional[str] = None
+    image_urls: Optional[List[str]] = []
+    reference_url: Optional[str] = None  # Legacy support
+    reference_urls: Optional[List[str]] = []
+    message: Optional[str] = None
+    existing_data: Optional[Dict[str, Any]] = None
+    target_fields: Optional[List[str]] = None
+    custom_instruction: Optional[str] = None
+
+@app.post("/api/ai/generate-content", response_model=ai_service.SkuContentResponse)
+async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_db)):
+    """
+    Generates AI-enhanced content for a SKU.
+    Supports multi-modal (images), reference URLs, and field-specific generation.
+    """
+    provider = ai_service.get_ai_provider()
+    if not provider:
+        logger.error("AI Provider requested but not configured in environment")
+        raise HTTPException(500, "AI Provider not configured")
+    
+    # Fetch taxonomy for dynamic injection
+    valid_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "CATEGORY", models.ReferenceData.deleted_at == None).all()]
+    valid_sub_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "SUB_CATEGORY", models.ReferenceData.deleted_at == None).all()]
+
+    # Combine legacy single reference_url with the new list for the service
+    reference_urls = req.reference_urls or []
+    if req.reference_url and req.reference_url not in reference_urls:
+        reference_urls.append(req.reference_url)
+
+    try:
+        logger.info(f"AI Content Request received for product: {req.product_name} (Brand: {req.brand})")
+        logger.info(f"Target fields: {req.target_fields or 'ALL'}")
+        
+        # Merge 'message' into custom_instruction if both are provided, prioritizing 'message' if it exists
+        instruction = req.message or req.custom_instruction
+
+        content = await provider.generate_sku_content(
+            product_name=req.product_name,
+            brand=req.brand,
+            category=req.category,
+            image_url=req.image_url,
+            image_urls=req.image_urls,
+            reference_urls=reference_urls,
+            existing_data=req.existing_data,
+            target_fields=req.target_fields,
+            custom_instruction=instruction,
+            valid_categories=valid_categories,
+            valid_sub_categories=valid_sub_categories
+        )
+        
+        logger.info("AI Content generated successfully")
+        return content
+    except Exception as e:
+        logger.exception(f"AI Generation Failed for '{req.product_name}'")
+        # Return a more descriptive error if possible
+        detail = str(e) if "AI failed" in str(e) else "An internal error occurred during AI generation."
+        raise HTTPException(status_code=500, detail=detail)
 
 @app.get("/api/skus/{id}/pool-discovery")
 def get_pool_discovery(id: int, comp_type: Optional[str] = Query(None), db: Session = Depends(get_db)):

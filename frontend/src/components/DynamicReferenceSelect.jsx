@@ -17,7 +17,8 @@ export default function DynamicReferenceSelect({
   autoOpen = false,
   variant = 'default', // 'default' or 'flat'
   usePortal = true,
-  hideTrigger = false
+  hideTrigger = false,
+  isImproved = false
 }) {
   const [options, setOptions] = useState(preloadedOptions || []);
   const [isOpen, setIsOpen] = useState(autoOpen);
@@ -157,7 +158,12 @@ export default function DynamicReferenceSelect({
             "flex items-center justify-between w-full transition-all",
             variant === 'flat' 
               ? "bg-transparent border-none ring-0 px-0 py-0 h-full cursor-pointer" 
-              : "rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm cursor-pointer hover:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-ring)] focus-within:border-transparent",
+              : cn(
+                  "rounded-lg border px-3 py-2 text-sm cursor-pointer transition-all focus-within:ring-2",
+                  isImproved
+                    ? "border-emerald-400/30 bg-transparent text-emerald-900 focus-within:ring-emerald-500/10 font-bold"
+                    : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-[var(--color-primary)]/50 focus-within:ring-[var(--color-ring)] focus-within:border-transparent"
+                ),
             className
           )}
           onMouseDown={() => {

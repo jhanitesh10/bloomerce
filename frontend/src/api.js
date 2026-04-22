@@ -31,6 +31,7 @@ export const skuApi = {
   unlinkComponent: (id, type) => api.delete(`/skus/${id}/link-component/${type}`).then(res => res.data),
   getPoolInfo: (id) => api.get(`/skus/${id}/pool-info`).then(res => res.data),
   getPoolDiscovery: (id, type) => api.get(`/skus/${id}/pool-discovery${type ? `?comp_type=${type}` : ''}`).then(res => res.data),
+  generateAIContent: (data) => api.post('/ai/generate-content', data).then(res => res.data),
 };
 
 

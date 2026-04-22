@@ -1,0 +1,56 @@
+
+> frontend@0.0.0 build
+> vite build
+
+vite v6.4.1 building for production...
+transforming...
+[plugin vite:esbuild] src/components/MasterTab.jsx: Duplicate "rowSelection" attribute in JSX element
+1390|                  }
+1391|                ]}
+1392|                rowSelection="multiple"
+   |                ^
+1393|                suppressRowClickSelection={false}
+1394|                gridOptions={{
+
+[plugin vite:esbuild] src/components/MasterTab.jsx: Duplicate "suppressRowClickSelection" attribute in JSX element
+1391|                ]}
+1392|                rowSelection="multiple"
+1393|                suppressRowClickSelection={false}
+   |                ^
+1394|                gridOptions={{
+1395|                  suppressCellFocus: false,
+
+✓ 1758 modules transformed.
+✗ Build failed in 1.33s
+error during build:
+[vite:esbuild] Transform failed with 2 errors:
+/Users/niteshjha/personal/github/bloomerce/frontend/src/components/SkuMasterForm.jsx:1691:8: ERROR: Unexpected closing "div" tag does not match opening fragment tag
+/Users/niteshjha/personal/github/bloomerce/frontend/src/components/SkuMasterForm.jsx:1692:7: ERROR: Unterminated regular expression
+file: /Users/niteshjha/personal/github/bloomerce/frontend/src/components/SkuMasterForm.jsx:1691:8
+
+Unexpected closing "div" tag does not match opening fragment tag
+1689|          )}
+1690|  
+1691|        </div>
+   |          ^
+1692|      </>
+1693|    );
+
+Unterminated regular expression
+1690|  
+1691|        </div>
+1692|      </>
+   |         ^
+1693|    );
+1694|  }
+
+    at failureErrorWithLog (/Users/niteshjha/personal/github/bloomerce/frontend/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/niteshjha/personal/github/bloomerce/frontend/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/Users/niteshjha/personal/github/bloomerce/frontend/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/niteshjha/personal/github/bloomerce/frontend/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/niteshjha/personal/github/bloomerce/frontend/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)

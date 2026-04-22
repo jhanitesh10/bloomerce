@@ -3,17 +3,18 @@ import DynamicReferenceSelect from './DynamicReferenceSelect';
 import { skuApi, uploadApi, refApi } from '../api';
 import { Button } from '@/components/ui/button';
 import { cn, getDirectImageUrl } from '@/lib/utils';
+import BloomAIConsole from './BloomAIConsole';
 import {
   X, Save, UploadCloud, RefreshCw, Trash2, Link, ArrowLeft, Search,
   Package, Tag, FileText, BarChart2, Layers, Info, StickyNote,
   AlertCircle, FolderPlus, ExternalLink, BookmarkCheck, Check, Copy,
-  Zap, Users, Compass, PlusCircle, Bookmark
+  Zap, Users, Compass, PlusCircle, Bookmark, RotateCcw
 } from 'lucide-react';
 
 
 
 // ─── Auto-resizing textarea ───────────────────────────────────────
-function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className }) {
+function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className, isImproved }) {
   const ref = useRef(null);
   useEffect(() => {
     if (ref.current) {
@@ -23,19 +24,24 @@ function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className 
     }
   }, [value]);
   return (
-    <textarea
-      ref={ref}
-      name={name}
-      value={value || ''}
-      onChange={onChange}
-      placeholder={placeholder}
-      rows={rows}
-      className={cn(
-        "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] focus:border-transparent transition-all leading-relaxed custom-scrollbar",
-        className
-      )}
-      style={{ maxHeight: '200px', overflowY: 'auto' }}
-    />
+    <div className={cn("relative group/textarea transition-all")}>
+      <textarea
+        ref={ref}
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        className={cn(
+          "w-full rounded-lg border px-3 py-2 text-sm transition-all leading-relaxed custom-scrollbar outline-none",
+          isImproved 
+            ? "bg-transparent border-indigo-400/30 text-slate-800 focus:border-indigo-500/50"
+            : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:ring-2 focus:ring-[var(--color-ring)] focus:border-transparent",
+          className
+        )}
+        style={{ maxHeight: '200px', overflowY: 'auto' }}
+      />
+    </div>
   );
 }
 
@@ -188,13 +194,46 @@ function ImageBlock({ value, onChange, onStatus }) {
 }
 
 // ─── Field + FieldRow helpers ─────────────────────────────────────
-function Field({ label, required, children, hint, error }) {
+function Field({ id, label, required, children, hint, error, isImproved, onAccept, onDiscard, onRegenerate }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-[var(--color-foreground)]">
-        {label}
-        {required && <span className="ml-0.5 text-red-500">*</span>}
-      </label>
+    <div className={cn("flex flex-col gap-1.5 transition-all duration-500", isImproved && "p-3 rounded-2xl bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm animate-bloom-pulse")}>
+      <div className="flex items-center justify-between">
+        <label className={cn("text-xs font-medium", isImproved ? "text-indigo-700 font-bold" : "text-[var(--color-foreground)]")}>
+          {label}
+          {required && <span className="ml-0.5 text-red-500">*</span>}
+        </label>
+        {isImproved && (
+          <div className="flex items-center gap-1 p-0.5 rounded-full bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 animate-in zoom-in-50 duration-300 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-600/50 rounded-l-full border-r border-indigo-400/30">
+              <Zap size={8} fill="currentColor" />
+              <span className="text-[7px] font-black uppercase tracking-widest">AI improved</span>
+            </div>
+            <div className="flex items-center">
+              <button 
+                onClick={() => onRegenerate?.(id)}
+                className="p-1 px-1.5 hover:bg-white/20 transition-colors border-none text-white flex items-center justify-center"
+                title="Regenerate this field"
+              >
+                <RefreshCw size={10} />
+              </button>
+              <button 
+                onClick={() => onDiscard?.(id)}
+                className="p-1 px-1.5 hover:bg-rose-500 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30"
+                title="Discard & Revert"
+              >
+                <RotateCcw size={10} />
+              </button>
+              <button 
+                onClick={() => onAccept?.(id)}
+                className="p-1 px-2 hover:bg-indigo-400 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30"
+                title="Accept Change"
+              >
+                <Check size={10} strokeWidth={4} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
       {children}
       {hint && !error && <span className="text-[11px] text-[var(--color-muted-foreground)]">{hint}</span>}
       {error && (
@@ -367,6 +406,90 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     sub_category_name: '',
     sku_code: ''
   });
+
+  const [isAIConsoleOpen, setIsAIConsoleOpen] = useState(false);
+  const [bloomHistory, setBloomHistory] = useState(new Set());
+  const [originalValues, setOriginalValues] = useState({});
+  const [regenField, setRegenField] = useState(null);
+
+  const handleApplyAI = (results) => {
+    // Filter out null, undefined, or empty values from results
+    const filteredResults = {};
+    Object.keys(results).forEach(key => {
+      const val = results[key];
+      // Only apply if the value is not null/undefined and not an empty string (after trimming)
+      if (val !== null && val !== undefined && String(val).trim() !== "") {
+        filteredResults[key] = val;
+      }
+    });
+
+    // If no valid content was returned, provide feedback and exit
+    if (Object.keys(filteredResults).length === 0) {
+      setStatusMessage({
+        type: 'info',
+        text: "Bloom completed, but no new content was suggested for the selected fields."
+      });
+      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+      statusTimeoutRef.current = setTimeout(() => setStatusMessage(null), 5000);
+      return;
+    }
+
+    // Record original values before applying AI if they don't exist yet
+    setOriginalValues(prev => {
+      const next = { ...prev };
+      Object.keys(filteredResults).forEach(key => {
+        if (!(key in next)) {
+          next[key] = form[key];
+        }
+      });
+      return next;
+    });
+
+    setForm(prev => ({
+      ...prev,
+      ...filteredResults
+    }));
+    
+    // Record which fields were improved for highlighting (only those that actually changed)
+    setBloomHistory(prev => new Set([...prev, ...Object.keys(filteredResults)]));
+    
+    // Detailed feedback for one-click bloom
+    setStatusMessage({
+      type: 'success',
+      text: "Bloom successful! 🍃 All content applied. Please review the highlighted fields and Accept or Discard changes as needed."
+    });
+    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    statusTimeoutRef.current = setTimeout(() => setStatusMessage(null), 8000);
+
+    setRegenField(null);
+  };
+
+  const handleAcceptField = (fieldId) => {
+    setBloomHistory(prev => {
+      const next = new Set(prev);
+      next.delete(fieldId);
+      return next;
+    });
+  };
+
+  const handleDiscardField = (fieldId) => {
+    if (fieldId in originalValues) {
+      setForm(prev => ({
+        ...prev,
+        [fieldId]: originalValues[fieldId]
+      }));
+    }
+    setBloomHistory(prev => {
+      const next = new Set(prev);
+      next.delete(fieldId);
+      return next;
+    });
+  };
+
+  const handleRegenerateField = (fieldId) => {
+    setRegenField(fieldId);
+    setIsAIConsoleOpen(true);
+  };
 
   const handleRegenerateClick = async (e, force = false) => {
     e?.stopPropagation();
@@ -811,6 +934,22 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               >
                 <StickyNote size={18} />
               </button>
+              
+              <button
+                type="button"
+                onClick={() => setIsAIConsoleOpen(!isAIConsoleOpen)}
+                className={cn(
+                  "flex items-center gap-2 p-2 px-3 rounded-lg transition-all font-bold group",
+                  isAIConsoleOpen 
+                    ? "bg-indigo-600 text-white shadow-inner" 
+                    : "bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20"
+                )}
+                title={isAIConsoleOpen ? "Close AI Workspace" : "Bloom AI Intelligence"}
+              >
+                <Zap size={18} className={cn("transition-transform", isAIConsoleOpen ? "scale-90" : "group-hover:scale-110")} fill="currentColor" />
+                <span className="text-[10px] uppercase tracking-widest hidden sm:inline">Bloom AI</span>
+              </button>
+
               <Button
                 onClick={handleSubmit}
                 disabled={saving}
@@ -825,6 +964,21 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
             </div>
           </div>
         </div>
+
+        {isAIConsoleOpen && (
+          <div className="flex-shrink-0 z-[80] sticky top-0">
+            <BloomAIConsole 
+              initialData={initialData}
+              currentForm={form}
+              initialSelectedFields={regenField ? [regenField] : null}
+              onApply={handleApplyAI}
+              onClose={() => {
+                setIsAIConsoleOpen(false);
+                setRegenField(null);
+              }}
+            />
+          </div>
+        )}
 
         {/* ── Notes panel ─────────────────────────────────────── */}
         {notesOpen && (
@@ -841,20 +995,20 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
           </div>
         )}
 
-        {/* ── Status Messages (Inline Toast) ─────────────────── */}
+        {/* ── Global Status Notifications (Floating Toast) ───── */}
         {statusMessage && (
-          <div className="absolute top-[60px] left-0 right-0 z-[120] px-5 animate-in slide-in-from-top-4 duration-300">
+          <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[300] w-full max-w-md px-6 animate-in slide-in-from-top-4 duration-300 pointer-events-none">
             <div className={cn(
-              "flex items-center gap-3 p-3 rounded-2xl shadow-xl border backdrop-blur-md",
+              "flex items-center gap-4 p-3 rounded-2xl shadow-2xl border backdrop-blur-xl pointer-events-auto",
               statusMessage.type === 'error'
-                ? "bg-rose-500/95 border-rose-400 text-white shadow-rose-500/20"
-                : "bg-emerald-500/95 border-emerald-400 text-white shadow-emerald-500/20"
+                ? "bg-rose-500/95 border-rose-400 text-white shadow-rose-500/30"
+                : "bg-indigo-600/95 border-indigo-400 text-white shadow-indigo-500/40"
             )}>
-              <div className="shrink-0 w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                {statusMessage.type === 'error' ? <AlertCircle size={18} /> : <Check size={18} />}
+              <div className="shrink-0 w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shadow-inner">
+                {statusMessage.type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}
               </div>
-              <p className="text-xs font-bold leading-tight flex-1">{statusMessage.text}</p>
-              <button onClick={() => setStatusMessage(null)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
+              <p className="text-[11px] font-bold leading-snug flex-1">{statusMessage.text}</p>
+              <button onClick={() => setStatusMessage(null)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
                 <X size={14} />
               </button>
             </div>
@@ -899,21 +1053,25 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                 <>
                   <ImageBlock onStatus={showStatus} value={form.primary_image_url} onChange={(val) => set('primary_image_url', val)} />
 
-                  <Field label="Product Name" required error={errors.product_name}>
+                  <Field id="product_name" label="Product Name" required error={errors.product_name} isImproved={bloomHistory.has('product_name')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="product_name" value={form.product_name} onChange={handleChange}
                       className={inputCls(errors.product_name)}
                       placeholder="e.g. Bloomerce Rose Petal Face Wash" />
                   </Field>
 
-                  <Field label="SKU / EAN / Barcode ID" required error={errors.sku_code} hint="Saved as both SKU Code and Barcode/EAN in the database">
+                  <Field id="sku_code" label="SKU / EAN / Barcode ID" required error={errors.sku_code} hint="Saved as both SKU Code and Barcode/EAN in the database" isImproved={bloomHistory.has('sku_code')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="sku_code" value={form.sku_code} onChange={handleChange}
                       className={cn(inputCls(errors.sku_code), "font-mono")}
                       placeholder="e.g. BL-RFW-001 or 8901234567891" />
                   </Field>
 
                   <FieldRow>
-                    <Field label="Brand">
+                    <Field id="brand_reference_id" label="Brand" isImproved={bloomHistory.has('brand_reference_id')}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <DynamicReferenceSelect label="" referenceType="BRAND" value={form.brand_reference_id}
+                        isImproved={bloomHistory.has('brand_reference_id')}
                         onChange={(id, label) => {
                           set('brand_reference_id', id);
                           setDriveDraft(prev => ({ ...prev, brand_name: sanitizeFolderName(label) }));
@@ -965,8 +1123,10 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               {activeTab === 'classification' && (
                 <>
                   <FieldRow>
-                    <Field label="Category">
+                    <Field id="category_reference_id" label="Category" isImproved={bloomHistory.has('category_reference_id')}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <DynamicReferenceSelect label="" referenceType="CATEGORY" value={form.category_reference_id}
+                        isImproved={bloomHistory.has('category_reference_id')}
                         onChange={(id, label) => {
                           const hasChanged = id !== form.category_reference_id;
                           set('category_reference_id', id);
@@ -978,21 +1138,25 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                           }
                         }} placeholder="Select or add category…" />
                     </Field>
-                    <Field label="Sub-Category">
+                    <Field id="sub_category_reference_id" label="Sub-Category" isImproved={bloomHistory.has('sub_category_reference_id')}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <DynamicReferenceSelect label="" referenceType="SUB_CATEGORY" value={form.sub_category_reference_id}
                         parentId={form.category_reference_id}
+                        isImproved={bloomHistory.has('sub_category_reference_id')}
                         onChange={(id, label) => {
                           set('sub_category_reference_id', id);
                           setDriveDraft(prev => ({ ...prev, sub_category_name: sanitizeFolderName(label) }));
                         }} placeholder="Select or add sub-category…" />
-                      {/* label info removed */}
                     </Field>
                   </FieldRow>
-                  <Field label="Product Status">
+                  <Field id="status_reference_id" label="Product Status" isImproved={bloomHistory.has('status_reference_id')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <DynamicReferenceSelect label="" referenceType="STATUS" value={form.status_reference_id}
+                      isImproved={bloomHistory.has('status_reference_id')}
                       onChange={(v) => set('status_reference_id', v)} placeholder="Active / Inactive / Draft…" />
                   </Field>
-                  <Field label="Product Type">
+                  <Field id="product_type" label="Product Type" isImproved={bloomHistory.has('product_type')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="product_type" value={form.product_type} onChange={handleChange}
                       className={inputCls(false)} placeholder="e.g. Finished Good / Raw Material" />
                   </Field>
@@ -1163,39 +1327,47 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                     </div>
                   </Field>
 
-                  <Field label="Description" hint="Main product description shown on listings">
-                    <AutoTextarea name="description" value={form.description} onChange={handleChange}
+                  <Field id="description" label="Description" hint="Main product description shown on listings" isImproved={bloomHistory.has('description')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                    <AutoTextarea name="description" value={form.description} onChange={handleChange} isImproved={bloomHistory.has('description')}
                       placeholder="Describe the product clearly for customers and search engines…" rows={3} />
                   </Field>
-                  <Field label="Key Features / USPs" hint="One feature per line">
-                    <AutoTextarea name="key_feature" value={form.key_feature} onChange={handleChange}
+                  <Field id="key_feature" label="Key Features / USPs" hint="One feature per line" isImproved={bloomHistory.has('key_feature')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                    <AutoTextarea name="key_feature" value={form.key_feature} onChange={handleChange} isImproved={bloomHistory.has('key_feature')}
                       placeholder={"Sulphate-free\npH balanced\nSuitable for all skin types"} rows={3} />
                   </Field>
                   <FieldRow>
-                    <Field label="Key Ingredients">
-                      <AutoTextarea name="key_ingredients" value={form.key_ingredients} onChange={handleChange}
+                    <Field id="key_ingredients" label="Key Ingredients" isImproved={bloomHistory.has('key_ingredients')}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                      <AutoTextarea name="key_ingredients" value={form.key_ingredients} onChange={handleChange} isImproved={bloomHistory.has('key_ingredients')}
                         placeholder="Rose Water, Aloe Vera…" />
                     </Field>
-                    <Field label="Full Ingredients">
-                      <AutoTextarea name="ingredients" value={form.ingredients} onChange={handleChange}
+                    <Field id="ingredients" label="Full Ingredients" isImproved={bloomHistory.has('ingredients')}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                      <AutoTextarea name="ingredients" value={form.ingredients} onChange={handleChange} isImproved={bloomHistory.has('ingredients')}
                         placeholder="Aqua, Glycerin, Rosa Damascena…" />
                     </Field>
                   </FieldRow>
                   <FieldRow>
-                    <Field label="How to Use">
-                      <AutoTextarea name="how_to_use" value={form.how_to_use} onChange={handleChange}
+                    <Field id="how_to_use" label="How to Use" isImproved={bloomHistory.has('how_to_use')}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                      <AutoTextarea name="how_to_use" value={form.how_to_use} onChange={handleChange} isImproved={bloomHistory.has('how_to_use')}
                         placeholder="Apply on wet face, massage gently, rinse." />
                     </Field>
-                    <Field label="Product Care">
-                      <AutoTextarea name="product_care" value={form.product_care} onChange={handleChange}
+                    <Field id="product_care" label="Product Care" isImproved={bloomHistory.has('product_care')}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                      <AutoTextarea name="product_care" value={form.product_care} onChange={handleChange} isImproved={bloomHistory.has('product_care')}
                         placeholder="Store in a cool, dry place." />
                     </Field>
                   </FieldRow>
-                  <Field label="Caution / Warnings">
-                    <AutoTextarea name="caution" value={form.caution} onChange={handleChange}
+                  <Field id="caution" label="Caution / Warnings" isImproved={bloomHistory.has('caution')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                    <AutoTextarea name="caution" value={form.caution} onChange={handleChange} isImproved={bloomHistory.has('caution')}
                       placeholder="Keep out of reach of children. For external use only." />
                   </Field>
-                  <Field label="SEO Keywords" hint="Comma-separated">
+                  <Field id="seo_keywords" label="SEO Keywords" hint="Comma-separated" isImproved={bloomHistory.has('seo_keywords')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="seo_keywords" value={form.seo_keywords} onChange={handleChange}
                       className={inputCls(false)} placeholder="rose face wash, sulphate free" />
                   </Field>
@@ -1281,11 +1453,13 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               {/* TAX & COMPLIANCE */}
               {activeTab === 'tax' && (
                 <FieldRow>
-                  <Field label="Tax Rule Code (HSN)" error={errors.tax_rule_code}>
+                  <Field id="tax_rule_code" label="Tax Rule Code (HSN)" error={errors.tax_rule_code} isImproved={bloomHistory.has('tax_rule_code')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="tax_rule_code" value={form.tax_rule_code} onChange={handleChange}
                       className={cn(inputCls(errors.tax_rule_code), "font-mono")} placeholder="HSN-8517" />
                   </Field>
-                  <Field label="Tax %">
+                  <Field id="tax_percent" label="Tax %" isImproved={bloomHistory.has('tax_percent')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="number" name="tax_percent" value={form.tax_percent} onChange={handleChange}
                       className={inputCls(false)} placeholder="18" min="0" max="100" step="0.1" />
                   </Field>
@@ -1555,6 +1729,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
           </div>
         </div>
       </div>
+
     </>
   );
 }
