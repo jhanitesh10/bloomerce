@@ -195,16 +195,16 @@ export default function BloomAIConsole({ initialData, currentForm, initialSelect
   const groupNames = [...new Set(TARGET_FIELDS.map(f => f.group))];
 
   return (
-    <div className="w-full bg-white/40 backdrop-blur-3xl border-b border-indigo-500/20 shadow-2xl animate-in slide-in-from-top duration-300 overflow-hidden relative">
+    <div className="w-full bg-white/80 backdrop-blur-3xl border-b border-indigo-500/10 shadow-2xl animate-in slide-in-from-top duration-300 overflow-hidden relative">
       {/* Decorative background element */}
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Mini Toggle Bar */}
-      <div className="flex items-center justify-between px-6 py-2 border-b border-indigo-500/10 bg-white/50">
+      <div className="flex items-center justify-between px-6 py-2 border-b border-indigo-500/5 bg-white/40">
         <div className="flex items-center gap-2">
           <Zap size={14} className="text-indigo-500" fill="currentColor" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-800/60">Bloom AI Intelligence</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600/80">Bloom AI Intelligence</span>
         </div>
         <div className="flex items-center gap-2">
           <button 
@@ -254,7 +254,7 @@ export default function BloomAIConsole({ initialData, currentForm, initialSelect
                 
                 <div className="shrink-0">
                   <Button 
-                    className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-3 shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all group"
+                    className="h-14 px-8 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold gap-3 shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all group border-t border-white/20"
                     onClick={handleGenerate}
                     disabled={loading || selectedFields.length === 0}
                   >
@@ -367,8 +367,8 @@ export default function BloomAIConsole({ initialData, currentForm, initialSelect
                       className={cn(
                         "px-3.5 py-2 rounded-2xl text-[10px] font-bold transition-all border flex items-center gap-2 relative",
                         isSelected 
-                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.02]" 
-                          : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
+                          ? "bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-600/20 scale-[1.02]" 
+                          : "bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-500"
                       )}
                     >
                       {isSelected ? <CheckCircle2 size={12} fill="white" className="text-indigo-600" /> : <Circle size={12} className="opacity-20" />}

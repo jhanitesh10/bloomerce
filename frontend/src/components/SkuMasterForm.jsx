@@ -941,8 +941,8 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                 className={cn(
                   "flex items-center gap-2 p-2 px-3 rounded-lg transition-all font-bold group",
                   isAIConsoleOpen 
-                    ? "bg-indigo-600 text-white shadow-inner" 
-                    : "bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20"
+                    ? "bg-indigo-500 text-white shadow-inner" 
+                    : "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20"
                 )}
                 title={isAIConsoleOpen ? "Close AI Workspace" : "Bloom AI Intelligence"}
               >
@@ -1002,7 +1002,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               "flex items-center gap-4 p-3 rounded-2xl shadow-2xl border backdrop-blur-xl pointer-events-auto",
               statusMessage.type === 'error'
                 ? "bg-rose-500/95 border-rose-400 text-white shadow-rose-500/30"
-                : "bg-indigo-600/95 border-indigo-400 text-white shadow-indigo-500/40"
+                : "bg-indigo-500/95 border-indigo-400 text-white shadow-indigo-500/30"
             )}>
               <div className="shrink-0 w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shadow-inner">
                 {statusMessage.type === 'error' ? <AlertCircle size={16} /> : <Check size={16} />}

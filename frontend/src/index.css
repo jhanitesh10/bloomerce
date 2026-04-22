@@ -242,9 +242,9 @@ thead .sticky-col { z-index: 12; background: var(--color-muted); }
 }
 /* ── Bloom Pulse for AI Highlighting ──────────────────────────── */
 @keyframes bloom-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3); }
+  70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
 }
 
 .animate-bloom-pulse {
