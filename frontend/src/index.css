@@ -38,6 +38,9 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
+  /* Breakpoints */
+  --breakpoint-xs: 400px;
+
   /* Fonts */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;

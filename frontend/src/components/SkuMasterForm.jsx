@@ -866,7 +866,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       />
 
       {/* Slide-over Panel */}
-      <div className="fixed inset-y-0 right-0 z-[100] flex flex-col w-full md:max-w-2xl bg-[var(--color-card)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)]">
+      <div className="fixed inset-y-0 right-0 sm:right-0 z-[100] flex flex-col w-full sm:w-full md:max-w-2xl bg-[var(--color-card)] border-l border-[var(--color-border)] shadow-2xl animate-[slide-in-from-right_0.3s_cubic-bezier(0.4,0,0.2,1)] overflow-hidden">
 
         {/* ── Unsaved-changes dialog (Edit mode only) ───────────── */}
         {confirmClose && (
@@ -902,26 +902,26 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
         {/* ── Header ───────────────────────────────────────────── */}
         <div className="flex flex-col border-b border-[var(--color-border)] flex-shrink-0 bg-[var(--color-card)]">
           <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 w-full">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 max-w-[50%] sm:max-w-none">
               <button
                 onClick={handleClose}
                 className="p-1.5 rounded-lg text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors shrink-0"
                 title="Close"
               >
-                <X size={18} />
+                <X size={20} className="sm:size-[18px]" />
               </button>
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shadow-inner shrink-0">
+                <div className="hidden xs:flex w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shadow-inner shrink-0">
                    <BookmarkCheck size={18} className="sm:size-5" />
                 </div>
                 <div className="min-w-0 overflow-hidden">
-                  <h2 className="text-sm sm:text-base font-bold text-[var(--color-foreground)] leading-tight truncate">{title}</h2>
-                  <p className="text-[9px] sm:text-[10px] text-[var(--color-muted-foreground)] font-bold uppercase tracking-widest truncate">Catalog Resource Entry</p>
+                  <h2 className="text-[13px] sm:text-base font-bold text-[var(--color-foreground)] leading-tight truncate">{title}</h2>
+                  <p className="text-[8px] sm:text-[10px] text-[var(--color-muted-foreground)] font-bold uppercase tracking-widest truncate">Catalog Entry</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setNotesOpen(!notesOpen)}
@@ -932,21 +932,21 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                 )}
                 title="Internal Notes"
               >
-                <StickyNote size={18} />
+                <StickyNote size={20} className="sm:size-[18px]" />
               </button>
               
               <button
                 type="button"
                 onClick={() => setIsAIConsoleOpen(!isAIConsoleOpen)}
                 className={cn(
-                  "flex items-center gap-2 p-2 px-3 rounded-lg transition-all font-bold group",
+                  "flex items-center gap-1.5 sm:gap-2 p-2 px-2.5 sm:px-3 rounded-lg transition-all font-bold group",
                   isAIConsoleOpen 
                     ? "bg-indigo-500 text-white shadow-inner" 
                     : "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20"
                 )}
                 title={isAIConsoleOpen ? "Close AI Workspace" : "Bloom AI Intelligence"}
               >
-                <Zap size={18} className={cn("transition-transform", isAIConsoleOpen ? "scale-90" : "group-hover:scale-110")} fill="currentColor" />
+                <Zap size={20} className={cn("sm:size-[18px] transition-transform", isAIConsoleOpen ? "scale-90" : "group-hover:scale-110")} fill="currentColor" />
                 <span className="text-[10px] uppercase tracking-widest hidden sm:inline">Bloom AI</span>
               </button>
 
@@ -958,7 +958,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                 {saving ? (
                   <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                 ) : (
-                  <><Save size={14} className="sm:size-4" /><span className="hidden sm:inline">{isEdit ? 'Save Changes' : 'Create Product'}</span><span className="sm:hidden text-xs">Save</span></>
+                  <><Save size={16} className="sm:size-4" /><span className="hidden sm:inline">{isEdit ? 'Save Changes' : 'Create Product'}</span><span className="sm:hidden text-[11px] font-black uppercase tracking-tight">Save</span></>
                 )}
               </Button>
             </div>
