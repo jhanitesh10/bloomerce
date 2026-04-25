@@ -1176,7 +1176,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                           <div>
                             <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">Syndicated Infrastructure</p>
                             <p className="text-[10px] text-indigo-600 font-medium">
-                              {(Array.isArray(form.product_component_group_code) ? form.product_component_group_code : []).length} component pools active
+                              {poolInfo.length} Products across {(Array.isArray(form.product_component_group_code) ? form.product_component_group_code : []).length} Pools
                             </p>
                           </div>
                         </div>
@@ -1191,14 +1191,23 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                         </Button>
                       </div>
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-indigo-100/50">
-                        {(Array.isArray(form.product_component_group_code) ? form.product_component_group_code : []).map((entry, idx) => (
-                          <div key={idx} className="flex flex-col">
-                            <span className="text-[8px] font-bold text-slate-400 uppercase px-1">{entry.type}</span>
-                            <span className="px-2 py-0.5 bg-white text-indigo-600 rounded-lg text-[10px] font-mono font-bold border border-indigo-100">
-                              {typeof entry.id === 'string' ? entry.id.split('_')[0] : '...'}
-                            </span>
-                          </div>
-                        ))}
+                        {(Array.isArray(form.product_component_group_code) ? form.product_component_group_code : []).map((entry, idx) => {
+                          const peers = poolInfo.filter(peer => {
+                            const peerCodes = parsePoolMapping(peer.product_component_group_code);
+                            return peerCodes.some(c => c.type === entry.type && c.id === entry.id);
+                          });
+                          return (
+                            <div key={idx} className="flex flex-col min-w-[70px]">
+                              <div className="flex items-center justify-between px-1 mb-0.5">
+                                <span className="text-[8px] font-bold text-slate-400 uppercase">{entry.type}</span>
+                                {peers.length > 0 && <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-1 rounded-sm">{peers.length}</span>}
+                              </div>
+                              <span className="px-2 py-0.5 bg-white text-indigo-600 rounded-lg text-[10px] font-mono font-bold border border-indigo-100 truncate shadow-sm">
+                                {typeof entry.id === 'string' ? entry.id.split('_')[0] : '...'}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
