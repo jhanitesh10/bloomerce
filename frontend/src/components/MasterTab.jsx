@@ -990,8 +990,8 @@ export default function MasterTab({ isMobile }) {
                 );
               }
               return (
-                <div className="flex items-center min-h-[44px] group/stack">
-                  <div className="flex -space-x-3 group-hover/stack:space-x-1.5 transition-all duration-300">
+                <div className="flex items-center justify-center w-full h-full group/stack">
+                  <div className="flex -space-x-3 group-hover/stack:space-x-1.5 transition-all duration-300 ml-1.5">
                     {p.value.map((plat, idx) => {
                       const baseUrl = channelUrls[plat.channel_name || plat.platform_name];
                       const finalUrl = baseUrl && plat.id ? (baseUrl.includes("{id}") ? baseUrl.replace("{id}", plat.id) : `${baseUrl}${plat.id}`) : "";
@@ -1020,8 +1020,8 @@ export default function MasterTab({ isMobile }) {
                            ) : (
                              <span className="text-[10px] font-bold text-slate-500">{(plat.channel_name || plat.platform_name || "C").charAt(0)}</span>
                            )}
-                           <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-indigo-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                              <ExternalLink size={6} strokeWidth={4} />
+                           <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-indigo-500 rounded-full flex items-center justify-center text-white border border-white shadow-sm">
+                              <ExternalLink size={7} strokeWidth={4} />
                            </div>
                         </a>
                       );
