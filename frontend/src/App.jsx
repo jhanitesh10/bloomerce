@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import MasterTab from './components/MasterTab';
 import SalesDashboard from './components/SalesDashboard';
+import { APP_PATHS } from './config';
 import {
   Layers,
   Package,
@@ -10,27 +12,26 @@ import {
   X,
   Moon,
   Sun,
-  Settings,
-  HelpCircle,
-  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import './index.css';
 
 const NAV_ITEMS = [
-  { key: 'prompt', label: 'Products Master', icon: Layers, description: 'Product Information & Catalog' },
-  { key: 'inventory', label: 'Inventory Management', icon: Package, description: 'Stock & Warehouse' },
-  { key: 'sales', label: 'Sales Analysis', icon: BarChart3, description: 'Metrics & Insights' },
+  { key: 'prompt', path: APP_PATHS.CATALOG, label: 'Products Master', icon: Layers, description: 'Product Information & Catalog' },
+  { key: 'inventory', path: APP_PATHS.INVENTORY, label: 'Inventory Management', icon: Package, description: 'Stock & Warehouse' },
+  { key: 'sales', path: APP_PATHS.SALES, label: 'Sales Analysis', icon: BarChart3, description: 'Metrics & Insights' },
 ];
 
 function App() {
   const [theme, setTheme] = useState('light');
-  const [activeTab, setActiveTab] = useState('prompt');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Hover Intent Timers
   const hoverTimer = useRef(null);
@@ -61,6 +62,10 @@ function App() {
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const sidebarWidth = (isSidebarOpen || isHovered) ? "w-[240px]" : "w-20";
+
+  // Determine active tab based on current path
+  const currentNav = NAV_ITEMS.find(item => location.pathname.startsWith(item.path));
+  const activeTab = currentNav ? currentNav.key : 'prompt';
 
   return (
     <div className="flex min-h-screen w-full bg-[var(--color-background)] font-sans antialiased text-[var(--color-foreground)] overflow-x-hidden">
@@ -113,7 +118,7 @@ function App() {
       >
         {/* Brand Section */}
         <div className="flex items-center justify-between px-5 py-4 min-h-[72px]">
-          <div className="flex items-center gap-3 overflow-hidden ml-1">
+          <div className="flex items-center gap-3 overflow-hidden ml-1" onClick={() => navigate(APP_PATHS.CATALOG)} style={{ cursor: 'pointer' }}>
             <img src="/bloomerce_logo.svg" alt="Bloomerce" className="h-9 w-9 object-contain flex-shrink-0" />
             {(isSidebarOpen || isHovered || isMobile) && (
               <div className="flex flex-col leading-tight animate-in fade-in slide-in-from-left-2 duration-300">
@@ -139,11 +144,11 @@ function App() {
                 Menu
               </p>
             )}
-            {NAV_ITEMS.map(({ key, label, icon: Icon, description }) => (
+            {NAV_ITEMS.map(({ key, path, label, icon: Icon, description }) => (
               <button
                 key={key}
                 onClick={() => {
-                  setActiveTab(key);
+                  navigate(path);
                   if (isMobile) setIsMobileMenuOpen(false);
                 }}
                 className={cn(
@@ -219,18 +224,28 @@ function App() {
           "flex-1 overflow-y-auto custom-scrollbar",
           isMobile ? "p-4" : "p-8"
         )}>
-          {activeTab === 'prompt' && <MasterTab isMobile={isMobile} />}
-          {activeTab === 'inventory' && (
-            <div className="flex flex-col items-center justify-center flex-1 h-full max-w-2xl mx-auto text-center gap-4 py-12 px-6">
-              <div className="w-20 h-20 bg-[var(--color-muted)] rounded-3xl flex items-center justify-center text-[var(--color-muted-foreground)]">
-                <Package size={40} />
+          <Routes>
+            <Route path="/" element={<Navigate to={APP_PATHS.CATALOG} replace />} />
+            <Route path={APP_PATHS.CATALOG} element={<MasterTab isMobile={isMobile} />} />
+            <Route path={`${APP_PATHS.CATALOG}/new`} element={<MasterTab isMobile={isMobile} forcedSkuId="new" />} />
+            <Route path={`${APP_PATHS.CATALOG}/new/:activeTab`} element={<MasterTab isMobile={isMobile} forcedSkuId="new" />} />
+            <Route path={`${APP_PATHS.CATALOG}/edit/:skuId`} element={<MasterTab isMobile={isMobile} />} />
+            <Route path={`${APP_PATHS.CATALOG}/edit/:skuId/:activeTab`} element={<MasterTab isMobile={isMobile} />} />
+            <Route path={`${APP_PATHS.CATALOG}/import`} element={<MasterTab isMobile={isMobile} forcedMode="import" />} />
+            <Route path={`${APP_PATHS.CATALOG}/export`} element={<MasterTab isMobile={isMobile} forcedMode="export" />} />
+            <Route path={APP_PATHS.INVENTORY} element={
+              <div className="flex flex-col items-center justify-center flex-1 h-full max-w-2xl mx-auto text-center gap-4 py-12 px-6">
+                <div className="w-20 h-20 bg-[var(--color-muted)] rounded-3xl flex items-center justify-center text-[var(--color-muted-foreground)]">
+                  <Package size={40} />
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight">Inventory Management</h2>
+                <p className="text-[var(--color-muted-foreground)] text-sm">We are currently building the specialized inventory control system. This will include warehouse tracking, vendor shipments, and real-time stock alerts.</p>
+                <Button className="mt-2" variant="secondary">Contact Support</Button>
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">Inventory Management</h2>
-              <p className="text-[var(--color-muted-foreground)] text-sm">We are currently building the specialized inventory control system. This will include warehouse tracking, vendor shipments, and real-time stock alerts.</p>
-              <Button className="mt-2" variant="secondary">Contact Support</Button>
-            </div>
-          )}
-          {activeTab === 'sales' && <SalesDashboard isMobile={isMobile} />}
+            } />
+            <Route path={APP_PATHS.SALES} element={<SalesDashboard isMobile={isMobile} />} />
+            <Route path="*" element={<Navigate to={APP_PATHS.CATALOG} replace />} />
+          </Routes>
         </div>
       </main>
     </div>

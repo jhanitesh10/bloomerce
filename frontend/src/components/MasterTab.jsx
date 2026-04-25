@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 
@@ -581,8 +582,10 @@ const ReferenceCellEditor = React.forwardRef((props, ref) => {
   );
 });
 
+import { APP_PATHS } from '../config';
+
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function MasterTab({ isMobile }) {
+export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
   const [skus,           setSkus]           = useState([]);
   const [references,     setReferences]     = useState({ BRAND:{}, CATEGORY:{}, STATUS:{}, SUB_CATEGORY:{}, BUNDLE_TYPE:{}, PACK_TYPE:{}, NET_QUANTITY_UNIT:{}, SIZE:{}, COLOR:{} });
   const [refLists,       setRefLists]       = useState({ BRAND:[], CATEGORY:[], STATUS:[], SUB_CATEGORY:[], BUNDLE_TYPE:[], PACK_TYPE:[], NET_QUANTITY_UNIT:[], SIZE:[], COLOR:[] });
@@ -599,6 +602,63 @@ export default function MasterTab({ isMobile }) {
   const [isFilterOpen,   setIsFilterOpen]   = useState(false);
   const [channelUrls,    setChannelUrls]    = useState({});
   const [formInitialTab, setFormInitialTab] = useState(null);
+
+  const { skuId: urlSkuId, activeTab: tabParam } = useParams();
+  const skuId = urlSkuId || forcedSkuId;
+  const navigate = useNavigate();
+
+  // Listen to forcedMode (from Routes)
+  useEffect(() => {
+    if (forcedMode === 'import') setIsImportOpen(true);
+    if (forcedMode === 'export') setIsExportCenterOpen(true);
+  }, [forcedMode]);
+
+  // Sync internal formInitialTab with URL if present
+  useEffect(() => {
+    if (tabParam) setFormInitialTab(tabParam);
+  }, [tabParam]);
+
+  // Listen to URL changes for SKU routing
+  useEffect(() => {
+    if (loading) return;
+
+    if (!skuId) {
+      setIsFormOpen(false);
+      setEditingSku(null);
+      return;
+    }
+
+    if (skuId === 'new') {
+      setEditingSku(null);
+      setIsFormOpen(true);
+      return;
+    }
+
+    // Try to find in current list first (by SKU code or ID)
+    const found = skus.find(s => 
+      String(s.sku_code) === skuId || 
+      String(s.id) === skuId
+    );
+    if (found) {
+      setEditingSku(found);
+      setIsFormOpen(true);
+      // If we are at /skus/:skuId, ensure formInitialTab is at least 'identity'
+      if (!tabParam && !formInitialTab) setFormInitialTab('identity');
+    } else {
+      // Fetch directly for deep links
+      setLoading(true);
+      skuApi.getById(skuId)
+        .then(res => {
+          setEditingSku(res);
+          setIsFormOpen(true);
+        })
+        .catch(err => {
+          console.error("SKU deep link failed:", err);
+          navigate(APP_PATHS.CATALOG);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [skuId, skus, loading]);
 
   // Advanced Filtering State
   const initialFilters = {
@@ -977,9 +1037,8 @@ export default function MasterTab({ isMobile }) {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingSku(p.data);
                         setFormInitialTab('platforms');
-                        setIsFormOpen(true);
+                        navigate(`${APP_PATHS.CATALOG}/edit/${p.data.sku_code || p.data.id}`);
                       }}
                       className="flex items-center gap-1 px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-full hover:bg-sky-100 hover:border-sky-300 transition-all text-[10px] font-bold whitespace-nowrap shadow-sm"
                     >
@@ -1062,11 +1121,10 @@ export default function MasterTab({ isMobile }) {
                  <div className="flex items-center justify-center w-full h-full">
                    <button 
                      onClick={(e) => {
-                       e.stopPropagation();
-                       setEditingSku(p.data);
-                       setFormInitialTab('content');
-                       setIsFormOpen(true);
-                     }}
+                        e.stopPropagation();
+                        setFormInitialTab('content');
+                        navigate(`${APP_PATHS.CATALOG}/edit/${p.data.sku_code || p.data.id}`);
+                      }}
                      className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full hover:bg-rose-100 hover:border-rose-300 transition-all text-[10px] font-bold whitespace-nowrap shadow-sm"
                    >
                      <FolderPlus size={12} strokeWidth={2.5} />
@@ -1118,7 +1176,7 @@ export default function MasterTab({ isMobile }) {
             cellRenderer: (p) => (
               <div className="flex items-center gap-1 mt-1.5">
                  <button
-                    onClick={() => { setEditingSku(p.data); setIsFormOpen(true); }}
+                    onClick={() => navigate(`${APP_PATHS.CATALOG}/edit/${p.data.sku_code || p.data.id}`)}
                     className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors"
                  >
                    <SquarePen size={15} />
@@ -1285,7 +1343,7 @@ export default function MasterTab({ isMobile }) {
             variant="outline"
             size="sm"
             className={cn("gap-1.5 h-[36px] font-semibold transition-all", isMobile && "w-full text-[11px] px-2 h-[38px] active:scale-95")}
-            onClick={()=>setIsImportOpen(true)}
+            onClick={()=>navigate(`${APP_PATHS.CATALOG}/import`)}
           >
             <Upload size={13}/> Import
           </Button>
@@ -1293,15 +1351,15 @@ export default function MasterTab({ isMobile }) {
             variant="outline"
             size="sm"
             className={cn("gap-1.5 h-[36px] bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)] shadow-sm font-semibold transition-all", isMobile && "w-full text-[11px] px-2 h-[38px] active:scale-95")}
-            onClick={() => setIsExportCenterOpen(true)}
+            onClick={() => navigate(`${APP_PATHS.CATALOG}/export`)}
           >
             <Download size={13} className="text-[var(--color-muted-foreground)]" /> Export
             {selectedSkus.size > 0 && <span className="ml-0.5 bg-[var(--color-primary)] text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">{selectedSkus.size}</span>}
           </Button>
-          {!isMobile && <Button size="sm" className="gap-1.5 ml-1 h-[36px] font-semibold shadow-sm" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={14}/> Add Product</Button>}
+          {!isMobile && <Button size="sm" className="gap-1.5 ml-1 h-[36px] font-semibold shadow-sm" onClick={() => navigate(`${APP_PATHS.CATALOG}/new`)}><Plus size={14}/> Add Product</Button>}
         </div>
         {isMobile && (
-          <Button size="sm" className="w-full gap-1.5 h-[42px] shadow-lg shadow-[var(--color-primary)]/20 font-bold active:scale-[0.98] transition-all" onClick={()=>{setEditingSku(null);setIsFormOpen(true);}}><Plus size={16}/> Add New Product</Button>
+          <Button size="sm" className="w-full gap-1.5 h-[42px] shadow-lg shadow-[var(--color-primary)]/20 font-bold active:scale-[0.98] transition-all" onClick={() => navigate(`${APP_PATHS.CATALOG}/new`)}><Plus size={16}/> Add New Product</Button>
         )}
       </div>
 
@@ -1461,7 +1519,7 @@ export default function MasterTab({ isMobile }) {
                   key={sku.id}
                   sku={sku}
                   references={references}
-                  onEdit={() => { setEditingSku(sku); setIsFormOpen(true); }}
+                  onEdit={() => navigate(`${APP_PATHS.CATALOG}/edit/${sku.sku_code || sku.id}`)}
                   onNote={(e) => { e?.stopPropagation(); setActiveNoteSkuId(prev => prev === sku.id ? null : sku.id); }}
                 />
               ))}
@@ -1584,25 +1642,14 @@ export default function MasterTab({ isMobile }) {
           initialData={editingSku}
           initialTab={formInitialTab}
           statusOptions={refLists.STATUS}
-          onClose={()=>{setIsFormOpen(false); setFormInitialTab(null);}}
-          onSaved={()=>{setIsFormOpen(false); setFormInitialTab(null); loadAll();}}
-          onSwitchProduct={(id) => {
-            const next = skus.find(s => s.id === id);
-            if (next) {
-              // Briefly clear and reset to trigger a re-mount/reset of the form
-              setEditingSku(null);
-              setFormInitialTab(null);
-              setTimeout(() => {
-                setEditingSku(next);
-                setIsFormOpen(true);
-              }, 50);
-            }
-          }}
+          onClose={() => navigate(APP_PATHS.CATALOG)}
+          onSaved={() => { navigate(APP_PATHS.CATALOG); loadAll(); }}
+          onSwitchProduct={(idOrCode) => navigate(`${APP_PATHS.CATALOG}/edit/${idOrCode}`)}
         />
       )}
       {isExportCenterOpen && (
         <ExportCenterSlideOver
-          onClose={() => setIsExportCenterOpen(false)}
+          onClose={() => { setIsExportCenterOpen(false); if (forcedMode) navigate(APP_PATHS.CATALOG); }}
           skus={skus}
           filtered={filtered}
           selected={selectedSkus}
@@ -1613,8 +1660,8 @@ export default function MasterTab({ isMobile }) {
         <ImportSlideOver
           skus={skus}
           refLists={refLists}
-          onClose={()=>setIsImportOpen(false)}
-          onImportComplete={()=>{setIsImportOpen(false);loadAll();}}
+          onClose={() => { setIsImportOpen(false); if (forcedMode) navigate(APP_PATHS.CATALOG); }}
+          onImportComplete={() => { setIsImportOpen(false); navigate(APP_PATHS.CATALOG); loadAll(); }}
         />
       )}
 

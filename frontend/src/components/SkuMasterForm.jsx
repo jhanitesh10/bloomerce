@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { APP_PATHS } from '../config';
 import DynamicReferenceSelect from './DynamicReferenceSelect';
 import { skuApi, uploadApi, refApi } from '../api';
 import { Button } from '@/components/ui/button';
@@ -405,7 +407,26 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [activeTab, setActiveTab] = useState(initialTab || 'identity');
+  const navigate = useNavigate();
+  const { skuId: urlSkuId, activeTab: urlTab } = useParams();
+  const [activeTab, setActiveTab] = useState(urlTab || initialTab || 'identity');
+
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    const isNew = urlSkuId === 'new' || !initialData?.id;
+    if (isNew) {
+      navigate(`${APP_PATHS.CATALOG}/new/${tabId}`);
+    } else {
+      const identifier = initialData?.sku_code || initialData?.id || urlSkuId;
+      navigate(`${APP_PATHS.CATALOG}/edit/${identifier}/${tabId}`);
+    }
+  };
 
   // Handle external tab switching (e.g. from Dashboard "Generate" button)
   useEffect(() => {
@@ -895,7 +916,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       setErrors(errs);
       const errTabs = getTabsWithErrors(errs);
       const firstErrTab = TABS.find(t => errTabs.has(t.id));
-      if (firstErrTab) setActiveTab(firstErrTab.id);
+      if (firstErrTab) handleTabChange(firstErrTab.id);
       return;
     }
     setSaving(true);
@@ -1089,7 +1110,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setActiveTab(t.id)}
+                onClick={() => handleTabChange(t.id)}
                 className={cn(
                   "flex items-center gap-1.5 px-3.5 py-3 text-xs font-medium whitespace-nowrap relative transition-colors",
                   isActive
@@ -1163,7 +1184,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => setActiveTab('components')}
+                          onClick={() => handleTabChange('components')}
                           className="text-[10px] font-bold text-indigo-600 hover:bg-indigo-100 border-none bg-transparent"
                         >
                           View Details
