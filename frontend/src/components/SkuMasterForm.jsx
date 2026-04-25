@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import DynamicReferenceSelect from './DynamicReferenceSelect';
 import { skuApi, uploadApi, refApi } from '../api';
 import { Button } from '@/components/ui/button';
@@ -353,6 +353,21 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     statusTimeoutRef.current = setTimeout(() => setStatusMessage(null), 4000);
   };
 
+  const normalizeInitialData = useCallback((data) => {
+    const merged = { ...EMPTY };
+    if (!data) return merged;
+    for (const key of Object.keys(EMPTY)) {
+      let v = data[key];
+      if (key === 'product_component_group_code') {
+        v = parsePoolMapping(v);
+      }
+      // Ensure platform_identifiers is always an array
+      if (key === 'platform_identifiers' && !v) v = [];
+      merged[key] = v != null ? v : EMPTY[key];
+    }
+    return merged;
+  }, []);
+
   const [form, setForm] = useState(() => {
     const draftKey = getDraftKey(initialData?.id);
     const savedDraft = localStorage.getItem(draftKey);
@@ -378,15 +393,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
         status_reference_id: draftStatus ? draftStatus.id : EMPTY.status_reference_id
       };
     }
-    const merged = { ...EMPTY };
-    for (const key of Object.keys(EMPTY)) {
-      let v = initialData[key];
-      if (key === 'product_component_group_code') {
-        v = parsePoolMapping(v);
-      }
-      merged[key] = v != null ? v : EMPTY[key];
-    }
-    return merged;
+    return normalizeInitialData(initialData);
   });
 
   // Sync draft to localStorage
@@ -793,27 +800,27 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     }
   };
 
-  const savedSnapshot = useRef((() => {
-    const base = { ...EMPTY };
-    if (initialData) {
-      for (const k of Object.keys(EMPTY)) {
-        const v = initialData[k];
-        base[k] = v != null ? v : EMPTY[k];
-      }
-    } else {
-      // Default to 'Draft' status for new products
+  const savedSnapshot = useRef(null);
+  if (!savedSnapshot.current) {
+    if (!initialData) {
+      const base = { ...EMPTY };
       const draftStatus = (statusOptions || []).find(s => s.label.toLowerCase() === 'draft');
-      if (draftStatus) {
-        base.status_reference_id = draftStatus.id;
-      }
+      if (draftStatus) base.status_reference_id = draftStatus.id;
+      savedSnapshot.current = base;
+    } else {
+      savedSnapshot.current = normalizeInitialData(initialData);
     }
-    return base;
-  })());
+  }
 
   const isDirty = useMemo(() => {
     return Object.keys(EMPTY).some(k => {
       let a = form[k];
       let b = savedSnapshot.current[k];
+
+      // Deep compare for arrays (product_component_group_code, platform_identifiers)
+      if (Array.isArray(a) || Array.isArray(b)) {
+        return JSON.stringify(a || []) !== JSON.stringify(b || []);
+      }
 
       // Normalize values for comparison
       const normalize = (val) => {
