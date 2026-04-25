@@ -176,14 +176,6 @@ const GROUPS = [
       { id: 'seo_keywords', label: 'SEO Keywords', width: 200, isContent: true },
     ],
   },
-  {
-    id: 'operations',
-    label: 'Operations',
-    color: 'orange',
-    cols: [
-      { id: 'remark', label: 'Internal Notes', width: 300, isContent: true },
-    ],
-  },
 ];
 
 const BASE_COLS = [
