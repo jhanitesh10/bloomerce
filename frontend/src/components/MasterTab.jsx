@@ -966,9 +966,9 @@ export default function MasterTab({ isMobile }) {
             return p.data[c.id];
           },
           valueFormatter: p => {
-             if (isRef && references[refKey]) return references[refKey][p.value] || p.value || '-';
-             if (c.id.endsWith('_weight') || c.id === 'finished_product_weight') return p.value ? `${p.value} g` : '-';
-             return p.value || '-';
+             if (isRef && references[refKey]) return references[refKey][p.value] || p.value || '';
+             if (c.id.endsWith('_weight') || c.id === 'finished_product_weight') return p.value ? `${p.value} g` : '';
+             return p.value || '';
           },
           cellRenderer: c.id === 'platform_identifiers' ? (p) => {
               if (!p.value || !Array.isArray(p.value) || p.value.length === 0) {
@@ -1039,7 +1039,7 @@ export default function MasterTab({ isMobile }) {
                    <IndianRupee size={12} strokeWidth={3} />
                  </span>
                )}
-               <span>{p.value !== '-' ? Number(p.value).toLocaleString('en-IN') : '-'}</span>
+               <span>{p.value && p.value !== '-' ? Number(p.value).toLocaleString('en-IN') : <span className="text-slate-300/40 select-none">·</span>}</span>
              </div>
           ) : (c.id === 'catalog_url' ? (p) => (
              <div className="flex items-center justify-center w-full min-h-[44px]">
@@ -1079,8 +1079,14 @@ export default function MasterTab({ isMobile }) {
               const val = p.valueFormatted || p.value;
               return (
                 <div className="flex items-center justify-between w-full group">
-                  <span className="truncate">{val || '-'}</span>
-                  {val && val !== '-' && (
+                  {val ? (
+                    <span className="truncate">{val}</span>
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full">
+                      <span className="text-slate-300/60 select-none font-black text-lg">·</span>
+                    </div>
+                  )}
+                  {val && (
                     <CopyButton
                       value={val}
                       className="opacity-0 group-hover:opacity-100 h-6 w-6 shrink-0 bg-white shadow-sm border border-slate-100 rounded text-slate-400 hover:text-indigo-600 ml-2"
@@ -1139,6 +1145,17 @@ export default function MasterTab({ isMobile }) {
   const defaultColDef = useMemo(() => ({
     resizable: true,
     suppressHeaderMenuButton: false,
+    cellRenderer: (p) => {
+      const val = p.valueFormatted || p.value;
+      if (!val || val === '-') {
+        return (
+          <div className="flex items-center justify-center w-full h-full">
+            <span className="text-slate-300/60 select-none font-black text-lg">·</span>
+          </div>
+        );
+      }
+      return val;
+    }
   }), []);
 
   // Handle clicking outside of cells, editors or notes
