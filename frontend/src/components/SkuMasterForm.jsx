@@ -1202,8 +1202,8 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                                 <span className="text-[8px] font-bold text-slate-400 uppercase">{entry.type}</span>
                                 {peers.length > 0 && <span className="text-[8px] font-black text-indigo-500 bg-indigo-50 px-1 rounded-sm">{peers.length}</span>}
                               </div>
-                              <span className="px-2 py-0.5 bg-white text-indigo-600 rounded-lg text-[10px] font-mono font-bold border border-indigo-100 truncate shadow-sm">
-                                {typeof entry.id === 'string' ? entry.id.split('_')[0] : '...'}
+                              <span className="px-2 py-0.5 bg-white text-indigo-600 rounded-lg text-[10px] font-mono font-bold border border-indigo-100 truncate shadow-sm" title={entry.id}>
+                                {entry.id || '...'}
                               </span>
                             </div>
                           );
