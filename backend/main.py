@@ -1,5 +1,4 @@
 import os
-import concurrent.futures
 import uuid
 import json
 import logging
@@ -393,7 +392,7 @@ def delete_reference(id: int, db: Session = Depends(get_db)):
 
 @app.get("/api/skus", response_model=List[schemas.SkuMaster])
 def get_skus(db: Session = Depends(get_db)):
-    return db.query(models.SkuMaster).filter(models.SkuMaster.deletedAt == None).all()
+    return db.query(models.SkuMaster).filter(models.SkuMaster.deleted_at == None).all()
 
 @app.get("/api/skus-search")
 def search_skus(q: str = "", db: Session = Depends(get_db)):
@@ -401,11 +400,11 @@ def search_skus(q: str = "", db: Session = Depends(get_db)):
     return db.query(models.SkuMaster).filter(
         (models.SkuMaster.sku_code.ilike(f"%{q}%")) |
         (models.SkuMaster.product_name.ilike(f"%{q}%"))
-    ).filter(models.SkuMaster.deletedAt == None).limit(20).all()
+    ).filter(models.SkuMaster.deleted_at == None).limit(20).all()
 
 @app.get("/api/skus/{id}", response_model=schemas.SkuMaster)
 def get_sku(id: int, db: Session = Depends(get_db)):
-    sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deletedAt == None).first()
+    sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deleted_at == None).first()
     if not sku: raise HTTPException(404, "Not Found")
     return sku
 
@@ -419,7 +418,7 @@ def create_sku(data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
 
 @app.put("/api/skus/{id}", response_model=schemas.SkuMaster)
 def update_sku(id: int, data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
-    db_item = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deletedAt == None).first()
+    db_item = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deleted_at == None).first()
     if not db_item: raise HTTPException(404, "Not Found")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(db_item, k, v)
@@ -431,7 +430,7 @@ def update_sku(id: int, data: schemas.SkuMasterCreate, db: Session = Depends(get
 def delete_sku(id: int, db: Session = Depends(get_db)):
     db_item = db.query(models.SkuMaster).filter(models.SkuMaster.id == id).first()
     if not db_item: raise HTTPException(404, "Not Found")
-    db_item.deletedAt = datetime.datetime.utcnow()
+    db_item.deleted_at = datetime.datetime.utcnow()
     db.commit()
     return {"message": "Deleted securely"}
 
@@ -566,7 +565,7 @@ def get_pool_info(id: int, db: Session = Depends(get_db)):
         models.SkuMaster.catalog_url
     ).filter(
         models.SkuMaster.id != id,
-        models.SkuMaster.deletedAt == None,
+        models.SkuMaster.deleted_at == None,
         or_(*filters)
     ).all()
 
@@ -620,7 +619,7 @@ async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_d
     if not provider:
         logger.error("AI Provider requested but not configured in environment")
         raise HTTPException(500, "AI Provider not configured")
-    
+
     # Fetch taxonomy for dynamic injection
     valid_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "CATEGORY", models.ReferenceData.deleted_at == None).all()]
     valid_sub_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "SUB_CATEGORY", models.ReferenceData.deleted_at == None).all()]
@@ -633,7 +632,7 @@ async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_d
     try:
         logger.info(f"AI Content Request received for product: {req.product_name} (Brand: {req.brand})")
         logger.info(f"Target fields: {req.target_fields or 'ALL'}")
-        
+
         # Merge 'message' into custom_instruction if both are provided, prioritizing 'message' if it exists
         instruction = req.message or req.custom_instruction
 
@@ -650,7 +649,7 @@ async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_d
             valid_categories=valid_categories,
             valid_sub_categories=valid_sub_categories
         )
-        
+
         logger.info("AI Content generated successfully")
         return content
     except Exception as e:
@@ -683,7 +682,7 @@ def get_pool_discovery(id: int, comp_type: Optional[str] = Query(None), db: Sess
 
         if not config: continue
 
-        query = db.query(models.SkuMaster).filter(models.SkuMaster.id != id, models.SkuMaster.deletedAt == None)
+        query = db.query(models.SkuMaster).filter(models.SkuMaster.id != id, models.SkuMaster.deleted_at == None)
         # Apply attribute matching filters
         for attr, val in config['match'].items():
             if val is not None and val != "":
@@ -708,7 +707,7 @@ def get_pool_discovery(id: int, comp_type: Optional[str] = Query(None), db: Sess
                 pool_members = []
                 sibling_candidates = db.query(models.SkuMaster.id, models.SkuMaster.sku_code, models.SkuMaster.product_component_group_code).filter(
                     models.SkuMaster.id != id,
-                    models.SkuMaster.deletedAt == None,
+                    models.SkuMaster.deleted_at == None,
                     cast(models.SkuMaster.product_component_group_code, String).like(f'%"{p_id}"%')
                 ).limit(10).all()
 
@@ -811,19 +810,20 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
                     new_key = f"{ref_type.lower()}_{slug}_{unique_suffix}"
 
                     try:
-                        new_ref = models.ReferenceData(
-                            reference_data_type=ref_type,
-                            label=clean_l,
-                            key=new_key,
-                            is_active=True
-                        )
-                        db.add(new_ref)
-                        db.flush()
-                        ref_map[(ref_type, clean_l.lower())] = {"id": new_ref.id, "label": new_ref.label}
+                        # Use nested transaction for each reference to avoid killing the main session
+                        with db.begin_nested():
+                            new_ref = models.ReferenceData(
+                                reference_data_type=ref_type,
+                                label=clean_l,
+                                key=new_key,
+                                is_active=True
+                            )
+                            db.add(new_ref)
+                            db.flush()
+                            ref_map[(ref_type, clean_l.lower())] = {"id": new_ref.id, "label": new_ref.label}
                     except Exception as e:
-                        db.rollback()
                         logger.warning(f"Failed to auto-create reference {ref_type}:{clean_l}: {e}")
-                        # If creation failed, maybe it was created by another worker; try fetching again
+                        # Already rolled back by begin_nested()
                         existing_after_fail = db.query(models.ReferenceData).filter(
                             models.ReferenceData.reference_data_type == ref_type,
                             func.lower(models.ReferenceData.label) == clean_l.lower(),
@@ -836,10 +836,9 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
         incoming_sku_codes = [s.sku_code for s in data.skus if s.sku_code]
         existing_skus = db.query(models.SkuMaster).filter(
             models.SkuMaster.sku_code.in_(incoming_sku_codes),
-            models.SkuMaster.deletedAt == None
+            models.SkuMaster.deleted_at == None
         ).all()
 
-        # sku_id_map maps sku_code -> model instance
         sku_id_map = {s.sku_code: s for s in existing_skus}
 
         # 5. Process Import
@@ -854,68 +853,70 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
                 continue
 
             try:
-                # Use a nested transaction (savepoint) for each SKU
                 with db.begin_nested():
-                    # Prepare payload
                     payload = s_data.model_dump(exclude_unset=True)
 
-                    # Resolve IDs from labels
                     def get_ref(rtype, rlabel):
-                        res = ref_map.get((rtype, safe_label(rlabel).lower()))
-                        return res if res else {"id": None, "label": None}
+                        if not rlabel: return {"id": None, "label": None}
+                        return ref_map.get((rtype, safe_label(rlabel).lower()), {"id": None, "label": None})
 
                     if s_data.brand_label: payload["brand_reference_id"] = get_ref("BRAND", s_data.brand_label)["id"]
                     if s_data.category_label: payload["category_reference_id"] = get_ref("CATEGORY", s_data.category_label)["id"]
                     if s_data.sub_category_label: payload["sub_category_reference_id"] = get_ref("SUB_CATEGORY", s_data.sub_category_label)["id"]
                     if s_data.status_label: payload["status_reference_id"] = get_ref("STATUS", s_data.status_label)["id"]
-
                     if s_data.bundle_type_label: payload["bundle_type"] = get_ref("BUNDLE_TYPE", s_data.bundle_type_label)["label"]
                     if s_data.pack_type_label: payload["pack_type"] = get_ref("PACK_TYPE", s_data.pack_type_label)["label"]
-
                     if s_data.net_quantity_unit_label: payload["net_quantity_unit_reference_id"] = get_ref("NET_QUANTITY_UNIT", s_data.net_quantity_unit_label)["id"]
                     if s_data.size_label: payload["size_reference_id"] = get_ref("SIZE", s_data.size_label)["id"]
                     if s_data.color_label: payload["color"] = get_ref("COLOR", s_data.color_label)["label"]
 
-                    # Remove local label fields
                     for k in ["brand_label", "category_label", "sub_category_label", "status_label", "bundle_type_label", "pack_type_label", "net_quantity_unit_label", "size_label", "color_label"]:
                         if k in payload: del payload[k]
 
-                    # CRITICAL: Sanitize empty strings to None to prevent DB syntax errors
                     for k, v in payload.items():
-                        if v == "":
-                            payload[k] = None
+                        if v == "": payload[k] = None
 
-                    # Upsert
                     existing_sku = sku_id_map.get(s_data.sku_code)
                     if existing_sku:
                         for k, v in payload.items():
-                            setattr(existing_sku, k, v)
+                            if k == "platform_identifiers" and v is not None:
+                                existing_ids = existing_sku.platform_identifiers or []
+                                if not isinstance(existing_ids, list): existing_ids = []
+                                
+                                merged_map = {
+                                    (p.get('channel_name', '').lower(), p.get('type', '').lower()): p 
+                                    for p in existing_ids if isinstance(p, dict)
+                                }
+                                for nid in v:
+                                    if isinstance(nid, dict) and nid.get('id') and nid.get('channel_name'):
+                                        key = (nid.get('channel_name', '').lower(), nid.get('type', '').lower())
+                                        merged_map[key] = nid
+                                setattr(existing_sku, k, list(merged_map.values()))
+                            else:
+                                setattr(existing_sku, k, v)
                     else:
                         new_sku = models.SkuMaster(**payload)
                         db.add(new_sku)
                         sku_id_map[s_data.sku_code] = new_sku
 
-                    db.flush() # Ensure it's valid for this nested transaction
-
+                    db.flush()
                 success_count += 1
             except Exception as e:
-                # Rollback of the nested transaction happens automatically by 'with db.begin_nested()'
                 failed_count += 1
                 err_msg = str(e)
                 logger.warning(f"SKU {s_data.sku_code} failed: {err_msg}")
                 errors.append({"sku_code": s_data.sku_code, "error": err_msg})
 
         db.commit()
-        logger.info(f"Bulk Import Complete: {success_count} success, {failed_count} failures")
         return {
             "message": f"Processed {len(data.skus)} items",
-            "count": success_count, # keeping 'count' for backward compatibility if any
             "success_count": success_count,
             "failed_count": failed_count,
             "errors": errors
         }
 
     except Exception as e:
+        print(f"DEBUG: Critical Error: {e}")
         db.rollback()
         logger.error(f"Bulk Import CRITICAL ERROR: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Bulk Import Logic Error: {str(e)}")
@@ -974,7 +975,7 @@ def bulk_import_sales(data: schemas.BulkSalesImportRequest, db: Session = Depend
             skus = db.query(models.SkuMaster).filter(
                 (models.SkuMaster.sku_code.in_(list(unique_sku_codes))) |
                 (models.SkuMaster.barcode.in_(list(unique_barcodes))),
-                models.SkuMaster.deletedAt == None
+                models.SkuMaster.deleted_at == None
             ).all()
             for s in skus:
                 if s.sku_code: sku_map[s.sku_code] = s.id
@@ -1058,7 +1059,7 @@ def get_sales_orders(db: Session = Depends(get_db)):
 
 @app.patch("/api/skus/{id}/platforms", response_model=schemas.SkuMaster)
 def patch_sku_platforms(id: int, patch_data: schemas.PlatformPatch, db: Session = Depends(get_db)):
-    db_item = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deletedAt == None).first()
+    db_item = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deleted_at == None).first()
     if not db_item: raise HTTPException(404, "Not Found")
 
     current_arr = db_item.live_platform_reference_id or []
@@ -1131,7 +1132,7 @@ def generate_sku_catalog_url_preview(data: schemas.DriveFolderCreate, db: Sessio
 
 @app.post("/api/skus/{id}/generate-catalog-url", response_model=schemas.SkuMaster)
 def generate_sku_catalog_url_saved(id: int, db: Session = Depends(get_db)):
-    sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deletedAt == None).first()
+    sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deleted_at == None).first()
     if not sku:
         raise HTTPException(status_code=404, detail="SKU not found")
 
@@ -1176,91 +1177,86 @@ async def export_sku_images(data: schemas.ImageExportRequest, db: Session = Depe
         ref = db.query(models.ReferenceData).filter(models.ReferenceData.id == ref_id).first()
         return ref.label if ref else "Unknown"
 
-    def resolve_template(tmpl, ctx, idx=0):
-        res = tmpl
-        for k, v in ctx.items():
-            res = res.replace("{{ " + k + " }}", str(v)).replace("{{" + k + "}}", str(v))
-        res = res.replace("{{ index }}", str(idx)).replace("{{index}}", str(idx))
-        segments = [drive.sanitize_name(p) for p in res.split("/") if p.strip()]
-        return "/".join(segments)
-
     print(f"Export Images: Starting for {len(data.sku_ids)} SKUs")
 
-    # 1. Collect Metadata for all files to download
-    download_tasks = []
-    for sku_id in data.sku_ids:
-        sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == sku_id).first()
-        if not sku or not sku.catalog_url:
-            continue
-
-        folder_id = drive.get_id_from_url(sku.catalog_url)
-        if not folder_id:
-            continue
-
-        files = drive.list_files_in_folder(folder_id)
-        if not files:
-            continue
-
-        context = {
-            "sku_code": sku.sku_code or "no_sku",
-            "barcode": sku.barcode or "no_barcode",
-            "brand": get_label(sku.brand_reference_id),
-            "category": get_label(sku.category_reference_id),
-            "sub_category": get_label(sku.sub_category_reference_id),
-            "product_name": sku.product_name or "no_name"
-        }
-
-        for idx, f in enumerate(files, 1):
-            if data.flatten_hierarchy:
-                folder_path = drive.sanitize_name(sku.sku_code or str(sku_id))
-            else:
-                folder_path = resolve_template(data.folder_template, context)
-
-            file_ext = f['name'].split('.')[-1] if '.' in f['name'] else 'bin'
-            filename = resolve_template(data.file_template, context, idx)
-            if not filename.endswith(f".{file_ext}"):
-                filename = f"{filename}.{file_ext}"
-
-            full_path = "/".join(p for p in f"{folder_path}/{filename}".split("/") if p)
-            download_tasks.append({
-                "file_id": f['id'],
-                "full_path": full_path,
-                "sku_code": sku.sku_code
-            })
-
-    if not download_tasks:
-        raise HTTPException(status_code=404, detail="No images found for the selected products.")
-
-    # 2. Download files in parallel using ThreadPoolExecutor
-    total_files_added = 0
+    # Memory buffer for ZIP
     zip_buffer = io.BytesIO()
+    total_files_added = 0
 
-    # Define the download function for the thread pool
-    def fetch_file(task):
-        try:
-            # Create a thread-local drive service to ensure thread safety
-            # The Google API client 'service' object is not thread-safe
-            thread_drive = DriveService()
-            content = thread_drive.get_file_content(task['file_id'])
-            return task['full_path'], content
-        except Exception as e:
-            print(f"Error downloading {task['full_path']}: {e}")
-            return None, None
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, False) as zip_file:
+        for sku_id in data.sku_ids:
+            sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == sku_id).first()
+            if not sku:
+                print(f"Export: SKU ID {sku_id} not found")
+                continue
+            if not sku.catalog_url:
+                print(f"Export: SKU {sku.sku_code} has no catalog_url")
+                continue
 
-    print(f"Export: Starting parallel download of {len(download_tasks)} files...")
-    
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            # map maintains order, but we just need the results
-            future_to_path = {executor.submit(fetch_file, task): task for task in download_tasks}
-            for future in concurrent.futures.as_completed(future_to_path):
-                path, content = future.result()
-                if path and content:
-                    zip_file.writestr(path, content)
-                    total_files_added += 1
+            folder_id = drive.get_id_from_url(sku.catalog_url)
+            if not folder_id:
+                print(f"Export: Invalid folder URL for SKU {sku.sku_code}")
+                continue
+
+            # Fetch file list
+            files = drive.list_files_in_folder(folder_id)
+            if not files:
+                print(f"Export: No files found in Drive folder for SKU {sku.sku_code}")
+                continue
+
+            # Context for template resolution
+            context = {
+                "sku_code": sku.sku_code or "no_sku",
+                "barcode": sku.barcode or "no_barcode",
+                "brand": get_label(sku.brand_reference_id),
+                "category": get_label(sku.category_reference_id),
+                "sub_category": get_label(sku.sub_category_reference_id),
+                "product_name": sku.product_name or "no_name"
+            }
+
+            def resolve_template(tmpl, ctx, idx=0):
+                res = tmpl
+                for k, v in ctx.items():
+                    res = res.replace("{{ " + k + " }}", str(v)).replace("{{" + k + "}}", str(v))
+                res = res.replace("{{ index }}", str(idx)).replace("{{index}}", str(idx))
+                # Sanitize path segments, filter out empty parts
+                segments = [drive.sanitize_name(p) for p in res.split("/") if p.strip()]
+                return "/".join(segments)
+
+            # Process files
+            print(f"Export: Processing {len(files)} files for SKU {sku.sku_code}")
+            for idx, f in enumerate(files, 1):
+                content = drive.get_file_content(f['id'])
+                if not content:
+                    continue
+
+                # Determine target path
+                if data.flatten_hierarchy:
+                    folder_path = drive.sanitize_name(sku.sku_code or str(sku_id))
+                else:
+                    folder_path = resolve_template(data.folder_template, context)
+
+                # Determine filename
+                file_ext = f['name'].split('.')[-1] if '.' in f['name'] else 'bin'
+                filename = resolve_template(data.file_template, context, idx)
+                if not filename.endswith(f".{file_ext}"):
+                    filename = f"{filename}.{file_ext}"
+
+                # Ensure path is valid and relative (not absolute)
+                full_path = "/".join(p for p in f"{folder_path}/{filename}".split("/") if p)
+
+                zip_file.writestr(full_path, content)
+                total_files_added += 1
 
     print(f"Export: ZIP complete. Total files added: {total_files_added}")
 
+    if total_files_added == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="No images found for the selected products to export. Ensure catalog URLs are correct and folders contain files."
+        )
+
+    # Prepare response using a generator for stable streaming of binary data
     def iter_buffer():
         zip_buffer.seek(0)
         while chunk := zip_buffer.read(8192):

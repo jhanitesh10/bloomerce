@@ -8,7 +8,7 @@ import {
   X, Save, UploadCloud, RefreshCw, Trash2, Link, ArrowLeft, Search,
   Package, Tag, FileText, BarChart2, Layers, Info, StickyNote,
   AlertCircle, FolderPlus, ExternalLink, BookmarkCheck, Check, Copy,
-  Zap, Users, Compass, PlusCircle, Bookmark, RotateCcw
+  Zap, Users, Compass, PlusCircle, Bookmark, RotateCcw, Globe, Settings, Store
 } from 'lucide-react';
 
 
@@ -34,7 +34,7 @@ function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className,
         rows={rows}
         className={cn(
           "w-full rounded-lg border px-3 py-2 text-sm transition-all leading-relaxed custom-scrollbar outline-none",
-          isImproved 
+          isImproved
             ? "bg-transparent border-indigo-400/30 text-slate-800 focus:border-indigo-500/50"
             : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:ring-2 focus:ring-[var(--color-ring)] focus:border-transparent",
           className
@@ -209,21 +209,21 @@ function Field({ id, label, required, children, hint, error, isImproved, onAccep
               <span className="text-[7px] font-black uppercase tracking-widest">AI improved</span>
             </div>
             <div className="flex items-center">
-              <button 
+              <button
                 onClick={() => onRegenerate?.(id)}
                 className="p-1 px-1.5 hover:bg-white/20 transition-colors border-none text-white flex items-center justify-center"
                 title="Regenerate this field"
               >
                 <RefreshCw size={10} />
               </button>
-              <button 
+              <button
                 onClick={() => onDiscard?.(id)}
                 className="p-1 px-1.5 hover:bg-rose-500 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30"
                 title="Discard & Revert"
               >
                 <RotateCcw size={10} />
               </button>
-              <button 
+              <button
                 onClick={() => onAccept?.(id)}
                 className="p-1 px-2 hover:bg-indigo-400 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30"
                 title="Accept Change"
@@ -261,6 +261,7 @@ const TABS = [
   { id: 'pricing',        label: 'Pricing & Specs',  icon: BarChart2 },
   { id: 'bundling',       label: 'Product & Bundle', icon: Layers },
   { id: 'tax',            label: 'Tax & Compliance', icon: Info },
+  { id: 'platforms',      label: 'Channels',         icon: ExternalLink },
   { id: 'components',     label: 'Shared Pools',     icon: BookmarkCheck },
 ];
 
@@ -272,6 +273,7 @@ const TAB_FIELDS = {
   pricing:        ['mrp', 'purchase_cost', 'net_quantity', 'net_quantity_unit_reference_id', 'size_reference_id', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'],
   bundling:       ['bundle_type', 'pack_type'],
   tax:            ['tax_rule_code', 'tax_percent'],
+  platforms:      ['platform_identifiers'],
   components:     ['product_component_group_code'],
 };
 
@@ -297,6 +299,7 @@ const EMPTY = {
   net_quantity: '', net_quantity_unit_reference_id: null, size_reference_id: null,
   bundle_type: null, pack_type: null,
   tax_rule_code: '', tax_percent: '',
+  platform_identifiers: [],
 };
 
 // ─── Shared input className ───────────────────────────────────────
@@ -411,6 +414,43 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
   const [bloomHistory, setBloomHistory] = useState(new Set());
   const [originalValues, setOriginalValues] = useState({});
   const [regenField, setRegenField] = useState(null);
+  const [channelUrls, setChannelUrls] = useState({});
+  const [expandedPlatIdx, setExpandedPlatIdx] = useState(null);
+
+  useEffect(() => {
+    refApi.getAll('CHANNEL').then(data => {
+      const mapping = {};
+      data.forEach(ch => {
+        if (ch.metadata_json && ch.metadata_json.base_url) {
+          mapping[ch.label] = ch.metadata_json.base_url;
+        }
+      });
+      setChannelUrls(mapping);
+    }).catch(err => console.error("Failed to fetch channel URLs:", err));
+  }, []);
+
+  const handleUpdateChannelUrl = async (channelLabel, newUrl) => {
+    if (!channelLabel) return;
+    try {
+      const allChannels = await refApi.getAll('CHANNEL');
+      const channel = allChannels.find(c => c.label === channelLabel);
+      if (channel) {
+        const meta = channel.metadata_json || {};
+        meta.base_url = newUrl;
+        await refApi.update(channel.id, {
+          reference_data_type: 'CHANNEL',
+          label: channel.label,
+          key: channel.key,
+          metadata_json: meta
+        });
+        setChannelUrls(prev => ({ ...prev, [channelLabel]: newUrl }));
+        showStatus(`Base URL for ${channelLabel} updated successfully.`);
+      }
+    } catch (err) {
+      console.error("Failed to update channel URL:", err);
+      showStatus("Failed to update channel URL", "error");
+    }
+  };
 
   const handleApplyAI = (results) => {
     // Filter out null, undefined, or empty values from results
@@ -449,10 +489,10 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
       ...prev,
       ...filteredResults
     }));
-    
+
     // Record which fields were improved for highlighting (only those that actually changed)
     setBloomHistory(prev => new Set([...prev, ...Object.keys(filteredResults)]));
-    
+
     // Detailed feedback for one-click bloom
     setStatusMessage({
       type: 'success',
@@ -688,6 +728,17 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     delete payload.finished_product_weight;
     // Force SKU and Barcode to be identical as per user instructions
     payload.barcode = payload.sku_code;
+
+    // Ensure platform_identifiers is a list and filter out empty ones
+    if (Array.isArray(payload.platform_identifiers)) {
+      payload.platform_identifiers = payload.platform_identifiers.filter(p =>
+        (p.id && String(p.id).trim() !== "") &&
+        (p.channel_name && String(p.channel_name).trim() !== "")
+      );
+    } else {
+      payload.platform_identifiers = [];
+    }
+
     return payload;
   };
 
@@ -934,14 +985,14 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               >
                 <StickyNote size={20} className="sm:size-[18px]" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => setIsAIConsoleOpen(!isAIConsoleOpen)}
                 className={cn(
                   "flex items-center gap-1.5 sm:gap-2 p-2 px-2.5 sm:px-3 rounded-lg transition-all font-bold group",
-                  isAIConsoleOpen 
-                    ? "bg-indigo-500 text-white shadow-inner" 
+                  isAIConsoleOpen
+                    ? "bg-indigo-500 text-white shadow-inner"
                     : "bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20"
                 )}
                 title={isAIConsoleOpen ? "Close AI Workspace" : "Bloom AI Intelligence"}
@@ -967,7 +1018,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
 
         {isAIConsoleOpen && (
           <div className="flex-shrink-0 z-[80] sticky top-0">
-            <BloomAIConsole 
+            <BloomAIConsole
               initialData={initialData}
               currentForm={form}
               initialSelectedFields={regenField ? [regenField] : null}
@@ -1450,21 +1501,208 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                 </FieldRow>
               )}
 
-              {/* TAX & COMPLIANCE */}
-              {activeTab === 'tax' && (
-                <FieldRow>
-                  <Field id="tax_rule_code" label="Tax Rule Code (HSN)" error={errors.tax_rule_code} isImproved={bloomHistory.has('tax_rule_code')}
-                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
-                    <input type="text" name="tax_rule_code" value={form.tax_rule_code} onChange={handleChange}
-                      className={cn(inputCls(errors.tax_rule_code), "font-mono")} placeholder="HSN-8517" />
-                  </Field>
-                  <Field id="tax_percent" label="Tax %" isImproved={bloomHistory.has('tax_percent')}
-                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
-                    <input type="number" name="tax_percent" value={form.tax_percent} onChange={handleChange}
-                      className={inputCls(false)} placeholder="18" min="0" max="100" step="0.1" />
-                  </Field>
-                </FieldRow>
-              )}
+               {/* TAX & COMPLIANCE */}
+               {activeTab === 'tax' && (
+                 <FieldRow>
+                   <Field id="tax_rule_code" label="Tax Rule Code (HSN)" error={errors.tax_rule_code} isImproved={bloomHistory.has('tax_rule_code')}
+                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                     <input type="text" name="tax_rule_code" value={form.tax_rule_code} onChange={handleChange}
+                       className={cn(inputCls(errors.tax_rule_code), "font-mono")} placeholder="HSN-8517" />
+                   </Field>
+                   <Field id="tax_percent" label="Tax %" isImproved={bloomHistory.has('tax_percent')}
+                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                     <input type="number" name="tax_percent" value={form.tax_percent} onChange={handleChange}
+                       className={inputCls(false)} placeholder="18" min="0" max="100" step="0.1" />
+                   </Field>
+                 </FieldRow>
+               )}
+
+               {/* PLATFORMS */}
+               {activeTab === 'platforms' && (
+                 <div className="flex flex-col gap-6">
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <h3 className="text-sm font-bold text-[var(--color-foreground)] uppercase tracking-tight">Platform-Specific Identifiers</h3>
+                       <p className="text-[10px] text-[var(--color-muted-foreground)] mt-0.5">Map this SKU to external marketplace IDs (e.g. Amazon ASIN, Myntra Style ID)</p>
+                     </div>
+                     <Button
+                       type="button"
+                       variant="outline"
+                       size="sm"
+                       onClick={() => {
+                         const next = [...(form.platform_identifiers || []), { id: '', channel_name: '', type: '' }];
+                         set('platform_identifiers', next);
+                         setExpandedPlatIdx(next.length - 1);
+                       }}
+                       className="gap-2 h-8 text-[10px] font-bold uppercase tracking-wider"
+                     >
+                       <PlusCircle size={14} /> Add Platform
+                     </Button>
+                   </div>
+
+                   <div className="space-y-4">
+                     {(form.platform_identifiers || []).length === 0 ? (
+                       <div className="p-10 border-2 border-dashed border-[var(--color-border)] rounded-3xl flex flex-col items-center justify-center text-center gap-3 bg-[var(--color-muted)]/5">
+                         <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                           <ExternalLink size={24} />
+                         </div>
+                         <div>
+                           <p className="font-bold text-[var(--color-foreground)]">No platform IDs linked</p>
+                           <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Add identifiers to help with marketplace synchronization and tracking.</p>
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="grid grid-cols-1 gap-4">
+                         {(form.platform_identifiers || []).map((plat, idx) => {
+                            const isExpanded = expandedPlatIdx === idx;
+                            const baseUrl = channelUrls[plat.channel_name];
+                            const finalUrl = baseUrl && plat.id ? (baseUrl.includes('{id}') ? baseUrl.replace('{id}', plat.id) : `${baseUrl}${plat.id}`) : '';
+
+                            let faviconUrl = null;
+                            if (baseUrl) {
+                              try {
+                                const u = new URL(baseUrl);
+                                faviconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
+                              } catch(e) {}
+                            }
+
+                            return (
+                              <div key={idx} className="group relative bg-white border border-[var(--color-border)] rounded-2xl p-4 shadow-sm hover:shadow-md transition-all animate-in zoom-in-95 duration-200">
+                                <button
+                                  type="button"
+                                  onClick={() => set('platform_identifiers', form.platform_identifiers.filter((_, i) => i !== idx))}
+                                  className="absolute -top-2 -right-2 w-7 h-7 bg-white border border-red-100 text-red-500 rounded-full flex items-center justify-center hover:bg-red-50 shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10"
+                                >
+                                  <X size={14} />
+                                </button>
+
+                                <div className="flex items-center gap-4">
+                                  {/* Avatar Icon */}
+                                  <div className="w-[62px] h-[62px] shrink-0 self-end mb-1 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-3 shadow-sm overflow-hidden">
+                                    {faviconUrl ? (
+                                      <img src={faviconUrl} alt={`${plat.channel_name} icon`} className="w-full h-full object-contain drop-shadow-sm" />
+                                    ) : (
+                                      <Store size={24} className="text-slate-300" />
+                                    )}
+                                  </div>
+
+                                  {/* Main 2 columns: Channel & ID */}
+                                  <div className="flex-1 grid grid-cols-2 gap-4">
+                                    <div className="flex flex-col gap-1.5">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Sales Channel</label>
+                                      <DynamicReferenceSelect
+                                        referenceType="CHANNEL"
+                                        value={plat.channel_name}
+                                        placeholder="Select Channel"
+                                        onChange={(id, label) => {
+                                          const next = [...form.platform_identifiers];
+                                          next[idx].channel_name = label;
+                                          set('platform_identifiers', next);
+                                        }}
+                                        disabled={!isExpanded}
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Identifier Value</label>
+                                      <div className="relative">
+                                        <input
+                                          type="text"
+                                          placeholder="e.g. B08N5WRWNW"
+                                          value={plat.id}
+                                          onChange={(e) => {
+                                            const next = [...form.platform_identifiers];
+                                            next[idx].id = e.target.value;
+                                            set('platform_identifiers', next);
+                                          }}
+                                          className={cn(inputCls(false), "font-mono disabled:opacity-60 disabled:bg-slate-50 disabled:cursor-not-allowed")}
+                                          disabled={!isExpanded}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-end gap-2 shrink-0 h-[62px] pb-1">
+                                     {plat.id && finalUrl && (
+                                       <a
+                                         href={finalUrl}
+                                         target="_blank"
+                                         rel="noopener noreferrer"
+                                         className="h-10 px-4 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                                         title="View Live Listing"
+                                       >
+                                         View <ExternalLink size={14} />
+                                       </a>
+                                     )}
+                                     <button
+                                       type="button"
+                                       onClick={() => setExpandedPlatIdx(isExpanded ? null : idx)}
+                                       className={cn("h-10 w-10 flex items-center justify-center rounded-xl transition-all border", isExpanded ? "bg-slate-100 border-slate-200 text-slate-700 shadow-inner" : "bg-white border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 shadow-sm")}
+                                       title="Advanced Settings"
+                                     >
+                                       <Settings size={16} />
+                                     </button>
+                                  </div>
+                                </div>
+
+                                {/* Expanded Settings */}
+                                {isExpanded && (
+                                  <div className="mt-4 pt-4 border-t border-slate-100/60 grid grid-cols-1 sm:grid-cols-12 gap-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                                    <div className="flex flex-col gap-1.5 sm:col-span-4">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">ID Type (Metadata)</label>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. ASIN, FSIN, Style ID"
+                                        value={plat.type}
+                                        onChange={(e) => {
+                                          const next = [...form.platform_identifiers];
+                                          next[idx].type = e.target.value;
+                                          set('platform_identifiers', next);
+                                        }}
+                                        className={inputCls(false)}
+                                      />
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5 sm:col-span-8">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center justify-between">
+                                         <span>Listing Base URL</span>
+                                         {plat.channel_name && (
+                                           <button
+                                             type="button"
+                                             onClick={() => handleUpdateChannelUrl(plat.channel_name, channelUrls[plat.channel_name])}
+                                             className="text-[9px] font-black text-indigo-600 hover:underline uppercase tracking-tighter bg-transparent border-none flex items-center gap-1"
+                                           >
+                                             <Globe size={10} /> Save Global URL
+                                           </button>
+                                         )}
+                                      </label>
+                                      <div className="relative">
+                                        <input
+                                          type="text"
+                                          placeholder="e.g. amazon.in/gp/product/{id}?th=1"
+                                          value={channelUrls[plat.channel_name] || ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            setChannelUrls(prev => ({ ...prev, [plat.channel_name]: val }));
+                                          }}
+                                          className={cn(inputCls(false), "pr-10")}
+                                          disabled={!plat.channel_name}
+                                        />
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-300">
+                                           <Link size={14} />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               )}
 
               {/* SHARED POOLS */}
               {activeTab === 'components' && (
@@ -1653,7 +1891,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                                           <X size={12} />
                                         </button>
                                       </div>
-                                      <div className="relative">
+                                      <div className="relative group/id">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                         <input
                                           autoFocus

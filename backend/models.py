@@ -72,13 +72,14 @@ class SkuMaster(Base):
     pack_type = Column(String(100), nullable=True)
     tax_rule_code = Column(String(100), nullable=True)
     tax_percent = Column(Float, nullable=True)
+    platform_identifiers = Column(JSON, nullable=True) # Array of {id, platform_name, type}
 
     # Audit
-    createdAt = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     created_by_id = Column(Integer, nullable=True)
-    updatedAt = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     updated_by_id = Column(Integer, nullable=True)
-    deletedAt = Column(DateTime, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
     deleted_by_id = Column(Integer, nullable=True)
 
 class SalesOrder(Base):

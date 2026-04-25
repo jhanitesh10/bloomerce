@@ -145,6 +145,22 @@ const GROUPS = [
     ],
   },
   {
+    id: 'channels_group',
+    label: 'Marketplace Channels',
+    color: 'blue',
+    cols: [
+      { 
+        id: 'platform_identifiers', 
+        label: 'Linked Channels', 
+        width: 250,
+        valueFormatter: (p) => {
+          if (!p.value || !Array.isArray(p.value)) return '-';
+          return p.value.map(plat => `${plat.channel_name || plat.platform_name}: ${plat.id}`).join(', ');
+        }
+      },
+    ],
+  },
+  {
     id: 'content',
     label: 'Content',
     color: 'blue',
@@ -568,6 +584,7 @@ export default function MasterTab({ isMobile }) {
   const [isExportCenterOpen, setIsExportCenterOpen] = useState(false);
   const [isImportOpen,   setIsImportOpen]   = useState(false);
   const [isFilterOpen,   setIsFilterOpen]   = useState(false);
+  const [channelUrls,    setChannelUrls]    = useState({});
 
   // Advanced Filtering State
   const initialFilters = {
@@ -645,7 +662,7 @@ export default function MasterTab({ isMobile }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [skuData, brands, cats, statuses, bundles, packs, nqUnits, sizes, colors] = await Promise.all([
+      const [skuData, brands, cats, statuses, bundles, packs, nqUnits, sizes, colors, channels] = await Promise.all([
         skuApi.getAll(),
         refApi.getAll('BRAND'),
         refApi.getAll('CATEGORY'),
@@ -654,8 +671,17 @@ export default function MasterTab({ isMobile }) {
         refApi.getAll('PACK_TYPE'),
         refApi.getAll('NET_QUANTITY_UNIT'),
         refApi.getAll('SIZE'),
-        refApi.getAll('COLOR')
+        refApi.getAll('COLOR'),
+        refApi.getAll('CHANNEL')
       ]);
+
+      const chUrls = {};
+      (channels || []).forEach(ch => {
+        if (ch.metadata_json && ch.metadata_json.base_url) {
+          chUrls[ch.label] = ch.metadata_json.base_url;
+        }
+      });
+      setChannelUrls(chUrls);
       let subcats = [];
       try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
       const toMap = arr => (arr || []).reduce((a, r) => ({
@@ -929,7 +955,44 @@ export default function MasterTab({ isMobile }) {
              if (c.id.endsWith('_weight') || c.id === 'finished_product_weight') return p.value ? `${p.value} g` : '-';
              return p.value || '-';
           },
-          cellRenderer: isRef ? ReferenceCellRenderer : (c.id === 'status_reference_id' ? (p) => {
+          cellRenderer: c.id === 'platform_identifiers' ? (p) => {
+             if (!p.value || !Array.isArray(p.value)) return '-';
+             return (
+               <div className="flex flex-wrap gap-1 items-center py-1">
+                 {p.value.map((plat, idx) => {
+                   const baseUrl = channelUrls[plat.channel_name || plat.platform_name];
+                   const finalUrl = baseUrl && plat.id ? (baseUrl.includes('{id}') ? baseUrl.replace('{id}', plat.id) : `${baseUrl}${plat.id}`) : '';
+                   
+                   let faviconUrl = null;
+                   if (baseUrl) {
+                     try {
+                       const u = new URL(baseUrl);
+                       faviconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
+                     } catch(e) {}
+                   }
+
+                   return (
+                     <a 
+                       key={idx}
+                       href={finalUrl || '#'}
+                       target={finalUrl ? "_blank" : undefined}
+                       rel={finalUrl ? "noopener noreferrer" : undefined}
+                       className="group flex items-center gap-1.5 px-1.5 py-1 rounded-md bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all"
+                       title={`View on ${plat.channel_name || plat.platform_name}`}
+                       onClick={(e) => { if (!finalUrl) e.preventDefault(); }}
+                     >
+                        {faviconUrl ? (
+                          <img src={faviconUrl} alt={plat.channel_name || 'channel'} className="w-4 h-4 object-contain" />
+                        ) : (
+                          <span className="w-4 h-4 flex items-center justify-center bg-slate-100 rounded text-[8px] font-bold text-slate-500">{(plat.channel_name || plat.platform_name || 'C').charAt(0)}</span>
+                        )}
+                        <ExternalLink size={10} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                     </a>
+                   );
+                 })}
+               </div>
+             );
+          } : (isRef ? ReferenceCellRenderer : (c.id === 'status_reference_id' ? (p) => {
              const lbl = references.STATUS[p.value];
              return <StatusBadge label={lbl} />;
           } : (c.id === 'mrp' || c.id === 'purchase_cost' ? (p) => (
@@ -971,7 +1034,7 @@ export default function MasterTab({ isMobile }) {
                   )}
                 </div>
               );
-           } : undefined)))),
+           } : undefined))))),
           cellRendererParams: isRef ? { references, referenceKey: refKey } : {},
           cellEditor: isRef ? ReferenceCellEditor : (c.isNum ? 'agNumberCellEditor' : 'agTextCellEditor'),
           cellEditorParams: isRef ? { referenceType: refKey, preloadedOptions: refLists[refKey] } : {},

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator, field_validator
 from typing import Optional, Dict, Any, Union, List
 from datetime import datetime
 
@@ -26,6 +26,22 @@ class ReferenceData(ReferenceDataBase):
         from_attributes = True
 
 # --- SKU Master Schemas ---
+class PlatformIdentifier(BaseModel):
+    id: str
+    channel_name: Optional[str] = None
+    platform_name: Optional[str] = None # Legacy support
+    type: str
+
+    @model_validator(mode='before')
+    @classmethod
+    def sync_names(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get('channel_name') and data.get('platform_name'):
+                data['channel_name'] = data['platform_name']
+            if not data.get('channel_name'):
+                data['channel_name'] = ""
+        return data
+
 class SkuMasterBase(BaseModel):
     brand_reference_id: Optional[int] = None
     category_reference_id: Optional[int] = None
@@ -65,41 +81,44 @@ class SkuMasterBase(BaseModel):
     product_component_group_code: Optional[Union[Dict[str, Any], List[Any], str]] = None
     product_type: Optional[str] = None
     pack_type: Optional[Union[int, str]] = None
+    product_component_group_code: Optional[Union[Dict[str, Any], List[Any], str]] = None
     tax_rule_code: Optional[str] = None
     tax_percent: Optional[float] = None
+    
+    platform_identifiers: Optional[List[PlatformIdentifier]] = None
 
-    created_by_id: Optional[int] = None
-    updated_by_id: Optional[int] = None
+    @field_validator('platform_identifiers', mode='before')
+    @classmethod
+    def filter_empty_identifiers(cls, v):
+        if not v or not isinstance(v, list):
+            return v
+        # Skip if both ID and Channel Name are empty
+        return [p for p in v if (isinstance(p, dict) and (p.get('id') or p.get('channel_name') or p.get('platform_name'))) or (not isinstance(p, dict) and (p.id or p.channel_name or p.platform_name))]
 
 class SkuMasterCreate(SkuMasterBase):
     pass
 
 class SkuMaster(SkuMasterBase):
     id: int
-    createdAt: datetime
-    updatedAt: datetime
-    deletedAt: Optional[datetime] = None
-    deleted_by_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 class PlatformPatch(BaseModel):
-    action: str
+    action: str # "add" or "remove"
     reference_id: int
 
 class DriveFolderCreate(BaseModel):
     brand_name: str
     category_name: str
-    sub_category_name: str
+    sub_category_name: Optional[str] = None
     sku_code: str
 
 class ImageExportRequest(BaseModel):
     sku_ids: List[int]
-    folder_template: str = "{{brand}}/{{sku_code}}"
-    file_template: str = "{{sku_code}}_{{index}}"
-    flatten_hierarchy: bool = False
-    include_all_files: bool = True
 
 class SkuImportRow(SkuMasterBase):
     brand_label: Optional[str] = None
@@ -121,26 +140,16 @@ class SalesOrderBase(BaseModel):
     platform_reference_id: Optional[int] = None
     channel_reference_id: Optional[int] = None
     sku_master_id: Optional[int] = None
-
+    order_type: Optional[str] = 'ORDER'
     external_order_id: Optional[str] = None
     external_sku: Optional[str] = None
-
-    order_type: Optional[str] = 'ORDER'
     order_date: Optional[datetime] = None
-
     quantity: Optional[int] = None
-    unit_selling_price: Optional[float] = None
+    unit_price: Optional[float] = None
     total_amount: Optional[float] = None
-    tax_amount: Optional[float] = None
-    platform_fee: Optional[float] = None
-
-    order_status: Optional[str] = None
-    payment_method: Optional[str] = None
-    tracking_id: Optional[str] = None
-    courier_name: Optional[str] = None
-
-    customer_location: Optional[Union[Dict[str, Any], List[Any]]] = None
-
+    currency: Optional[str] = 'INR'
+    status: Optional[str] = 'PENDING'
+    
     metadata_json: Optional[Union[Dict[str, Any], List[Any]]] = None
     order_journey: Optional[Union[Dict[str, Any], List[Any]]] = None
     remark: Optional[str] = None

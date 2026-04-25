@@ -18,7 +18,8 @@ export default function DynamicReferenceSelect({
   variant = 'default', // 'default' or 'flat'
   usePortal = true,
   hideTrigger = false,
-  isImproved = false
+  isImproved = false,
+  disabled = false
 }) {
   const [options, setOptions] = useState(preloadedOptions || []);
   const [isOpen, setIsOpen] = useState(autoOpen);
@@ -142,7 +143,10 @@ export default function DynamicReferenceSelect({
     opt => opt.label.toLowerCase() === search.trim().toLowerCase()
   );
 
-  const selectedOption = options.find(opt => Number(opt.id) === Number(value));
+  const selectedOption = options.find(opt => 
+    (value && !isNaN(value) && Number(opt.id) === Number(value)) || 
+    (value && opt.label === value)
+  );
 
   return (
     <div className={cn("relative w-full", className)} ref={dropdownRef}>
@@ -167,8 +171,9 @@ export default function DynamicReferenceSelect({
             className
           )}
           onMouseDown={() => {
-            setIsOpen(!isOpen);
+            if (!disabled) setIsOpen(!isOpen);
           }}
+          style={disabled ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
         >
           <span className={cn("truncate", !selectedOption && "text-[var(--color-muted-foreground)]")}>
             {selectedOption ? selectedOption.label : placeholder}

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
-import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, XCircle, Search, RefreshCcw, Check } from 'lucide-react';
+import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, XCircle, Search, RefreshCcw, Check, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { skuApi, refApi } from '../api';
@@ -20,7 +20,8 @@ const FIELD_LABELS = {
   finished_product_weight: "Fin Wt (calculated)",
   bundle_type: "Bundle Type", pack_type: "Pack Type", tax_rule_code: "Tax Rule Code (HSN)", tax_percent: "Tax Percent",
   product_type: "Product Type", remark: "Remark", metadata_json: "Metadata (JSON)",
-  live_platform_reference_id: "Live Platforms"
+  live_platform_reference_id: "Live Platforms",
+  platform_identifiers: "Channel Identifiers"
 };
 
 const GROUPS = [
@@ -112,6 +113,63 @@ function CsvHeaderSelect({ currentVal, onChange, headers }) {
   );
 }
 
+function ChannelSelect({ currentVal, onChange, channels }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "h-9 rounded-lg border px-3 text-[11px] cursor-pointer transition-all flex justify-between items-center shadow-sm",
+          currentVal ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-foreground)] font-medium" : "border-[var(--color-border)] bg-white text-[var(--color-muted-foreground)]"
+        )}
+      >
+        <span className="truncate">{currentVal || "Select Channel"}</span>
+        <ChevronDown size={14} className={cn("transition-transform opacity-50", isOpen && "rotate-180")} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-[var(--color-card)] border border-[var(--color-border)] shadow-xl rounded-xl overflow-hidden animate-[fade-in_0.1s_ease]">
+          <div className="max-h-40 overflow-y-auto p-1 custom-scrollbar">
+            {channels.map(p => (
+              <div
+                key={p.id}
+                onClick={() => {
+                  onChange(p.label);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer hover:bg-[var(--color-muted)] text-[var(--color-foreground)]",
+                  currentVal === p.label && "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium"
+                )}
+              >
+                {p.label}
+              </div>
+            ))}
+            {channels.length === 0 && (
+              <div className="p-4 text-center text-[10px] text-[var(--color-muted-foreground)] italic">
+                No channels found in system
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onImportComplete }) {
   const [file, setFile] = useState(null);
 
@@ -122,6 +180,12 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     } catch(e) {}
     return [];
   });
+
+  const [availableChannels, setAvailableChannels] = useState([]);
+
+  useEffect(() => {
+    refApi.getAll('CHANNEL').then(setAvailableChannels).catch(console.error);
+  }, []);
 
   const [csvData, setCsvData] = useState(() => {
     try {
@@ -148,6 +212,21 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     return {};
   });
 
+  const [platformMappings, setPlatformMappings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bloomerce_import_platform_mappings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migration: convert platform_name to channel_name if present
+        return (parsed || []).map(m => ({
+          ...m,
+          channel_name: m.channel_name || m.platform_name || '',
+        }));
+      }
+    } catch(e) {}
+    return [];
+  });
+
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [progressStatus, setProgressStatus] = useState("");
@@ -168,6 +247,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     try {
       localStorage.setItem('bloomerce_import_headers', JSON.stringify(csvHeaders));
       localStorage.setItem('bloomerce_import_mappings', JSON.stringify(mappings));
+      localStorage.setItem('bloomerce_import_platform_mappings', JSON.stringify(platformMappings));
       const dataStr = JSON.stringify(csvData);
       if (dataStr.length < 2000000) {
         localStorage.setItem('bloomerce_import_data', dataStr);
@@ -175,7 +255,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     } catch (e) {
       console.warn("Could not save import draft to localStorage:", e);
     }
-  }, [csvHeaders, csvData, mappings, importStats]);
+  }, [csvHeaders, csvData, mappings, platformMappings, importStats]);
 
   const handleFileUpload = (e) => {
     const f = e.target.files[0];
@@ -192,7 +272,8 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
         const initialMapping = {};
         ALL_FIELD_IDS.forEach(fId => {
-          const label = FIELD_LABELS[fId].toLowerCase().replace("*", "").trim();
+          const labelVal = FIELD_LABELS[fId] || fId;
+          const label = labelVal.toLowerCase().replace("*", "").trim();
           const match = headers.find(h => {
              const lowerH = h.toLowerCase().trim();
              return lowerH === fId.toLowerCase() || 
@@ -214,10 +295,8 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     localStorage.removeItem('bloomerce_import_data');
     localStorage.removeItem('bloomerce_import_headers');
     localStorage.removeItem('bloomerce_import_mappings');
-    setFile(null);
-    setCsvHeaders([]);
-    setCsvData([]);
     setMappings({});
+    setPlatformMappings([]);
     setImportStats(null);
     setImportErrors([]);
     setImportProgress(0);
@@ -238,7 +317,8 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   const autoMapGroup = (groupFields) => {
     const newMappings = { ...mappings };
     groupFields.forEach(fId => {
-      const label = FIELD_LABELS[fId].toLowerCase().replace("*", "").trim();
+      const labelVal = FIELD_LABELS[fId] || fId;
+      const label = labelVal.toLowerCase().replace("*", "").trim();
       const match = csvHeaders.find(h => {
         const lowerH = h.toLowerCase().trim();
         return lowerH === fId.toLowerCase() || 
@@ -252,12 +332,29 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   };
 
   const getMappedRow = (rawRow) => {
+    if (!rawRow) return {};
     const newRow = {};
     Object.entries(mappings).forEach(([fId, csvH]) => {
       if(csvH && rawRow[csvH] !== undefined) {
          newRow[fId] = rawRow[csvH];
       }
     });
+
+    // Add platform identifiers
+    if (platformMappings.length > 0) {
+      const platforms = platformMappings
+        .filter(m => m.csvHeader && rawRow[m.csvHeader] !== undefined && rawRow[m.csvHeader] !== null && String(rawRow[m.csvHeader]).trim() !== "")
+        .filter(m => m.channel_name && m.channel_name.trim() !== "") // Skip if no channel selected
+        .map(m => ({
+          id: String(rawRow[m.csvHeader]).trim(),
+          channel_name: m.channel_name,
+          type: (m.type || 'id').trim()
+        }));
+      if (platforms.length > 0) {
+        newRow.platform_identifiers = platforms;
+      }
+    }
+
     return newRow;
   };
 
@@ -380,8 +477,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   };
 
   const previewRows = useMemo(() => {
+    if (!csvData) return [];
     return csvData.slice(0,3).map(r => getMappedRow(r));
-  }, [csvData, mappings]);
+  }, [csvData, mappings, platformMappings]);
   const activeCols = Object.keys(mappings).filter(id => mappings[id]);
 
   return (
@@ -672,59 +770,150 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                           </div>
                         );
                       })}
+
+                      {/* Platform Identifiers Section */}
+                      <div className="border-b border-[var(--color-border)] last:border-0">
+                        <div 
+                          className="flex items-center justify-between px-4 py-2.5 cursor-pointer bg-[var(--color-card)] hover:bg-[var(--color-muted)]/50 transition-colors"
+                          onClick={() => toggleGroup('platforms')}
+                        >
+                          <div className="flex items-center gap-3">
+                            {expandedGroups.has('platforms') ? <ChevronDown size={14} className="text-[var(--color-muted-foreground)]"/> : <ChevronRight size={14} className="text-[var(--color-muted-foreground)]"/>}
+                            <span className="text-sm font-medium">Channel Identifiers</span>
+                            <span className="text-[10px] font-semibold bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-2 py-0.5 rounded-full">
+                              {platformMappings.length} mappings
+                            </span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 px-2 text-[10px] font-bold text-[var(--color-primary)] uppercase"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPlatformMappings([...platformMappings, { csvHeader: '', channel_name: '', type: '' }]);
+                              if (!expandedGroups.has('platforms')) toggleGroup('platforms');
+                            }}
+                          >
+                            <PlusCircle size={12} className="mr-1" /> Add Mapping
+                          </Button>
+                        </div>
+
+                        {expandedGroups.has('platforms') && (
+                          <div className="bg-[var(--color-background)] p-4 space-y-3">
+                            {platformMappings.length === 0 ? (
+                              <div className="text-[10px] text-center text-[var(--color-muted-foreground)] py-4 italic border border-dashed border-[var(--color-border)] rounded-lg">
+                                No platform mappings added. Use these for platform-specific IDs like FSIN, ASIN, Style ID.
+                              </div>
+                            ) : (
+                              platformMappings.map((m, idx) => (
+                                <div key={idx} className="flex flex-col gap-2 p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl relative group/plat">
+                                  <button 
+                                    className="absolute -top-2 -right-2 w-5 h-5 bg-white border border-red-200 text-red-500 rounded-full flex items-center justify-center hover:bg-red-50 shadow-sm opacity-0 group-hover/plat:opacity-100 transition-opacity"
+                                    onClick={() => setPlatformMappings(platformMappings.filter((_, i) => i !== idx))}
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex flex-col gap-1">
+                                      <label className="text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase">CSV Column</label>
+                                      <CsvHeaderSelect
+                                        currentVal={m.csvHeader}
+                                        onChange={(val) => {
+                                          const next = [...platformMappings];
+                                          next[idx].csvHeader = val;
+                                          setPlatformMappings(next);
+                                        }}
+                                        headers={csvHeaders}
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <label className="text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase">Sales Channel</label>
+                                      <ChannelSelect 
+                                        currentVal={m.channel_name}
+                                        channels={availableChannels}
+                                        onChange={(val) => {
+                                          const next = [...platformMappings];
+                                          next[idx].channel_name = val;
+                                          setPlatformMappings(next);
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase">Identifier Type</label>
+                                    <input 
+                                      type="text" 
+                                      placeholder="e.g. ASIN, Style ID, FSIN"
+                                      value={m.type}
+                                      onChange={(e) => {
+                                        const next = [...platformMappings];
+                                        next[idx].type = e.target.value;
+                                        setPlatformMappings(next);
+                                      }}
+                                      className="h-9 rounded-lg border border-[var(--color-border)] bg-white px-3 text-[11px] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
+                                    />
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-              </div>
-
-              <div className="px-5 sm:px-6 py-6 pb-12 bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] shrink-0">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileSpreadsheet size={15} className="text-[var(--color-primary)]" />
-                  <h3 className="text-sm font-semibold">Ready to Import Preview</h3>
                 </div>
 
-                {activeCols.length === 0 ? (
-                  <div className="text-xs text-center text-[var(--color-muted-foreground)] py-8 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] border-dashed">
-                    Map at least one column to see a preview
+                <div className="px-5 sm:px-6 py-6 pb-12 bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] shrink-0">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileSpreadsheet size={15} className="text-[var(--color-primary)]" />
+                    <h3 className="text-sm font-semibold">Ready to Import Preview</h3>
                   </div>
-                ) : (
-                  <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left" style={{ borderSpacing: 0 }}>
-                      <thead>
-                        <tr className="bg-[var(--color-muted)] border-b border-[var(--color-border)]">
-                          {activeCols.map((sysId, i) => (
-                            <th key={i} className="px-3 py-2 text-[10px] font-bold tracking-wider uppercase whitespace-nowrap border-r border-[var(--color-border)] last:border-0 text-[var(--color-muted-foreground)] truncate max-w-[150px]">
-                              {FIELD_LABELS[sysId] || sysId}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {previewRows.map((row, rowIdx) => (
-                          <tr key={rowIdx} className="border-b border-[var(--color-border)] last:border-0">
-                            {activeCols.map((sysId, colIdx) => {
-                              const val = row[sysId];
-                              return (
-<td key={colIdx} className="px-3 py-2 text-[11px] whitespace-nowrap border-r border-[var(--color-border)] last:border-0 max-w-[150px] truncate text-[var(--color-foreground)]" title={val}>
-  {val !== undefined && val !== null && val !== "" ? val : <EmptyState />}
-</td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="bg-[var(--color-muted)] border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-muted-foreground)] flex items-center justify-between gap-4">
-                       <span className="truncate">Showing 3 of {csvData.length} rows.</span>
-                       <span className="whitespace-nowrap font-medium text-[var(--color-primary)]">Auto-resolve references is ON</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
 
+                  {activeCols.length === 0 ? (
+                    <div className="text-xs text-center text-[var(--color-muted-foreground)] py-8 bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] border-dashed">
+                      Map at least one column to see a preview
+                    </div>
+                  ) : (
+                    <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden overflow-x-auto custom-scrollbar">
+                      <table className="w-full text-left" style={{ borderSpacing: 0 }}>
+                        <thead>
+                          <tr className="bg-[var(--color-muted)] border-b border-[var(--color-border)]">
+                            {activeCols.map((sysId, i) => (
+                              <th key={i} className="px-3 py-2 text-[10px] font-bold tracking-wider uppercase whitespace-nowrap border-r border-[var(--color-border)] last:border-0 text-[var(--color-muted-foreground)] truncate max-w-[150px]">
+                                {FIELD_LABELS[sysId] || sysId}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewRows.map((row, rowIdx) => (
+                            <tr key={rowIdx} className="border-b border-[var(--color-border)] last:border-0">
+                              {activeCols.map((sysId, colIdx) => {
+                                const val = row[sysId];
+                                return (
+                                   <td key={colIdx} className="px-3 py-2 text-[11px] whitespace-nowrap border-r border-[var(--color-border)] last:border-0 max-w-[150px] truncate text-[var(--color-foreground)]" title={typeof val === 'object' ? JSON.stringify(val) : val}>
+                                     {val !== undefined && val !== null && val !== "" ? 
+                                       (typeof val === 'object' ? JSON.stringify(val) : String(val)) 
+                                       : <EmptyState />}
+                                   </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="bg-[var(--color-muted)] border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-muted-foreground)] flex items-center justify-between gap-4">
+                         <span className="truncate">Showing 3 of {csvData.length} rows.</span>
+                         <span className="whitespace-nowrap font-medium text-[var(--color-primary)]">Auto-resolve references is ON</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
 }

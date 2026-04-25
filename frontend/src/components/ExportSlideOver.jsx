@@ -18,6 +18,7 @@ const FIELD_LABELS = {
   finished_product_weight: "Finished Product Wt",
   bundle_type: "Bundle Type", pack_type: "Pack Type",
   tax_rule_code: "Tax Rule Code (HSN)", tax_percent: "Tax Percent",
+  platform_identifiers: "Platform Identifiers",
   // additional raw fields:
   created_at: "Created At", updated_at: "Updated At"
 };
@@ -28,7 +29,8 @@ const GROUPS = [
   { id: 'pricing', label: 'Pricing & Specs', fields: ['mrp', 'purchase_cost', 'net_quantity', 'net_quantity_unit_reference_id', 'size_reference_id', 'color', 'raw_product_size', 'package_size', 'package_weight', 'raw_product_weight', 'finished_product_weight'] },
   { id: 'content', label: 'Content', fields: ['description', 'key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords', 'catalog_url'] },
   { id: 'bundling', label: 'Product & Bundle', fields: ['bundle_type', 'pack_type'] },
-  { id: 'tax', label: 'Tax & Compliance', fields: ['tax_rule_code', 'tax_percent'] }
+  { id: 'tax', label: 'Tax & Compliance', fields: ['tax_rule_code', 'tax_percent'] },
+  { id: 'platforms', label: 'Platforms', fields: ['platform_identifiers'] }
 ];
 
 const PREFS_KEY = 'bloomerce_export_prefs';
@@ -106,6 +108,10 @@ export default function ExportSlideOver({ onClose, skus = [], filtered = [], pag
     if (fId === 'pack_type') return references?.PACK_TYPE?.[rawValue] || rawValue || '';
     if (fId === 'net_quantity_unit_reference_id') return references?.NET_QUANTITY_UNIT?.[rawValue] || rawValue || '';
     if (fId === 'size_reference_id') return references?.SIZE?.[rawValue] || rawValue || '';
+    if (fId === 'platform_identifiers') {
+      if (!rawValue || !Array.isArray(rawValue)) return '';
+      return rawValue.map(p => `${p.channel_name}(${p.type}): ${p.id}`).join(' | ');
+    }
 
     return rawValue === null || rawValue === undefined ? '' : String(rawValue);
   };
