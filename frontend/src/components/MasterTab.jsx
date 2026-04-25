@@ -166,6 +166,7 @@ const GROUPS = [
     color: 'blue',
     cols: [
       { id: 'description',  label: 'Description',  width: 260, isContent: true },
+      { id: 'catalog_url',  label: 'Catalog URL',  width: 120, isContent: true, showInDefaultView: true },
       { id: 'key_feature',  label: 'Key Features', width: 260, isContent: true },
       { id: 'key_ingredients', label: 'Key Ingredients', width: 260, isContent: true },
       { id: 'ingredients',  label: 'Ingredients',  width: 260, isContent: true },
@@ -173,7 +174,6 @@ const GROUPS = [
       { id: 'product_care', label: 'Product Care', width: 260, isContent: true },
       { id: 'caution',      label: 'Caution',      width: 220, isContent: true },
       { id: 'seo_keywords', label: 'SEO Keywords', width: 200, isContent: true },
-      { id: 'catalog_url',  label: 'Catalog URL',  width: 250, isContent: true },
     ],
   },
   {
@@ -927,7 +927,7 @@ export default function MasterTab({ isMobile }) {
         return {
           headerName: c.label,
           field: c.id,
-          columnGroupShow: idx === 0 ? undefined : 'open',
+          columnGroupShow: (idx === 0 || c.showInDefaultView) ? undefined : 'open',
           width: c.width,
           align: c.align,
           sortable: c.sortable || false,
@@ -1011,10 +1011,15 @@ export default function MasterTab({ isMobile }) {
                    href={p.value}
                    target="_blank"
                    rel="noopener noreferrer"
-                   className="w-10 h-10 flex items-center justify-center bg-white border border-indigo-100 rounded-full text-indigo-600 shadow-sm hover:shadow-md hover:border-indigo-300 hover:scale-110 transition-all duration-200"
+                   className="flex items-center gap-1.5 px-2 h-8 bg-white border border-indigo-100 rounded-lg text-indigo-600 shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200 group"
                    onClick={(e) => e.stopPropagation()}
                  >
-                   <ExternalLink size={18} strokeWidth={2.5} />
+                    {p.value.includes('drive.google.com') ? (
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" className="w-4 h-4 object-contain" />
+                    ) : (
+                      <Layers size={14} className="text-slate-400" />
+                    )}
+                    <ExternalLink size={10} strokeWidth={2.5} className="text-slate-300 group-hover:text-indigo-600 transition-colors" />
                  </a>
                ) : (
                  <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
