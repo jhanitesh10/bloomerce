@@ -1,7 +1,7 @@
 import {
   Plus, Search, Image as ImageIcon, ChevronLeft, ChevronRight, ChevronDown,
   ArrowUpDown, LayoutGrid, Rocket, FileEdit, Download, Upload,
-  SquarePen, Check, X, Filter, Maximize2, Minimize2, StickyNote, Send, Trash2, RefreshCcw, ExternalLink,
+  SquarePen, Check, X, Filter, Maximize2, Minimize2, StickyNote, Send, Trash2, RefreshCcw, ExternalLink, FolderPlus, PlusCircle,
   AlertCircle, Copy, Layers, Command, MoreVertical, Info, IndianRupee
 } from 'lucide-react';
 
@@ -598,6 +598,7 @@ export default function MasterTab({ isMobile }) {
   const [isImportOpen,   setIsImportOpen]   = useState(false);
   const [isFilterOpen,   setIsFilterOpen]   = useState(false);
   const [channelUrls,    setChannelUrls]    = useState({});
+  const [formInitialTab, setFormInitialTab] = useState(null);
 
   // Advanced Filtering State
   const initialFilters = {
@@ -970,7 +971,24 @@ export default function MasterTab({ isMobile }) {
              return p.value || '-';
           },
           cellRenderer: c.id === 'platform_identifiers' ? (p) => {
-             if (!p.value || !Array.isArray(p.value)) return '-';
+              if (!p.value || !Array.isArray(p.value) || p.value.length === 0) {
+                return (
+                  <div className="flex items-center justify-center w-full h-full">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingSku(p.data);
+                        setFormInitialTab('platforms');
+                        setIsFormOpen(true);
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-full hover:bg-sky-100 hover:border-sky-300 transition-all text-[10px] font-bold whitespace-nowrap shadow-sm"
+                    >
+                      <PlusCircle size={12} strokeWidth={2.5} />
+                      Link Channels
+                    </button>
+                  </div>
+                );
+              }
               return (
                 <div className="flex items-center min-h-[44px] group/stack">
                   <div className="flex -space-x-3 group-hover/stack:space-x-1.5 transition-all duration-300">
@@ -1041,7 +1059,20 @@ export default function MasterTab({ isMobile }) {
                     <ExternalLink size={10} strokeWidth={2.5} className="text-slate-300 group-hover:text-indigo-600 transition-colors" />
                  </a>
                ) : (
-                 <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                 <div className="flex items-center justify-center w-full h-full">
+                   <button 
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       setEditingSku(p.data);
+                       setFormInitialTab('content');
+                       setIsFormOpen(true);
+                     }}
+                     className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full hover:bg-rose-100 hover:border-rose-300 transition-all text-[10px] font-bold whitespace-nowrap shadow-sm"
+                   >
+                     <FolderPlus size={12} strokeWidth={2.5} />
+                     Generate
+                   </button>
+                 </div>
                )}
              </div>
           ) : (c.isMono ? (p) => {
@@ -1534,14 +1565,16 @@ export default function MasterTab({ isMobile }) {
       {isFormOpen && (
         <SkuMasterForm
           initialData={editingSku}
+          initialTab={formInitialTab}
           statusOptions={refLists.STATUS}
-          onClose={()=>setIsFormOpen(false)}
-          onSaved={()=>{setIsFormOpen(false);loadAll();}}
+          onClose={()=>{setIsFormOpen(false); setFormInitialTab(null);}}
+          onSaved={()=>{setIsFormOpen(false); setFormInitialTab(null); loadAll();}}
           onSwitchProduct={(id) => {
             const next = skus.find(s => s.id === id);
             if (next) {
               // Briefly clear and reset to trigger a re-mount/reset of the form
               setEditingSku(null);
+              setFormInitialTab(null);
               setTimeout(() => {
                 setEditingSku(next);
                 setIsFormOpen(true);

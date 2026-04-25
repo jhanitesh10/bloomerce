@@ -341,7 +341,7 @@ const parsePoolMapping = (val) => {
 const getDraftKey = (id) => id ? `bloomerce_sku_edit_draft_${id}` : `bloomerce_sku_add_draft`;
 
 // ─── Main Form ────────────────────────────────────────────────────
-export default function SkuMasterForm({ initialData, statusOptions, onClose, onSaved, onSwitchProduct }) {
+export default function SkuMasterForm({ initialData, statusOptions, onClose, onSaved, onSwitchProduct, initialTab }) {
   const isEdit = Boolean(initialData?.id);
   const [statusMessage, setStatusMessage] = useState(null); // { text: string, type: 'success' | 'error' }
   const [pendingAction, setPendingAction] = useState(null); // { type: string, payload?: any }
@@ -398,7 +398,14 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [activeTab, setActiveTab] = useState('identity');
+  const [activeTab, setActiveTab] = useState(initialTab || 'identity');
+
+  // Handle external tab switching (e.g. from Dashboard "Generate" button)
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [notesOpen, setNotesOpen] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [generatingUrl, setGeneratingUrl] = useState(false);
