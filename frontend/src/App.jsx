@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import MasterTab from './components/MasterTab';
 import SalesDashboard from './components/SalesDashboard';
+import NotFound from './components/NotFound';
 import { APP_PATHS } from './config';
 import {
   Layers,
@@ -244,7 +245,7 @@ function App() {
               </div>
             } />
             <Route path={APP_PATHS.SALES} element={<SalesDashboard isMobile={isMobile} />} />
-            <Route path="*" element={<Navigate to={APP_PATHS.CATALOG} replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </main>
