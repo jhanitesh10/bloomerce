@@ -1167,6 +1167,25 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                       </div>
                     </div>
                   )}
+
+                  <Field id="catalog_url" label="Catalog / Product Page URL" hint="Direct link to the primary catalog or drive folder" isImproved={bloomHistory.has('catalog_url')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                    <div className="flex items-center gap-2">
+                      <input type="url" name="catalog_url" value={form.catalog_url} onChange={handleChange}
+                        className={cn(inputCls(false), "font-mono")} placeholder="https://..." />
+                      {form.catalog_url && (
+                        <a href={form.catalog_url} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-lg border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-colors shrink-0">
+                          <ExternalLink size={16} />
+                        </a>
+                      )}
+                    </div>
+                  </Field>
+
+                  <Field id="description" label="Description" hint="Main product description shown on listings" isImproved={bloomHistory.has('description')}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                    <AutoTextarea name="description" value={form.description} onChange={handleChange} isImproved={bloomHistory.has('description')}
+                      placeholder="Describe the product clearly for customers and search engines…" rows={3} />
+                  </Field>
                 </>
               )}
 
@@ -1217,172 +1236,6 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
               {/* CONTENT */}
               {activeTab === 'content' && (
                 <>
-                  <Field label="Catalog / Product Page URL">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 group min-h-[40px]">
-                        {!showDrivePreview ? (
-                          <>
-                            <input
-                              type="url"
-                              name="catalog_url"
-                              value={form.catalog_url}
-                              onChange={handleChange}
-                              className={cn(inputCls(false), "w-full sm:grow font-mono text-[11px] h-10")}
-                              placeholder="https://drive.google.com/..."
-                            />
-
-                            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                              {form.catalog_url ? (
-                                <>
-                                  <a
-                                    href={form.catalog_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex flex-1 sm:flex-none items-center justify-center w-auto sm:w-10 h-10 px-4 sm:px-0 rounded-xl border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95 transition-all shrink-0 shadow-sm gap-2"
-                                    title="Open Drive Link"
-                                  >
-                                    <ExternalLink size={15} />
-                                    <span className="sm:hidden text-xs font-bold uppercase tracking-wider">Open</span>
-                                  </a>
-
-                                  {pendingAction?.type === 'regenerate' ? (
-                                    <div className="flex items-center gap-1.5 animate-in zoom-in-95 duration-200">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => handleRegenerateClick(e, true)}
-                                        className="h-10 px-4 rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition-all border-none text-[10px] font-black uppercase shadow-md shadow-amber-500/20"
-                                      >
-                                        Confirm Re-gen
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setPendingAction(null)}
-                                        className="h-10 px-4 rounded-xl bg-white border border-amber-200 text-amber-600 hover:bg-amber-50 transition-all text-[10px] font-bold uppercase"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={handleRegenerateClick}
-                                      disabled={generatingUrl}
-                                      className="flex flex-1 sm:flex-none items-center justify-center w-auto sm:w-10 h-10 px-4 sm:px-0 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 active:scale-95 transition-all shrink-0 gap-2"
-                                      title="Re-generate Google Drive Folder"
-                                    >
-                                      <RefreshCw size={15} className={generatingUrl ? "animate-spin" : ""} />
-                                      <span className="sm:hidden text-xs font-bold uppercase tracking-wider">Reset</span>
-                                    </button>
-                                  )}
-                                </>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={handleGenerateDriveFolder}
-                                  disabled={generatingUrl || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id}
-                                  className={cn(
-                                    "flex flex-1 sm:flex-none items-center justify-center gap-2 px-6 sm:px-4 h-10 rounded-xl text-xs font-bold transition-all border shrink-0 shadow-sm w-full sm:w-auto",
-                                    (generatingUrl || !form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id)
-                                      ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
-                                      : "bg-white border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 active:scale-95"
-                                  )}
-                                >
-                                  <FolderPlus size={15} />
-                                  Preview Path
-                                </button>
-                              )}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="grow flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1.5 p-3 sm:p-0 sm:px-3 sm:py-1 rounded-2xl sm:rounded-xl bg-amber-50/50 border border-amber-200 shadow-sm animate-in slide-in-from-right-2 duration-300 h-auto sm:h-11">
-                            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-1 grow min-w-0">
-                               <div className="flex flex-col gap-1 sm:contents">
-                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">Brand</span>
-                                <input
-                                  className="min-w-0 flex-1 bg-white/90 hover:bg-white border border-transparent focus:border-amber-300 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-600 text-[11px] truncate shadow-sm sm:shadow-none"
-                                  value={driveDraft.brand_name}
-                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, brand_name: sanitizeFolderName(e.target.value) }))}
-                                  placeholder="brand"
-                                />
-                              </div>
-
-                              <span className="hidden sm:inline text-amber-300 shrink-0 select-none">/</span>
-
-                              <div className="flex flex-col gap-1 sm:contents">
-                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">Category</span>
-                                <input
-                                  className="min-w-0 flex-1 bg-white/90 hover:bg-white border border-transparent focus:border-amber-300 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-600 text-[11px] truncate shadow-sm sm:shadow-none"
-                                  value={driveDraft.category_name}
-                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, category_name: sanitizeFolderName(e.target.value) }))}
-                                  placeholder="category"
-                                />
-                              </div>
-
-                              <span className="hidden sm:inline text-amber-300 shrink-0 select-none">/</span>
-
-                              <div className="flex flex-col gap-1 sm:contents">
-                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">Sub-Cat</span>
-                                <input
-                                  className="min-w-0 flex-1 bg-white/90 hover:bg-white border border-transparent focus:border-amber-300 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-600 text-[11px] truncate shadow-sm sm:shadow-none"
-                                  value={driveDraft.sub_category_name}
-                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, sub_category_name: sanitizeFolderName(e.target.value) }))}
-                                  placeholder="subcategory"
-                                />
-                              </div>
-
-                              <span className="hidden sm:inline text-amber-300 shrink-0 select-none">/</span>
-
-                              <div className="flex flex-col gap-1 sm:contents">
-                                <span className="sm:hidden text-[9px] font-bold text-amber-600 uppercase tracking-tighter ml-1 opacity-70">SKU Code</span>
-                                <input
-                                  className="min-w-0 flex-1 bg-white font-bold border border-amber-200 focus:border-amber-400 rounded-lg sm:rounded-md px-2.5 py-1.5 sm:py-1 outline-none transition-all text-slate-900 text-[11px] truncate shadow-inner"
-                                  value={driveDraft.sku_code}
-                                  onChange={(e) => setDriveDraft(prev => ({ ...prev, sku_code: sanitizeFolderName(e.target.value) }))}
-                                  placeholder="sku"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 sm:gap-1.5 mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-amber-200 sm:pl-2">
-                               <button
-                                 type="button"
-                                 onClick={handleGenerateDriveFolder}
-                                 disabled={generatingUrl}
-                                 className="flex grow sm:grow-0 items-center justify-center gap-2 sm:gap-0 px-4 sm:px-0 w-auto sm:w-8 h-10 sm:h-8 rounded-xl sm:rounded-lg bg-amber-500 text-white hover:bg-amber-600 active:scale-95 transition-all shadow-md shadow-amber-500/20"
-                               >
-                                 {generatingUrl ? <RefreshCw size={14} className="animate-spin" /> : <Check size={16} />}
-                                 <span className="sm:hidden text-xs font-bold uppercase tracking-widest">Confirm & Create</span>
-                               </button>
-                               <button
-                                 type="button"
-                                 onClick={() => setShowDrivePreview(false)}
-                                 className="flex items-center justify-center w-12 sm:w-8 h-10 sm:h-8 rounded-xl sm:rounded-lg bg-white border border-amber-200 text-amber-600 hover:bg-amber-100 active:scale-95 transition-all"
-                               >
-                                 <X size={16} />
-                               </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {initialData?.id && isDirty && !form.catalog_url && !showDrivePreview && (
-                        <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1 ml-1 mt-1">
-                          <AlertCircle size={10} /> Save product first
-                        </p>
-                      )}
-                      {!initialData?.id && !form.catalog_url && !showDrivePreview && (!form.sku_code || !form.brand_reference_id || !form.category_reference_id || !form.sub_category_reference_id) && (
-                        <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1 ml-1 mt-1">
-                          <AlertCircle size={10} /> Complete Identity first
-                        </p>
-                      )}
-                    </div>
-                  </Field>
-
-                  <Field id="description" label="Description" hint="Main product description shown on listings" isImproved={bloomHistory.has('description')}
-                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
-                    <AutoTextarea name="description" value={form.description} onChange={handleChange} isImproved={bloomHistory.has('description')}
-                      placeholder="Describe the product clearly for customers and search engines…" rows={3} />
-                  </Field>
                   <Field id="key_feature" label="Key Features / USPs" hint="One feature per line" isImproved={bloomHistory.has('key_feature')}
                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <AutoTextarea name="key_feature" value={form.key_feature} onChange={handleChange} isImproved={bloomHistory.has('key_feature')}
