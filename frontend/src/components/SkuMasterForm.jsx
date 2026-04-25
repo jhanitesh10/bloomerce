@@ -1915,7 +1915,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
                                             <span className="text-slate-200 shrink-0 ml-1">|</span>
                                             <button
                                               type="button"
-                                              onClick={() => onSwitchProduct?.(peer.id)}
+                                              onClick={() => onSwitchProduct?.(peer.sku_code || peer.id)}
                                               className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 bg-transparent border-none uppercase tracking-tighter shrink-0"
                                             >
                                               View
