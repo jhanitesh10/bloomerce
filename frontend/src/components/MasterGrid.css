@@ -132,6 +132,19 @@
 .ag-group-header-amber { background-color: rgba(245, 158, 11, 0.08) !important; color: #f59e0b !important; }
 .ag-group-header-orange { background-color: rgba(249, 115, 22, 0.08) !important; color: #f97316 !important; }
 .ag-group-header-blue { background-color: rgba(59, 130, 246, 0.08) !important; color: #3b82f6 !important; }
+.ag-group-header-sky { background-color: rgba(14, 165, 233, 0.08) !important; color: #0ea5e9 !important; }
+.ag-group-header-indigo { background-color: rgba(99, 102, 241, 0.08) !important; color: #6366f1 !important; }
+.ag-group-header-rose { background-color: rgba(244, 63, 94, 0.08) !important; color: #f43f5e !important; }
+
+/* Group Cell Backgrounds */
+.ag-cell-bg-violet { background-color: rgba(139, 92, 246, 0.02) !important; }
+.ag-cell-bg-emerald { background-color: rgba(16, 185, 129, 0.02) !important; }
+.ag-cell-bg-amber { background-color: rgba(245, 158, 11, 0.02) !important; }
+.ag-cell-bg-orange { background-color: rgba(249, 115, 22, 0.02) !important; }
+.ag-cell-bg-blue { background-color: rgba(59, 130, 246, 0.02) !important; }
+.ag-cell-bg-sky { background-color: rgba(14, 165, 233, 0.02) !important; }
+.ag-cell-bg-indigo { background-color: rgba(99, 102, 241, 0.02) !important; }
+.ag-cell-bg-rose { background-color: rgba(244, 63, 94, 0.02) !important; }
 
 /* Framework Ghost Cloaking - Suppress internal selection columns from eating space */
 .ag-header-cell[col-id="ag-Grid-SelectionColumn"],

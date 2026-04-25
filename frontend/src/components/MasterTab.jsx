@@ -147,12 +147,12 @@ const GROUPS = [
   {
     id: 'channels_group',
     label: 'Marketplace Channels',
-    color: 'blue',
+    color: 'sky',
     cols: [
       { 
         id: 'platform_identifiers', 
         label: 'Linked Channels', 
-        width: 250,
+        width: 120,
         valueFormatter: (p) => {
           if (!p.value || !Array.isArray(p.value)) return '-';
           return p.value.map(plat => `${plat.channel_name || plat.platform_name}: ${plat.id}`).join(', ');
@@ -163,7 +163,7 @@ const GROUPS = [
   {
     id: 'content',
     label: 'Content',
-    color: 'blue',
+    color: 'rose',
     cols: [
       { id: 'description',  label: 'Description',  width: 260, isContent: true },
       { id: 'catalog_url',  label: 'Catalog URL',  width: 120, isContent: true, showInDefaultView: true },
@@ -217,6 +217,24 @@ const GC = {
     row2: 'bg-orange-500/[0.03]',
     td: 'bg-orange-500/[0.01]',
     pill: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20'
+  },
+  sky:     {
+    row1: 'bg-sky-500/5     text-sky-600     border-sky-500/20     dark:text-sky-400',
+    row2: 'bg-sky-500/[0.03]',
+    td: 'bg-sky-500/[0.01]',
+    pill: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20'
+  },
+  indigo:  {
+    row1: 'bg-indigo-500/5  text-indigo-600  border-indigo-500/20  dark:text-indigo-400',
+    row2: 'bg-indigo-500/[0.03]',
+    td: 'bg-indigo-500/[0.01]',
+    pill: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20'
+  },
+  rose:    {
+    row1: 'bg-rose-500/5    text-rose-600    border-rose-500/20    dark:text-rose-400',
+    row2: 'bg-rose-500/[0.03]',
+    td: 'bg-rose-500/[0.01]',
+    pill: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
   },
 };
 
@@ -460,8 +478,11 @@ function ColumnGroupHeader({ displayName, columnGroup, api, color }) {
     violet:  '#8b5cf6',
     emerald: '#10b981',
     blue:    '#3b82f6',
+    sky:     '#0ea5e9',
+    indigo:  '#6366f1',
     amber:   '#f59e0b',
-    orange:  '#f97316'
+    orange:  '#f97316',
+    rose:    '#f43f5e'
   };
   const hex = THEME[color] || '#64748b';
 
@@ -929,6 +950,7 @@ export default function MasterTab({ isMobile }) {
           autoHeight: false,
           headerClass: `ag-group-header-${g.color}`,
           cellClass: cn(
+            `ag-cell-bg-${g.color}`,
             c.align === 'right' && 'text-right',
             c.isMono && 'font-mono text-[11px]',
             c.isNum && 'tabular-nums font-semibold',
@@ -949,41 +971,46 @@ export default function MasterTab({ isMobile }) {
           },
           cellRenderer: c.id === 'platform_identifiers' ? (p) => {
              if (!p.value || !Array.isArray(p.value)) return '-';
-             return (
-               <div className="flex flex-wrap gap-1 items-center py-1">
-                 {p.value.map((plat, idx) => {
-                   const baseUrl = channelUrls[plat.channel_name || plat.platform_name];
-                   const finalUrl = baseUrl && plat.id ? (baseUrl.includes('{id}') ? baseUrl.replace('{id}', plat.id) : `${baseUrl}${plat.id}`) : '';
-                   
-                   let faviconUrl = null;
-                   if (baseUrl) {
-                     try {
-                       const u = new URL(baseUrl);
-                       faviconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
-                     } catch(e) {}
-                   }
+              return (
+                <div className="flex items-center min-h-[44px] group/stack">
+                  <div className="flex -space-x-3 group-hover/stack:space-x-1.5 transition-all duration-300">
+                    {p.value.map((plat, idx) => {
+                      const baseUrl = channelUrls[plat.channel_name || plat.platform_name];
+                      const finalUrl = baseUrl && plat.id ? (baseUrl.includes("{id}") ? baseUrl.replace("{id}", plat.id) : `${baseUrl}${plat.id}`) : "";
+                      
+                      let faviconUrl = null;
+                      if (baseUrl) {
+                        try {
+                          const u = new URL(baseUrl);
+                          faviconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
+                        } catch(e) {}
+                      }
 
-                   return (
-                     <a 
-                       key={idx}
-                       href={finalUrl || '#'}
-                       target={finalUrl ? "_blank" : undefined}
-                       rel={finalUrl ? "noopener noreferrer" : undefined}
-                       className="group flex items-center gap-1.5 px-1.5 py-1 rounded-md bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all"
-                       title={`View on ${plat.channel_name || plat.platform_name}`}
-                       onClick={(e) => { if (!finalUrl) e.preventDefault(); }}
-                     >
-                        {faviconUrl ? (
-                          <img src={faviconUrl} alt={plat.channel_name || 'channel'} className="w-4 h-4 object-contain" />
-                        ) : (
-                          <span className="w-4 h-4 flex items-center justify-center bg-slate-100 rounded text-[8px] font-bold text-slate-500">{(plat.channel_name || plat.platform_name || 'C').charAt(0)}</span>
-                        )}
-                        <ExternalLink size={10} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
-                     </a>
-                   );
-                 })}
-               </div>
-             );
+                      return (
+                        <a 
+                          key={idx}
+                          href={finalUrl || "#"}
+                          target={finalUrl ? "_blank" : undefined}
+                          rel={finalUrl ? "noopener noreferrer" : undefined}
+                          className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-400 hover:z-50 hover:-translate-y-1 transition-all duration-200 group"
+                          style={{ zIndex: p.value.length - idx }}
+                          title={`View on ${plat.channel_name || plat.platform_name}: ${plat.id}`}
+                          onClick={(e) => { e.stopPropagation(); if (!finalUrl) e.preventDefault(); }}
+                        >
+                           {faviconUrl ? (
+                             <img src={faviconUrl} alt={plat.channel_name || "channel"} className="w-4 h-4 object-contain" />
+                           ) : (
+                             <span className="text-[10px] font-bold text-slate-500">{(plat.channel_name || plat.platform_name || "C").charAt(0)}</span>
+                           )}
+                           <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-indigo-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ExternalLink size={6} strokeWidth={4} />
+                           </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
           } : (isRef ? ReferenceCellRenderer : (c.id === 'status_reference_id' ? (p) => {
              const lbl = references.STATUS[p.value];
              return <StatusBadge label={lbl} />;
