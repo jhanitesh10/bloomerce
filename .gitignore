@@ -23,5 +23,10 @@ build/
 .DS_Store
 Thumbs.db
 .env
+# Configs
 *.json
+!vercel.json
+!package.json
+!package-lock.json
+!credentials_to_paste_in_vercel.json
 backend.log
