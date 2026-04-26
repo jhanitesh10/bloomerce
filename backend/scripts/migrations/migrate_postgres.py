@@ -1,7 +1,11 @@
+import os
 from sqlalchemy import text, create_engine
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Use the DATABASE_URL from .env or environment
-DATABASE_URL = "postgresql://postgres.jljcnubiqfjinlnadslg:bXwpjzSuQWAIwxCu@aws-1-ap-south-1.pooler.supabase.com:6543/postgres"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def run_migration():
     engine = create_engine(DATABASE_URL)

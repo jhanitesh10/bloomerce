@@ -498,21 +498,30 @@ def _perform_component_link(db: Session, source_sku: models.SkuMaster, target_sk
 
     if not existing_code:
         u_id = uuid.uuid4().hex[:8]
+        brand = _get_ref_label(db, target_sku.brand_reference_id)
         subcat = _get_ref_label(db, target_sku.sub_category_reference_id)
         size = _get_ref_label(db, target_sku.size_reference_id)
         color = re.sub(r'[^a-zA-Z0-9]+', '_', (target_sku.color or "none").lower()).strip('_')
         pkg_size = re.sub(r'[^a-zA-Z0-9]+', '_', (target_sku.package_size or "none").lower()).strip('_')
 
         if component_type == 'raw':
-            existing_code = f"{u_id}_{color}_{subcat}_{size}_raw"
+            # Generic: No brand
+            existing_code = f"{subcat}_{color}_{size}_raw_{u_id}"
         elif component_type == 'package':
-            existing_code = f"{u_id}_{pkg_size}_{subcat}_package"
+            # Generic: No brand
+            existing_code = f"{subcat}_{pkg_size}_package_{u_id}"
         elif component_type == 'label':
-            existing_code = f"{u_id}_{subcat}_label"
+            # Brand-Specific (Brand moved after subcat)
+            existing_code = f"{subcat}_{brand}_label_{u_id}"
         elif component_type == 'sticker':
-            existing_code = f"{u_id}_sticker"
+            # Generic
+            existing_code = f"{subcat}_sticker_{u_id}"
         else: # monocarton or others
-            existing_code = f"{u_id}_{subcat}_{component_type}"
+            # Brand-Specific for monocarton
+            if component_type == 'monocarton':
+                existing_code = f"{subcat}_{brand}_{component_type}_{u_id}"
+            else:
+                existing_code = f"{subcat}_{component_type}_{u_id}"
 
     new_s_codes = set_code(s_codes, component_type, existing_code)
     new_t_codes = set_code(t_codes, component_type, existing_code)
