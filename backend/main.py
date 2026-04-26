@@ -630,8 +630,36 @@ async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_d
         raise HTTPException(500, "AI Provider not configured")
 
     # Fetch taxonomy for dynamic injection
-    valid_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "CATEGORY", models.ReferenceData.deleted_at == None).all()]
-    valid_sub_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "SUB_CATEGORY", models.ReferenceData.deleted_at == None).all()]
+    try:
+        categories = db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "CATEGORY", models.ReferenceData.deleted_at == None).all()
+        valid_categories = [r.label for r in categories]
+        
+        # Try to filter sub-categories by parent if category is selected in existing_data
+        cat_id = (req.existing_data or {}).get("category_reference_id")
+        
+        # Ensure cat_id is an integer if it's a string from JSON
+        if cat_id and isinstance(cat_id, str) and cat_id.isdigit():
+            cat_id = int(cat_id)
+            
+        if cat_id and isinstance(cat_id, (int, float)):
+            logger.info(f"Fetching sub-categories for Category ID: {cat_id}")
+            valid_sub_categories = [r.label for r in db.query(models.ReferenceData).filter(
+                models.ReferenceData.reference_data_type == "SUB_CATEGORY", 
+                models.ReferenceData.parent_reference_id == int(cat_id),
+                models.ReferenceData.deleted_at == None
+            ).all()]
+            
+            # If no sub-categories found for this specific category, fall back to a reasonable sample
+            if not valid_sub_categories:
+                 logger.warning(f"No sub-categories found for Category ID {cat_id}, falling back to sample.")
+                 valid_sub_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "SUB_CATEGORY", models.ReferenceData.deleted_at == None).limit(50).all()]
+        else:
+            logger.info("No valid Category ID provided, fetching sample sub-categories.")
+            valid_sub_categories = [r.label for r in db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "SUB_CATEGORY", models.ReferenceData.deleted_at == None).limit(50).all()]
+    except Exception as te:
+        logger.error(f"Taxonomy fetching error: {te}")
+        valid_categories = []
+        valid_sub_categories = []
 
     # Combine legacy single reference_url with the new list for the service
     reference_urls = req.reference_urls or []

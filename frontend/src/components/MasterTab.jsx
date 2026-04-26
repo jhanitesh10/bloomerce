@@ -1642,6 +1642,8 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
           initialData={editingSku}
           initialTab={formInitialTab}
           statusOptions={refLists.STATUS}
+          references={references}
+          refLists={refLists}
           onClose={() => navigate(APP_PATHS.CATALOG)}
           onSaved={() => { navigate(APP_PATHS.CATALOG); loadAll(); }}
           onSwitchProduct={(idOrCode) => navigate(`${APP_PATHS.CATALOG}/edit/${idOrCode}`)}

@@ -343,7 +343,7 @@ const parsePoolMapping = (val) => {
 const getDraftKey = (id) => id ? `bloomerce_sku_edit_draft_${id}` : `bloomerce_sku_add_draft`;
 
 // ─── Main Form ────────────────────────────────────────────────────
-export default function SkuMasterForm({ initialData, statusOptions, onClose, onSaved, onSwitchProduct, initialTab }) {
+export default function SkuMasterForm({ initialData, statusOptions, references, refLists, onClose, onSaved, onSwitchProduct, initialTab }) {
   const isEdit = Boolean(initialData?.id);
   const [statusMessage, setStatusMessage] = useState(null); // { text: string, type: 'success' | 'error' }
   const [pendingAction, setPendingAction] = useState(null); // { type: string, payload?: any }
@@ -487,7 +487,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
     }
   };
 
-  const handleApplyAI = (results) => {
+    const handleApplyAI = (results) => {
     // Filter out null, undefined, or empty values from results
     const filteredResults = {};
     Object.keys(results).forEach(key => {
@@ -497,6 +497,44 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
         filteredResults[key] = val;
       }
     });
+
+    // --- AUTO-RESOLVE TAXONOMY IDs ---
+    // If AI suggested a Category label, find the ID in our refLists
+    if (results.category && refLists?.CATEGORY) {
+      const match = refLists.CATEGORY.find(c => 
+        c.label?.toLowerCase() === results.category.toLowerCase() ||
+        c.key?.toLowerCase() === results.category.toLowerCase()
+      );
+      if (match) {
+        filteredResults.category_reference_id = match.id;
+        console.log(`AI Mapping: Resolved Category "${results.category}" to ID ${match.id}`);
+      }
+    }
+
+    // If AI suggested a Sub-Category label, find the ID in our refLists
+    if (results.sub_category && refLists?.SUB_CATEGORY) {
+      const match = refLists.SUB_CATEGORY.find(sc => 
+        sc.label?.toLowerCase() === results.sub_category.toLowerCase() ||
+        sc.key?.toLowerCase() === results.sub_category.toLowerCase()
+      );
+      if (match) {
+        filteredResults.sub_category_reference_id = match.id;
+        console.log(`AI Mapping: Resolved Sub-Category "${results.sub_category}" to ID ${match.id}`);
+      }
+    }
+
+    // If AI suggested a Brand label, find the ID in our refLists
+    if (results.brand && refLists?.BRAND) {
+      const match = refLists.BRAND.find(b => 
+        b.label?.toLowerCase() === results.brand.toLowerCase() ||
+        b.key?.toLowerCase() === results.brand.toLowerCase()
+      );
+      if (match) {
+        filteredResults.brand_reference_id = match.id;
+        console.log(`AI Mapping: Resolved Brand "${results.brand}" to ID ${match.id}`);
+      }
+    }
+    // ---------------------------------
 
     // If no valid content was returned, provide feedback and exit
     if (Object.keys(filteredResults).length === 0) {
@@ -1056,6 +1094,7 @@ export default function SkuMasterForm({ initialData, statusOptions, onClose, onS
             <BloomAIConsole
               initialData={initialData}
               currentForm={form}
+              references={references}
               initialSelectedFields={regenField ? [regenField] : null}
               onApply={handleApplyAI}
               onClose={() => {

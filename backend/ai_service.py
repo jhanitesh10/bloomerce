@@ -12,10 +12,14 @@ import litellm
 logger = logging.getLogger("ai_service")
 logger.setLevel(logging.INFO)
 
+import base64
+import mimetypes
+
 # --- Structured Output Models ---
 
 class SkuContentResponse(BaseModel):
     product_name: Optional[str] = Field(None, description="Primary optimized product name (e.g. for Nykaa)")
+    brand: Optional[str] = Field(None, description="Identified or suggested brand name")
     alternate_product_name: Optional[str] = Field(None, description="Secondary/Alternative brand-aligned product name")
     category: Optional[str] = Field(None, description="Best-fit category from the provided list")
     sub_category: Optional[str] = Field(None, description="Best-fit sub-category from the provided list")
@@ -29,6 +33,7 @@ class SkuContentResponse(BaseModel):
     tax_rule_code: Optional[str] = Field(None, description="Suggested 4-digit HSN code (e.g. 3304)")
     tax_percent: Optional[float] = Field(None, description="Suggested Tax % (e.g. 18.0)")
     seo_keywords: Optional[str] = Field(None, description="Comma-separated SEO keywords")
+    color: Optional[str] = Field(None, description="Color or Shade of the product identified from image or text")
 
 # --- Provider Interface ---
 
@@ -64,8 +69,8 @@ class BaseAIProvider(ABC):
 class LiteLLMProvider(BaseAIProvider):
     def __init__(self, model: str, api_key: Optional[str] = None, api_base: Optional[str] = None):
         self.model = model
-        self.api_key = api_key
         self.api_base = api_base
+        self.api_key = api_key
 
         # Configure litellm if needed
         if api_key:
@@ -76,8 +81,17 @@ class LiteLLMProvider(BaseAIProvider):
 
         # Detect if we should force OpenAI protocol for local/custom endpoints
         self.custom_provider = None
-        if api_base and "127.0.0.1" in api_base or "localhost" in api_base:
+        if api_base and ("127.0.0.1" in api_base or "localhost" in api_base):
             self.custom_provider = "openai"
+
+        # Rotation setup for 'auto-free'
+        self.free_models = [
+            "google/gemini-2.0-flash-lite-001",
+            "meta-llama/llama-3.1-8b-instruct:free",
+            "google/gemini-2.0-flash-exp:free",
+            "google/gemini-1.5-flash"
+        ]
+        self.current_free_idx = 0
 
         # litellm will use the api_base if provided for local/custom endpoints
         self.common_config = {
@@ -87,8 +101,43 @@ class LiteLLMProvider(BaseAIProvider):
             "custom_llm_provider": self.custom_provider
         }
 
+    def _get_model_for_attempt(self, attempt: int) -> str:
+        if "auto-free" in self.model:
+            # Rotate models on each retry attempt
+            idx = (self.current_free_idx + attempt) % len(self.free_models)
+            selected = self.free_models[idx]
+            
+            # If api_base is OpenRouter, we might not need the 'openrouter/' prefix 
+            # if we are already hitting the openrouter endpoint. 
+            # But litellm often expects the provider prefix to know how to map.
+            if self.model.startswith("openrouter/") and not selected.startswith("openrouter/"):
+                return f"openrouter/{selected}"
+            return selected
+        return self.model
+
     def _extract_urls(self, text: str) -> List[str]:
         return re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', text)
+
+    def _handle_local_image(self, url: str) -> str:
+        """Converts localhost upload URLs to base64 data URLs for AI processing."""
+        if not url: return url
+        if "localhost" in url or "127.0.0.1" in url:
+            try:
+                # Extract filename: http://localhost:8000/uploads/uuid.png -> uuid.png
+                filename = url.split('/')[-1]
+                # Try to find it in the uploads directory relative to this file's parent (backend/)
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                path = os.path.join(base_dir, "uploads", filename)
+                
+                if os.path.exists(path):
+                    mime_type, _ = mimetypes.guess_type(path)
+                    with open(path, "rb") as f:
+                        encoded = base64.b64encode(f.read()).decode('utf-8')
+                        return f"data:{mime_type or 'image/png'};base64,{encoded}"
+                logger.warning(f"Local file not found for URL: {url} at {path}")
+            except Exception as e:
+                logger.error(f"Failed to convert local image {url}: {e}")
+        return url
 
     async def generate_sku_content(self, product_name, brand, category, image_url=None, image_urls=None, reference_urls=None, existing_data=None, target_fields=None, custom_instruction=None, valid_categories=None, valid_sub_categories=None):
         # Intelligent URL Extraction from the instruction message
@@ -109,13 +158,13 @@ class LiteLLMProvider(BaseAIProvider):
 
         few_shot_example = """
         EXAMPLE INPUT:
-        Product: Vitamin C Day Cream, Brand: Bloom Botanics
+        Product: [Product Name], Brand: [Brand Name]
         Target Fields: product_name, description, tax_rule_code, tax_percent
 
         EXAMPLE OUTPUT (JSON):
         {
-          "product_name": "Bloom Botanics Vitamin C Radiance Day Cream with SPF 30 (50g)",
-          "description": "Dullness, meet your match. Our Vitamin C Radiance Day Cream is a weightless moisture boost that hooks your skin with instant glow. Infused with Kakadu Plum and Hyaluronic acid, it doesn't just hydrate—it creates a breathable shield against urban pollution. Experience a velvety texture that melts in, leaving a citrusy freshness and a visible spark of health. Perfect for those seeking an effortless AM glow.",
+          "product_name": "[Brand Name] [Product Name] [Hero Benefit]",
+          "description": "[A high-conversion, benefit-first description synthesizing all provided inputs...]",
           "tax_rule_code": "3304",
           "tax_percent": 18.0
         }
@@ -132,6 +181,7 @@ class LiteLLMProvider(BaseAIProvider):
                     "STRICT INSTRUCTIONS:\n"
                     "- TONE: High-end, persuasive, results-oriented, yet factually accurate.\n"
                     "- ACTUAL CONTENT ONLY: Do not echo placeholders or instructions back as data. Write real product copy.\n"
+                    "- INFERENCE: If Product Name, Brand, or Category are 'Not provided', analyze the attached Images and Reference URLs to identify the product and brand. Use your internal knowledge of global and Indian brands to be accurate.\n"
                     "- ACCURACY: Synthesize information from the provided Reference URLs and Images.\n"
                     "- FORMAT: Return ONLY a valid JSON object. No markdown, no pre-amble.\n\n"
                     
@@ -148,8 +198,17 @@ class LiteLLMProvider(BaseAIProvider):
             messages = [{"role": "user", "content": merged_content}]
 
         active_urls = []
-        if image_url: active_urls.append(image_url)
-        if image_urls: active_urls.extend(image_urls)
+        if image_url:
+            local_processed = self._handle_local_image(image_url)
+            # Only add if it's not a dead localhost link
+            if not ("localhost" in local_processed or "127.0.0.1" in local_processed):
+                active_urls.append(local_processed)
+
+        if image_urls: 
+            for u in image_urls:
+                local_processed = self._handle_local_image(u)
+                if not ("localhost" in local_processed or "127.0.0.1" in local_processed):
+                    active_urls.append(local_processed)
 
         if active_urls:
             # LiteLLM handles multi-modal messages for compatible models
@@ -162,10 +221,11 @@ class LiteLLMProvider(BaseAIProvider):
         retry_delay = 10
 
         for attempt in range(max_retries):
+            current_model = self._get_model_for_attempt(attempt)
             try:
                 # Optimized LiteLLM Call
                 completion_kwargs = {
-                    "model": self.model,
+                    "model": current_model,
                     "api_base": self.api_base,
                     "api_key": self.api_key or "not-needed",
                     "messages": messages,
@@ -188,7 +248,7 @@ class LiteLLMProvider(BaseAIProvider):
                     
                     # Fallback: Minimal parameters
                     response = await litellm.acompletion(
-                        model=self.model,
+                        model=current_model,
                         api_base=self.api_base,
                         api_key=self.api_key or "not-needed",
                         messages=messages,
@@ -202,8 +262,9 @@ class LiteLLMProvider(BaseAIProvider):
 
             except Exception as e:
                 error_msg = str(e)
-                if ("Engine is not loaded yet" in error_msg or "400" in error_msg) and attempt < max_retries - 1:
-                    logger.info(f"AI Engine still loading, retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
+                # Rotate model on BadRequest (400) or NotFound (404) or RateLimit
+                if ("400" in error_msg or "404" in error_msg or "rate limit" in error_msg.lower() or "Engine is not loaded" in error_msg) and attempt < max_retries - 1:
+                    logger.info(f"AI Provider error ({error_msg[:100]}), rotating model and retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
                     await asyncio.sleep(retry_delay)
                     continue
 
@@ -246,11 +307,24 @@ class LiteLLMProvider(BaseAIProvider):
                 raise Exception("AI response did not contain a valid JSON object")
 
         # Normalize fields: if a field expected to be a string is a list, join it
-        string_fields = ['key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords']
+        string_fields = ['product_name', 'brand', 'color', 'key_feature', 'key_ingredients', 'ingredients', 'how_to_use', 'product_care', 'caution', 'seo_keywords']
         for field in string_fields:
             if field in data and isinstance(data[field], list):
                 logger.info(f"Normalizing list field '{field}' to string")
                 data[field] = "\n".join([str(i) for i in data[field]]) if field != 'seo_keywords' else ", ".join([str(i) for i in data[field]])
+
+        # Clean up tax_percent
+        if 'tax_percent' in data and data['tax_percent']:
+            try:
+                # Remove '%' and other non-numeric chars except '.'
+                clean_val = re.sub(r'[^\d.]', '', str(data['tax_percent']))
+                data['tax_percent'] = float(clean_val) if clean_val else 0.0
+            except:
+                data['tax_percent'] = 0.0
+
+        # Clean up tax_rule_code
+        if 'tax_rule_code' in data and data['tax_rule_code']:
+            data['tax_rule_code'] = str(data['tax_rule_code']).replace(" ", "").strip()
 
         return data
 
@@ -284,16 +358,17 @@ class LiteLLMProvider(BaseAIProvider):
 
     def _build_prompt(self, name, brand, cat, ref_url, existing, fields, instruction, valid_categories=None, valid_sub_categories=None):
         fields = fields or [
-            "product_name", "alternate_product_name", "category", "sub_category", 
+            "product_name", "brand", "alternate_product_name", "category", "sub_category", 
             "description", "key_feature", "key_ingredients", "ingredients", 
             "how_to_use", "product_care", "caution", "tax_rule_code", 
-            "tax_percent", "seo_keywords"
+            "tax_percent", "seo_keywords", "color"
         ]
         
         # Define the full schema template
         # Neutral Schema Template (no instructions inside values to prevent AI echoing)
         schema_template = {
             "product_name": "",
+            "brand": "",
             "alternate_product_name": "",
             "category": "",
             "sub_category": "",
@@ -306,7 +381,8 @@ class LiteLLMProvider(BaseAIProvider):
             "caution": "",
             "tax_rule_code": "",
             "tax_percent": 0.0,
-            "seo_keywords": ""
+            "seo_keywords": "",
+            "color": ""
         }
         
         # Field-specific writing guidelines (outside JSON to keep schema clean)
@@ -317,7 +393,8 @@ class LiteLLMProvider(BaseAIProvider):
             "key_ingredients": "Primary active ingredients only.",
             "how_to_use": "Clear, step-by-step numbered steps.",
             "tax_rule_code": "Suggested 4-digit HSN code (e.g. 3304).",
-            "seo_keywords": "High-intent search keywords (comma separated)."
+            "seo_keywords": "High-intent search keywords (comma separated).",
+            "color": "The Color / Shade of the product. Infer from image if not in text."
         }
         
         # Filter schema based on requested fields
@@ -330,8 +407,9 @@ class LiteLLMProvider(BaseAIProvider):
 
         prompt = f"""
         INPUT DATA:
-        Product Name (Draft): {name}
-        Brand: {brand}
+        Product Name (Draft): {name if name else "Not provided (Infer from images/links)"}
+        Brand: {brand if brand else "Not provided (Infer from images/links)"}
+        Current Category Selection: {cat if cat else "Not provided (Infer from images/links)"}
         Reference URLs: {", ".join(ref_url) if isinstance(ref_url, list) and ref_url else (ref_url or "None provided")}
         
         AVAILABLE TAXONOMY:
@@ -347,6 +425,12 @@ class LiteLLMProvider(BaseAIProvider):
         TASK:
         Generate actual, high-quality content for: {", ".join(fields)}.
         Analyze the Input Data and available Reference URLs to synthesize accurate facts. 
+
+        TAXONOMY ENFORCEMENT:
+        - For 'category', you MUST select the best fit from: {categories_str}
+        - For 'sub_category', you MUST select the best fit from: {sub_cats_str}
+        - If the field is not in the requested fields, ignore it.
+
         Return ONLY valid JSON following this structure:
         {json.dumps(target_schema, indent=2)}
 

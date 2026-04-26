@@ -24,7 +24,8 @@ const TARGET_FIELDS = [
   { id: 'caution', label: 'Cautions', group: 'Usage' },
   { id: 'tax_rule_code', label: 'HSN Code', group: 'Compliance' },
   { id: 'tax_percent', label: 'Tax %', group: 'Compliance' },
-  { id: 'seo_keywords', label: 'SEO Keywords', group: 'Marketing' }
+  { id: 'seo_keywords', label: 'SEO Keywords', group: 'Marketing' },
+  { id: 'color', label: 'Color / Shade', group: 'Basic' }
 ];
 
 const IS_IMAGE_REGEX = /\.(jpeg|jpg|gif|png|webp|bmp)$/i;
@@ -36,7 +37,7 @@ const PRESETS = [
   { label: "⚡ Short", text: "Keep it concise, punchy, and direct. Best for quick reading." }
 ];
 
-export default function BloomAIConsole({ initialData, currentForm, initialSelectedFields, onApply, onClose }) {
+export default function BloomAIConsole({ initialData, currentForm, references, initialSelectedFields, onApply, onClose }) {
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState(() => {
     const initial = [];
@@ -170,10 +171,13 @@ export default function BloomAIConsole({ initialData, currentForm, initialSelect
       const selectedLinks = attachments.filter(a => a.type === 'link' && a.selected).map(a => a.url);
       const selectedImages = attachments.filter(a => a.type === 'image' && a.selected).map(a => a.url);
 
+      const brandLabel = references?.BRAND?.[currentForm.brand_reference_id] || initialData?.brand_name || "";
+      const categoryLabel = references?.CATEGORY?.[currentForm.category_reference_id] || initialData?.category_name || "";
+
       const payload = {
-        product_name: currentForm.product_name || "New Product",
-        brand: initialData?.brand_name || "Bloom Botanics",
-        category: initialData?.category_name || "Beauty",
+        product_name: currentForm.product_name || "",
+        brand: brandLabel,
+        category: categoryLabel,
         reference_urls: selectedLinks,
         image_urls: selectedImages,
         message: message || null,
