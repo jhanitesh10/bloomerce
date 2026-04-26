@@ -315,14 +315,25 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+from fastapi import Request
+
 @app.post("/api/upload")
-async def upload_image(file: UploadFile = File(...)):
-    ext = file.filename.split('.')[-1]
+async def upload_image(request: Request, file: UploadFile = File(...)):
+    # Ensure directory exists (useful for environments where it might be wiped)
+    os.makedirs("uploads", exist_ok=True)
+    
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
     filename = f"{uuid.uuid4()}.{ext}"
     file_path = os.path.join("uploads", filename)
+    
     with open(file_path, "wb") as f:
         f.write(await file.read())
-    return {"url": f"http://localhost:8000/uploads/{filename}"}
+        
+    # Generate dynamic base URL from request
+    base_url = str(request.base_url).rstrip('/')
+    # If we are behind a proxy/Vercel, we might need to adjust this, 
+    # but request.base_url is usually the most reliable way.
+    return {"url": f"{base_url}/uploads/{filename}"}
 
 
 # ==========================================
