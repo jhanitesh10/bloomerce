@@ -599,7 +599,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
   const [isFormOpen,     setIsFormOpen]     = useState(false);
   const [isExportCenterOpen, setIsExportCenterOpen] = useState(false);
   const [isImportOpen,   setIsImportOpen]   = useState(false);
-  const [isFilterOpen,   setIsFilterOpen]   = useState(false);
+  const [isFilterOpen,   setIsFilterOpen]   = useState(true);
   const [channelUrls,    setChannelUrls]    = useState({});
   const [formInitialTab, setFormInitialTab] = useState(null);
   const searchInputRef = useRef(null);
