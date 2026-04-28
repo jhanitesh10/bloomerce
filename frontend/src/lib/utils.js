@@ -13,8 +13,8 @@ export const getDirectImageUrl = (url) => {
                   url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
                   
   if (gdMatch && gdMatch[1]) {
-    // lh3.googleusercontent.com/d/ID is the most direct and reliable format for <img> tags
-    return `https://lh3.googleusercontent.com/d/${gdMatch[1]}`;
+    // drive.google.com/thumbnail?id=ID&sz=w1000 is highly reliable for previews
+    return `https://drive.google.com/thumbnail?id=${gdMatch[1]}&sz=w1000`;
   }
   return url;
 };

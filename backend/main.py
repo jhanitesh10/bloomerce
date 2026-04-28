@@ -1178,6 +1178,31 @@ def generate_sku_catalog_url_preview(data: schemas.DriveFolderCreate, db: Sessio
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Google Drive Error: {str(e)}")
 
+class DriveImageRequest(BaseModel):
+    folder_url: str
+
+@app.post("/api/skus/get-first-drive-image")
+def get_first_drive_image(data: DriveImageRequest):
+    if not data.folder_url or not data.folder_url.strip():
+        raise HTTPException(status_code=400, detail="Folder URL is required")
+        
+    try:
+        drive = DriveService()
+        if not drive.service:
+            raise HTTPException(status_code=500, detail="Drive service not initialized")
+            
+        file_id = drive.get_first_image_in_folder(data.folder_url)
+        if not file_id:
+            return {"file_id": None, "image_url": None}
+            
+        return {
+            "file_id": file_id,
+            "image_url": f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+        }
+    except Exception as e:
+        logger.error(f"Error in get_first_drive_image: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/skus/{id}/generate-catalog-url", response_model=schemas.SkuMaster)
 def generate_sku_catalog_url_saved(id: int, db: Session = Depends(get_db)):
     sku = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deleted_at == None).first()

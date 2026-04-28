@@ -32,6 +32,7 @@ export const skuApi = {
   getPoolInfo: (id) => api.get(`/skus/${id}/pool-info`).then(res => res.data),
   getPoolDiscovery: (id, type) => api.get(`/skus/${id}/pool-discovery${type ? `?comp_type=${type}` : ''}`).then(res => res.data),
   generateAIContent: (data) => api.post('/ai/generate-content', data).then(res => res.data),
+  getFirstDriveImage: (folderUrl) => api.post('/skus/get-first-drive-image', { folder_url: folderUrl }).then(res => res.data),
 };
 
 

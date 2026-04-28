@@ -227,20 +227,20 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
       </div>
 
       {isExpanded && (
-        <div className="p-4 sm:p-6 flex flex-col gap-5 sm:gap-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+        <div className="p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 max-h-[60vh] sm:max-h-[80vh] overflow-y-auto custom-scrollbar">
           
           <div className="flex flex-col gap-6 items-start">
             {/* Top Area: Instructions & Attachments */}
             <div className="w-full flex flex-col gap-5">
               <div className="flex flex-col md:flex-row gap-4 sm:gap-5 items-stretch md:items-center">
                 <div className="flex-1 w-full bg-white rounded-3xl p-1 border border-indigo-500/20 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/5 transition-all">
-                  <textarea 
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Describe how to bloom this product (e.g. 'Make it sound luxurious, focus on organic rose') or paste URLs..."
-                    rows={2}
-                    className="w-full px-5 py-4 bg-transparent text-[13px] sm:text-sm placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed min-h-[80px]"
-                  />
+                    <textarea 
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Describe how to bloom this product (e.g. 'Make it sound luxurious') or paste URLs..."
+                      rows={2}
+                      className="w-full px-4 py-3 sm:px-5 sm:py-4 bg-transparent text-[12px] sm:text-sm placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed min-h-[60px] sm:min-h-[80px]"
+                    />
                   {/* Quick Presets */}
                   <div className="flex items-center gap-1.5 px-3 pb-2 overflow-x-auto no-scrollbar">
                     <span className="text-[10px] sm:text-[9px] font-black uppercase tracking-tighter text-slate-300 mr-1 shrink-0">Quick Bloom:</span>
@@ -258,19 +258,19 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
                 
                 <div className="shrink-0 flex justify-end">
                   <Button 
-                    className="h-12 sm:h-14 w-full md:w-auto px-6 sm:px-8 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold gap-3 shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all group border-t border-white/20"
+                    className="h-10 sm:h-14 w-full md:w-auto px-5 sm:px-8 rounded-xl sm:rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold gap-2 sm:gap-3 shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all group border-t border-white/20"
                     onClick={handleGenerate}
                     disabled={loading || selectedFields.length === 0}
                   >
                     {loading ? (
                       <>
-                        <RefreshCw size={20} className="animate-spin" />
-                        <span className="text-xs uppercase tracking-widest">Blooming...</span>
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span className="text-[10px] sm:text-xs uppercase tracking-widest">Blooming...</span>
                       </>
                     ) : (
                       <>
-                        <Zap size={20} fill="currentColor" className="group-hover:scale-110 transition-transform" />
-                        <span className="text-sm uppercase tracking-wider">Analyze & Bloom</span>
+                        <Zap size={16} fill="currentColor" className="group-hover:scale-110 transition-transform" />
+                        <span className="text-xs sm:text-sm uppercase tracking-wider">Analyze & Bloom</span>
                       </>
                     )}
                   </Button>
@@ -323,7 +323,7 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
                         {item.selected ? <CheckCircle2 size={16} sm:size={14} fill="currentColor" className="text-indigo-500 fill-white" /> : <Circle size={16} sm:size={14} />}
                       </div>
                       {item.type === 'image' ? (
-                        <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-slate-200 shrink-0 shadow-sm"><img src={item.url} alt="" className="w-full h-full object-cover" /></div>
+                        <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-slate-200 shrink-0 shadow-sm"><img src={item.url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /></div>
                       ) : (
                         <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shrink-0 shadow-sm"><Link size={14} sm:size={12} /></div>
                       )}

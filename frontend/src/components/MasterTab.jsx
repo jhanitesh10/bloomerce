@@ -421,7 +421,7 @@ function SkuCard({ sku, references, onEdit, onNote }) {
         {/* thumbnail */}
         <div className="w-16 h-16 rounded-xl overflow-hidden border border-[var(--color-border)] flex-shrink-0 bg-[var(--color-muted)]">
           {sku.primary_image_url ? (
-            <img src={sku.primary_image_url} alt="product" className="w-full h-full object-cover" />
+            <img src={sku.primary_image_url} alt="product" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-[var(--color-muted-foreground)]">
               <ImageIcon size={20} />
@@ -923,7 +923,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
             cellClass: 'no-padding-cell flex items-center justify-center',
             cellRenderer: (p) => p.value ? (
                <div className="w-11 h-11 rounded-lg overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center bg-white">
-                 <img src={p.value} className="w-full h-full object-cover" />
+                 <img src={p.value} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                </div>
             ) : (
                <div className="w-11 h-11 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-sm">

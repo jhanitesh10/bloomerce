@@ -48,8 +48,9 @@ function AutoTextarea({ name, value, onChange, placeholder, rows = 2, className,
 }
 
 // ─── Image uploader with URL support ──────────────────────────────
-function ImageBlock({ value, onChange, onStatus }) {
+function ImageBlock({ value, onChange, onStatus, catalogUrl }) {
   const [uploading, setUploading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const fileRef = useRef(null);
   const [tempUrl, setTempUrl] = useState(value || '');
@@ -71,6 +72,28 @@ function ImageBlock({ value, onChange, onStatus }) {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleFetchFromCatalog = async () => {
+    if (!catalogUrl) {
+      onStatus?.('No Catalog URL provided in Content tab.', 'error');
+      return;
+    }
+    setFetching(true);
+    try {
+      const res = await skuApi.getFirstDriveImage(catalogUrl);
+      if (res.image_url) {
+        onChange(getDirectImageUrl(res.image_url));
+        onStatus?.('Successfully fetched image from Catalog URL.', 'success');
+        setShowOptions(false);
+      } else {
+        onStatus?.('No images found in the Catalog URL folder.', 'error');
+      }
+    } catch (err) {
+      onStatus?.(err.response?.data?.detail || 'Failed to fetch image.', 'error');
+    } finally {
+      setFetching(false);
     }
   };
 
@@ -100,6 +123,7 @@ function ImageBlock({ value, onChange, onStatus }) {
               src={value}
               alt="Product Preview"
               className="max-w-full max-h-full object-contain drop-shadow-sm rounded-lg"
+              referrerPolicy="no-referrer"
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.nextSibling.style.display = 'flex';
@@ -157,7 +181,22 @@ function ImageBlock({ value, onChange, onStatus }) {
               <div className="flex-1 w-full space-y-3">
                  <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[var(--color-foreground)]">Google Drive Image URL</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-[var(--color-foreground)]">Google Drive Image URL</span>
+                        <button
+                          type="button"
+                          onClick={handleFetchFromCatalog}
+                          disabled={fetching || !catalogUrl}
+                          className={cn(
+                            "flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
+                            catalogUrl ? "text-indigo-600 bg-indigo-50 hover:bg-indigo-100" : "text-slate-400 bg-slate-100"
+                          )}
+                          title={!catalogUrl ? "Please provide a Catalog URL in Content tab first" : "Fetch first image from Catalog URL"}
+                        >
+                          {fetching ? <RefreshCw size={10} className="animate-spin" /> : <Store size={10} />}
+                          Sync from Catalog
+                        </button>
+                      </div>
                       <span className="text-[10px] font-bold text-[var(--color-primary)] uppercase tracking-tight bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-full">Cloud Active</span>
                     </div>
                     <div className="relative group/input">
@@ -1176,7 +1215,12 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
               {/* IDENTITY */}
               {activeTab === 'identity' && (
                 <>
-                  <ImageBlock onStatus={showStatus} value={form.primary_image_url} onChange={(val) => set('primary_image_url', val)} />
+                  <ImageBlock
+                    onStatus={showStatus}
+                    value={form.primary_image_url}
+                    onChange={(val) => set('primary_image_url', val)}
+                    catalogUrl={form.catalog_url}
+                  />
 
                   <Field id="product_name" label="Product Name" required error={errors.product_name} isImproved={bloomHistory.has('product_name')}
                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>

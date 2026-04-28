@@ -180,6 +180,33 @@ class DriveService:
             print(f"Error listing files in folder {folder_id}: {e}")
             return []
 
+    def get_first_image_in_folder(self, folder_url):
+        if not self.service or not folder_url:
+            return None
+        
+        try:
+            folder_id = self.get_id_from_url(folder_url)
+            if not folder_id:
+                return None
+                
+            # Query: folder_id in parents, not trashed, is an image
+            query = f"'{folder_id}' in parents and trashed = false and mimeType contains 'image/'"
+            results = self.service.files().list(
+                q=query, 
+                spaces='drive', 
+                fields='files(id, name)',
+                pageSize=1,
+                orderBy='name'
+            ).execute()
+            
+            files = results.get('files', [])
+            if files:
+                return files[0]['id']
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching first image from folder {folder_url}: {e}")
+            return None
+
     def get_file_content(self, file_id):
         if not self.service or not file_id:
             return None
