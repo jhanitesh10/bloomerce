@@ -602,6 +602,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
   const [isFilterOpen,   setIsFilterOpen]   = useState(false);
   const [channelUrls,    setChannelUrls]    = useState({});
   const [formInitialTab, setFormInitialTab] = useState(null);
+  const searchInputRef = useRef(null);
 
   const { skuId: urlSkuId, activeTab: tabParam } = useParams();
   const skuId = urlSkuId || forcedSkuId;
@@ -685,7 +686,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     return count;
   }, [filters]);
 
-  const isFilterActive = activeAdvancedFiltersCount > 0;
+  const isFilterActive = activeAdvancedFiltersCount > 0 || search.trim() !== '' || statusFilter !== 'all';
 
   const [editingSku,     setEditingSku]     = useState(null);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
@@ -857,6 +858,18 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
       setLoading(false);
     }
   };
+
+  // -- Keyboard Shortcuts --
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // ── Global Event Listeners ──────────────────────────────────────────────────
   useEffect(() => { loadAll(); }, [loadAll]);
@@ -1363,137 +1376,156 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
         )}
       </div>
 
-      {/* ── Table Global Toolbar ── */}
-      <div className={cn("flex bg-[var(--color-card)] p-2 rounded-xl border border-[var(--color-border)] shadow-sm gap-4", isMobile ? "flex-col" : "items-center justify-between")}>
+      {/* ── Consolidated Filter & View Toolbar ── */}
+      <div className={cn(
+        "flex flex-col bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden",
+        isFilterOpen && "ring-1 ring-[var(--color-primary)]/10"
+      )}>
+        {/* Main Toolbar Row */}
+        <div className={cn(
+          "flex p-2 gap-4", 
+          isMobile ? "flex-col" : "items-center justify-between",
+          (isFilterOpen || isFilterActive) && "border-b border-[var(--color-border)]/50"
+        )}>
+          {/* Left: View Controls */}
+          <div className={cn("flex gap-2", isMobile ? "flex-col" : "items-center")}>
+            {/* Status Tabs */}
+            <div className="flex items-center border border-[var(--color-border)] rounded-lg p-1 bg-[var(--color-muted)] overflow-x-auto no-scrollbar">
+              {FILTER_TABS.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setStatusFilter(tab.key); setPage(1); }}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap",
+                    statusFilter === tab.key
+                      ? "bg-[var(--color-card)] text-[var(--color-foreground)] shadow-sm"
+                      : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                  )}
+                >
+                  {tab.label(statusCounts, skus.length)}
+                </button>
+              ))}
+            </div>
 
-        {/* Left: View Controls */}
-        <div className={cn("flex gap-2", isMobile ? "flex-col" : "items-center")}>
-          {/* Status Tabs */}
-          <div className="flex items-center border border-[var(--color-border)] rounded-lg p-1 bg-[var(--color-muted)] overflow-x-auto no-scrollbar">
-            {FILTER_TABS.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => { setStatusFilter(tab.key); setPage(1); }}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap",
-                  statusFilter === tab.key
-                    ? "bg-[var(--color-card)] text-[var(--color-foreground)] shadow-sm"
-                    : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                )}
-              >
-                {tab.label(statusCounts, skus.length)}
-              </button>
-            ))}
+            {!isMobile && <div className="w-px h-6 bg-slate-200 mx-1" />}
+
+            {/* Search (Flexible to fill space) */}
+            <div className={cn(
+              "flex-1 flex items-center gap-2 border border-[var(--color-border)] rounded-lg px-3 h-[36px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 focus-within:border-[var(--color-primary)]/40 transition-all bg-[var(--color-card)] group", 
+              isMobile ? "w-full h-[38px]" : "min-w-[280px] max-w-[600px]"
+            )}>
+              <Search size={15} className="text-[var(--color-muted-foreground)] group-focus-within:text-[var(--color-primary)] transition-colors" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search by product name, SKU code, or barcode..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                className="bg-transparent text-sm w-full outline-none text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)]/40 font-medium"
+              />
+              {!isMobile && !search && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-muted)] text-[10px] font-bold text-[var(--color-muted-foreground)] opacity-40 group-hover:opacity-100 transition-opacity">
+                  <Command size={10} />
+                  <span>K</span>
+                </div>
+              )}
+              {search && (
+                <button 
+                  onClick={() => { setSearch(''); setPage(1); }}
+                  className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-red-500 transition-all"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
-          {!isMobile && <div className="w-px h-6 bg-slate-200 mx-1" />}
+          {/* Right: Actions & View Controls */}
+          <div className={cn("flex items-center gap-2", isMobile && "w-full")}>
+            {/* Advanced Filter Toggle */}
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={cn(
+                "relative flex items-center gap-2 px-3.5 h-[32px] text-xs font-semibold border rounded-lg transition-all",
+                isMobile && "flex-1 h-[38px] justify-center",
+                isFilterOpen
+                  ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20"
+                  : isFilterActive
+                    ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/15"
+                    : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)]/30 hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+              )}
+              title="Toggle Advanced Filters"
+            >
+              <Filter size={13} />
+              <span>Filters</span>
+              {isFilterActive && (
+                <span className={cn(
+                  "flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-black rounded-full tabular-nums",
+                  isFilterOpen ? "bg-white text-[var(--color-primary)]" : "bg-[var(--color-primary)] text-white shadow-sm"
+                )}>
+                  {activeAdvancedFiltersCount}
+                </span>
+              )}
+            </button>
 
-          {/* Search */}
-          <div className={cn("flex items-center gap-1.5 border border-[var(--color-border)] rounded-lg px-2.5 h-[32px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 transition-all bg-[var(--color-card)]", isMobile && "h-[38px]")}>
-            <Search size={14} className="text-[var(--color-muted-foreground)]" />
-            <input
-              type="text"
-              placeholder="Search product, SKU..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
-              className="bg-transparent text-xs w-full outline-none text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)]/50"
+            {!isMobile && (
+              <>
+                <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
+
+                <button
+                  onClick={() => handleExpandAllGroupings(expandedGroups.size === 0)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3.5 h-[32px] text-xs font-bold transition-all border rounded-lg active:scale-95 shadow-sm",
+                    expandedGroups.size > 0
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100"
+                      : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)]/30 hover:text-[var(--color-foreground)]"
+                  )}
+                  title={expandedGroups.size > 0 ? "Collapse all groups" : "Expand all groups"}
+                >
+                  {expandedGroups.size > 0 ? (
+                    <>
+                      <Minimize2 size={13} className="text-indigo-500" />
+                      <span>Collapse All</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 size={13} />
+                      <span>Expand All</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Advanced Filter Row (Integrated) ── */}
+        {(isFilterOpen || isFilterActive) && (
+          <div className="animate-in slide-in-from-top-2 duration-300">
+            <TopFilterBar
+              filters={filters}
+              hideAttributes={!isFilterOpen}
+              search={search}
+              onSearchClear={() => { setSearch(''); setPage(1); }}
+              onFilterChange={(newFilters) => {
+                setFilters(prev => ({ ...prev, ...newFilters }));
+                setPage(1);
+              }}
+              onClearAll={() => {
+                setSearch('');
+                setFilters(initialFilters);
+                setStatusFilter('all');
+                setPage(1);
+              }}
+              references={references}
+              refLists={refLists}
+              matchCount={filtered.length}
+              totalCount={skus.length}
             />
           </div>
-
-          {(search || isFilterActive || statusFilter !== 'all') && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
-              {!isMobile && <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />}
-              <button
-                onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
-                className={cn("group flex items-center gap-1.5 px-3 h-[32px] text-[11px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-100 hover:bg-red-100 hover:border-red-200 rounded-lg transition-all shadow-sm", isMobile && "h-[38px] w-full justify-center")}
-                title="Clear all search and filters"
-              >
-                <RefreshCcw size={12} className="group-hover:-rotate-180 transition-transform duration-500" />
-                Clear All
-              </button>
-            </div>
-          )}
-        </div>
-
-
-
-        {/* Right: Actions & View Controls */}
-        <div className={cn("flex items-center gap-2", isMobile && "w-full")}>
-          {/* Advanced Filter Toggle */}
-          <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={cn(
-              "relative flex items-center gap-2 px-3.5 h-[32px] text-xs font-semibold border rounded-lg transition-all",
-              isMobile && "flex-1 h-[38px] justify-center",
-              isFilterOpen
-                ? "bg-[var(--color-primary)] border-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/20"
-                : isFilterActive
-                  ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/15"
-                  : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)]/30 hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-            )}
-            title="Toggle Advanced Filters"
-          >
-            <Filter size={13} />
-            <span>Filters</span>
-            {isFilterActive && (
-              <span className={cn(
-                "flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[9px] font-black rounded-full tabular-nums",
-                isFilterOpen ? "bg-white text-[var(--color-primary)]" : "bg-[var(--color-primary)] text-white shadow-sm"
-              )}>
-                {activeAdvancedFiltersCount}
-              </span>
-            )}
-          </button>
-
-          {!isMobile && (
-            <>
-              <div className="w-px h-6 bg-[var(--color-border)] mx-1 hidden sm:block" />
-
-              <button
-                onClick={() => handleExpandAllGroupings(expandedGroups.size === 0)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3.5 h-[32px] text-xs font-bold transition-all border rounded-lg active:scale-95 shadow-sm",
-                  expandedGroups.size > 0
-                    ? "bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100"
-                    : "bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)]/30 hover:text-[var(--color-foreground)]"
-                )}
-                title={expandedGroups.size > 0 ? "Collapse all groups" : "Expand all groups"}
-              >
-                {expandedGroups.size > 0 ? (
-                  <>
-                    <Minimize2 size={13} className="text-indigo-500" />
-                    <span>Collapse All</span>
-                  </>
-                ) : (
-                  <>
-                    <Maximize2 size={13} />
-                    <span>Expand All</span>
-                  </>
-                )}
-              </button>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* ── Advanced Filter Bar ── */}
-      {isFilterOpen && (
-        <TopFilterBar
-          filters={filters}
-          onFilterChange={(newFilters) => {
-            setFilters(prev => ({ ...prev, ...newFilters }));
-            setPage(1);
-          }}
-          onClearAll={() => {
-            setFilters(initialFilters);
-            setPage(1);
-          }}
-          references={references}
-          refLists={refLists}
-          matchCount={filtered.length}
-          totalCount={skus.length}
-        />
-      )}
 
       {/* ── Table or Card view ── */}
       {isMobile ? (

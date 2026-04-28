@@ -15,9 +15,13 @@ export default function TopFilterBar({
   references,
   refLists,
   matchCount,
-  totalCount
+  totalCount,
+  hideAttributes,
+  search,
+  onSearchClear
 }) {
   const isAnyFilterActive = useMemo(() => 
+    (search && search.trim() !== '') ||
     filters.brandIds.length > 0 || 
     filters.categoryIds.length > 0 || 
     filters.subCategoryIds?.length > 0 ||
@@ -26,101 +30,98 @@ export default function TopFilterBar({
     filters.maxPrice !== '' || 
     filters.hasImage !== null || 
     filters.hasNotes !== null
-  , [filters]);
+  , [filters, search]);
 
   if (!filters) return null;
 
   return (
-    <div className="bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl p-3 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-3 z-[50]">
+    <div className="p-3 animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-3 z-[50]">
       
-      {/* Row 1: Controls */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:overflow-visible sm:flex-wrap sm:pb-0 sm:mx-0 sm:px-0">
-          
-          {/* Brand Filter */}
-          <FilterDropdown
-            label="Brand"
-            icon={Tag}
-            options={refLists.BRAND || []}
-            selectedIds={filters.brandIds}
-            onChange={(ids) => onFilterChange({ brandIds: ids })}
-          />
+      {/* Row 1: Controls (Conditional) */}
+      {!hideAttributes && (
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 sm:overflow-visible sm:flex-wrap sm:pb-0 sm:mx-0 sm:px-0">
+            {/* Brand Filter */}
+            <FilterDropdown
+              label="Brand"
+              icon={Tag}
+              options={refLists.BRAND || []}
+              selectedIds={filters.brandIds}
+              onChange={(ids) => onFilterChange({ brandIds: ids })}
+            />
 
-          {/* Category Filter */}
-          <FilterDropdown
-            label="Category"
-            icon={Layers}
-            options={refLists.CATEGORY || []}
-            selectedIds={filters.categoryIds}
-            onChange={(ids) => onFilterChange({ categoryIds: ids, subCategoryIds: [] })}
-          />
+            {/* Category Filter */}
+            <FilterDropdown
+              label="Category"
+              icon={Layers}
+              options={refLists.CATEGORY || []}
+              selectedIds={filters.categoryIds}
+              onChange={(ids) => onFilterChange({ categoryIds: ids, subCategoryIds: [] })}
+            />
 
-          {/* Sub-Category Filter */}
-          <FilterDropdown
-            label="Sub-Category"
-            icon={LayoutGrid}
-            options={
-              filters.categoryIds.length > 0 
-                ? (refLists.SUB_CATEGORY || []).filter(sc => filters.categoryIds.includes(sc.parent_reference_id))
-                : (refLists.SUB_CATEGORY || [])
-            }
-            selectedIds={filters.subCategoryIds || []}
-            onChange={(ids) => onFilterChange({ subCategoryIds: ids })}
-          />
+            {/* Sub-Category Filter */}
+            <FilterDropdown
+              label="Sub-Category"
+              icon={LayoutGrid}
+              options={
+                filters.categoryIds.length > 0 
+                  ? (refLists.SUB_CATEGORY || []).filter(sc => filters.categoryIds.includes(sc.parent_reference_id))
+                  : (refLists.SUB_CATEGORY || [])
+              }
+              selectedIds={filters.subCategoryIds || []}
+              onChange={(ids) => onFilterChange({ subCategoryIds: ids })}
+            />
 
-          <FilterDropdown
-            label="Status"
-            icon={RefreshCcw}
-            options={refLists.STATUS || []}
-            selectedIds={filters.statusIds || []}
-            onChange={(ids) => onFilterChange({ statusIds: ids })}
-          />
+            <FilterDropdown
+              label="Status"
+              icon={RefreshCcw}
+              options={refLists.STATUS || []}
+              selectedIds={filters.statusIds || []}
+              onChange={(ids) => onFilterChange({ statusIds: ids })}
+            />
 
+            {/* Price Range */}
+            <PriceRangeFilter 
+              min={filters.minPrice}
+              max={filters.maxPrice}
+              onChange={(min, max) => onFilterChange({ minPrice: min, maxPrice: max })}
+            />
 
-
-          {/* Price Range */}
-          <PriceRangeFilter 
-            min={filters.minPrice}
-            max={filters.maxPrice}
-            onChange={(min, max) => onFilterChange({ minPrice: min, maxPrice: max })}
-          />
-
-          {/* Quality Toggles */}
-          <QualityToggle 
-            label="Image" 
-            icon={ImageIcon}
-            state={filters.hasImage}
-            onClick={() => {
-              const updated = filters.hasImage === null ? true : filters.hasImage === true ? false : null;
-              onFilterChange({ hasImage: updated });
-            }}
-          />
-          <QualityToggle 
-            label="Notes" 
-            icon={StickyNote}
-            state={filters.hasNotes}
-            onClick={() => {
-              const updated = filters.hasNotes === null ? true : filters.hasNotes === true ? false : null;
-              onFilterChange({ hasNotes: updated });
-            }}
-          />
-
-          {/* Fallback Results Pill (Only if no filters active) */}
-          {!isAnyFilterActive && (
-            <div className="ml-auto flex items-center gap-2 px-3 h-[34px] bg-[var(--color-muted)] border border-[var(--color-border)] rounded-xl shadow-sm whitespace-nowrap">
-               <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-muted-foreground)]">Total</span>
-               <span className="text-sm font-bold text-[var(--color-primary)] tabular-nums">{totalCount}</span>
-            </div>
-          )}
-        </div>
+            {/* Quality Toggles */}
+            <QualityToggle 
+              label="Image" 
+              icon={ImageIcon}
+              state={filters.hasImage}
+              onClick={() => {
+                const updated = filters.hasImage === null ? true : filters.hasImage === true ? false : null;
+                onFilterChange({ hasImage: updated });
+              }}
+            />
+            <QualityToggle 
+              label="Notes" 
+              icon={StickyNote}
+              state={filters.hasNotes}
+              onClick={() => {
+                const updated = filters.hasNotes === null ? true : filters.hasNotes === true ? false : null;
+                onFilterChange({ hasNotes: updated });
+              }}
+            />
+          </div>
+      )}
 
       {/* Row 2: Active Chips & Result Actions */}
       {isAnyFilterActive && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-3 border-t border-[var(--color-border)]/50 animate-in fade-in slide-in-from-top-1 duration-300 gap-3">
+        <div className={cn(
+          "flex flex-col sm:flex-row items-stretch sm:items-center justify-between animate-in fade-in slide-in-from-top-1 duration-300 gap-3",
+          !hideAttributes && "pt-3 border-t border-[var(--color-border)]/50"
+        )}>
           
           {/* Left: Active Chips */}
           <div className="flex flex-wrap items-center gap-1.5 flex-1">
             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-muted-foreground)] mr-1 hidden sm:block">Active:</span>
             
+            {/* (Search chip removed as per user request) */}
+
+
             {(filters.brandIds || []).map(id => {
               const b = (refLists.BRAND || []).find(x => x.id === id);
               return b ? <ActiveChip key={`b-${id}`} label={b.label} variant="primary" onRemove={() => onFilterChange({ brandIds: filters.brandIds.filter(x => x !== id) })} /> : null;
