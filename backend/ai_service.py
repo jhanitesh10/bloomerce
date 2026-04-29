@@ -40,10 +40,10 @@ class SkuContentResponse(BaseModel):
 class BaseAIProvider(ABC):
     @abstractmethod
     async def generate_sku_content(
-        self, 
-        product_name: str, 
-        brand: str, 
-        category: str, 
+        self,
+        product_name: str,
+        brand: str,
+        category: str,
         image_url: Optional[str] = None,
         image_urls: Optional[List[str]] = None,
         reference_urls: Optional[List[str]] = None,
@@ -73,6 +73,7 @@ class LiteLLMProvider(BaseAIProvider):
         self.api_key = api_key
 
         # Configure litellm if needed
+        os.environ["LITELLM_LOG"] = "DEBUG"
         if api_key:
             if "gemini" in model.lower():
                 os.environ["GEMINI_API_KEY"] = api_key
@@ -106,9 +107,9 @@ class LiteLLMProvider(BaseAIProvider):
             # Rotate models on each retry attempt
             idx = (self.current_free_idx + attempt) % len(self.free_models)
             selected = self.free_models[idx]
-            
-            # If api_base is OpenRouter, we might not need the 'openrouter/' prefix 
-            # if we are already hitting the openrouter endpoint. 
+
+            # If api_base is OpenRouter, we might not need the 'openrouter/' prefix
+            # if we are already hitting the openrouter endpoint.
             # But litellm often expects the provider prefix to know how to map.
             if self.model.startswith("openrouter/") and not selected.startswith("openrouter/"):
                 return f"openrouter/{selected}"
@@ -128,7 +129,7 @@ class LiteLLMProvider(BaseAIProvider):
                 # Try to find it in the uploads directory relative to this file's parent (backend/)
                 base_dir = os.path.dirname(os.path.abspath(__file__))
                 path = os.path.join(base_dir, "uploads", filename)
-                
+
                 if os.path.exists(path):
                     mime_type, _ = mimetypes.guess_type(path)
                     with open(path, "rb") as f:
@@ -172,19 +173,19 @@ class LiteLLMProvider(BaseAIProvider):
 
         messages = [
             {
-                "role": "system", 
+                "role": "system",
                 "content": (
                     "ROLE:\n"
                     "You are a Senior E-commerce Catalog Specialist for premium Indian marketplaces like Nykaa and Myntra. "
                     "Your goal is to transform basic product facts and reference data into high-conversion, searchable, and luxury listings.\n\n"
-                    
+
                     "STRICT INSTRUCTIONS:\n"
                     "- TONE: High-end, persuasive, results-oriented, yet factually accurate.\n"
                     "- ACTUAL CONTENT ONLY: Do not echo placeholders or instructions back as data. Write real product copy.\n"
                     "- INFERENCE: If Product Name, Brand, or Category are 'Not provided', analyze the attached Images and Reference URLs to identify the product and brand. Use your internal knowledge of global and Indian brands to be accurate.\n"
                     "- ACCURACY: Synthesize information from the provided Reference URLs and Images.\n"
                     "- FORMAT: Return ONLY a valid JSON object. No markdown, no pre-amble.\n\n"
-                    
+
                     f"{hsn_knowledge}\n\n"
                     f"QUALITY REFERENCE:\n{few_shot_example}"
                 )
@@ -204,7 +205,7 @@ class LiteLLMProvider(BaseAIProvider):
             if not ("localhost" in local_processed or "127.0.0.1" in local_processed):
                 active_urls.append(local_processed)
 
-        if image_urls: 
+        if image_urls:
             for u in image_urls:
                 local_processed = self._handle_local_image(u)
                 if not ("localhost" in local_processed or "127.0.0.1" in local_processed):
@@ -231,7 +232,7 @@ class LiteLLMProvider(BaseAIProvider):
                     "messages": messages,
                     "timeout": 120
                 }
-                
+
                 if self.custom_provider:
                     completion_kwargs["custom_llm_provider"] = self.custom_provider
 
@@ -239,14 +240,19 @@ class LiteLLMProvider(BaseAIProvider):
                 if self.custom_provider == "openai" or ("gpt" in self.model.lower()):
                      completion_kwargs["response_format"] = {"type": "json_object"}
 
+                # Log the messages for debugging
+                logger.info(f"AI Request Model: {current_model}")
+                logger.info(f"AI Request Messages: {json.dumps(messages, indent=2)}")
+
                 try:
                     response = await litellm.acompletion(**completion_kwargs)
                 except Exception as e:
                     logger.warning(f"LiteLLM attempt {attempt+1} failed: {e}")
                     if attempt == max_retries - 1:
                         raise e
-                    
+
                     # Fallback: Minimal parameters
+                    logger.info("Retrying with minimal parameters...")
                     response = await litellm.acompletion(
                         model=current_model,
                         api_base=self.api_base,
@@ -256,7 +262,7 @@ class LiteLLMProvider(BaseAIProvider):
                     )
 
                 content = response.choices[0].message.content
-                logger.info(f"AI Raw Content Received (Attempt {attempt+1})")
+                logger.info(f"AI Raw Content Received (Attempt {attempt+1}):\n{content}")
                 data = self._extract_json(content)
                 return SkuContentResponse(**data)
 
@@ -358,12 +364,12 @@ class LiteLLMProvider(BaseAIProvider):
 
     def _build_prompt(self, name, brand, cat, ref_url, existing, fields, instruction, valid_categories=None, valid_sub_categories=None):
         fields = fields or [
-            "product_name", "brand", "alternate_product_name", "category", "sub_category", 
-            "description", "key_feature", "key_ingredients", "ingredients", 
-            "how_to_use", "product_care", "caution", "tax_rule_code", 
+            "product_name", "brand", "alternate_product_name", "category", "sub_category",
+            "description", "key_feature", "key_ingredients", "ingredients",
+            "how_to_use", "product_care", "caution", "tax_rule_code",
             "tax_percent", "seo_keywords", "color"
         ]
-        
+
         # Define the full schema template
         # Neutral Schema Template (no instructions inside values to prevent AI echoing)
         schema_template = {
@@ -384,7 +390,7 @@ class LiteLLMProvider(BaseAIProvider):
             "seo_keywords": "",
             "color": ""
         }
-        
+
         # Field-specific writing guidelines (outside JSON to keep schema clean)
         field_guidelines = {
             "product_name": "Premium title. Format: [Brand] [Product Name] [Key Benefit/Hero Ingredient] [Size]. Max 80 chars.",
@@ -396,13 +402,13 @@ class LiteLLMProvider(BaseAIProvider):
             "seo_keywords": "High-intent search keywords (comma separated).",
             "color": "The Color / Shade of the product. Infer from image if not in text."
         }
-        
+
         # Filter schema based on requested fields
         target_schema = {k: schema_template[k] for k in fields if k in schema_template}
-        
+
         categories_str = ", ".join(valid_categories) if valid_categories else cat
         sub_cats_str = ", ".join(valid_sub_categories) if valid_sub_categories else "Relevant sub-category"
-        
+
         guidelines_str = "\n".join([f"- {k.replace('_', ' ').upper()}: {field_guidelines[k]}" for k in fields if k in field_guidelines])
 
         prompt = f"""
@@ -411,20 +417,20 @@ class LiteLLMProvider(BaseAIProvider):
         Brand: {brand if brand else "Not provided (Infer from images/links)"}
         Current Category Selection: {cat if cat else "Not provided (Infer from images/links)"}
         Reference URLs: {", ".join(ref_url) if isinstance(ref_url, list) and ref_url else (ref_url or "None provided")}
-        
+
         AVAILABLE TAXONOMY:
         Categories: {categories_str}
         Sub-Categories: {sub_cats_str}
-        
+
         EXISTING DATA (Maintain consistency):
         {json.dumps(existing, indent=2) if existing else "None"}
-        
+
         WRITING GUIDELINES FOR REQUESTED FIELDS:
         {guidelines_str}
-        
+
         TASK:
         Generate actual, high-quality content for: {", ".join(fields)}.
-        Analyze the Input Data and available Reference URLs to synthesize accurate facts. 
+        Analyze the Input Data and available Reference URLs to synthesize accurate facts.
 
         TAXONOMY ENFORCEMENT:
         - For 'category', you MUST select the best fit from: {categories_str}
@@ -436,14 +442,14 @@ class LiteLLMProvider(BaseAIProvider):
 
         CRITICAL: Use meaningful words, not placeholders or instructions.
         """
-        
+
         if instruction:
             prompt += f"\nCLIENT SPECIFIC INSTRUCTION/MESSAGE: {instruction}\n"
-            
+
         prompt += f"""
         REQUIRED JSON SCHEMA (Return ONLY these keys):
         {json.dumps(target_schema, indent=4)}
-        
+
         MARKETPLACE GUIDELINES:
         - Descriptions must follow the 'Benefit-First' framework.
         - Ensure JSON is perfectly formatted. Do not include extra text.
