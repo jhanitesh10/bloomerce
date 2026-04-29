@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 
@@ -590,11 +590,80 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
   const [references,     setReferences]     = useState({ BRAND:{}, CATEGORY:{}, STATUS:{}, SUB_CATEGORY:{}, BUNDLE_TYPE:{}, PACK_TYPE:{}, NET_QUANTITY_UNIT:{}, SIZE:{}, COLOR:{} });
   const [refLists,       setRefLists]       = useState({ BRAND:[], CATEGORY:[], STATUS:[], SUB_CATEGORY:[], BUNDLE_TYPE:[], PACK_TYPE:[], NET_QUANTITY_UNIT:[], SIZE:[], COLOR:[] });
   const [loading,        setLoading]        = useState(true);
-  const [search,         setSearch]         = useState('');
-  const [statusFilter,   setStatusFilter]   = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [search, setSearch] = useState(() => searchParams.get('q') || '');
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'all');
+  const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1);
+  const [filters, setFilters] = useState(() => ({
+    brandIds: searchParams.get('brands')?.split(',').filter(Boolean).map(Number) || [],
+    categoryIds: searchParams.get('categories')?.split(',').filter(Boolean).map(Number) || [],
+    subCategoryIds: searchParams.get('subcategories')?.split(',').filter(Boolean).map(Number) || [],
+    statusIds: searchParams.get('statuses')?.split(',').filter(Boolean).map(Number) || [],
+    minPrice: searchParams.get('min') || '',
+    maxPrice: searchParams.get('max') || '',
+    hasImage: searchParams.get('img') === 'true' ? true : searchParams.get('img') === 'false' ? false : null,
+    hasNotes: searchParams.get('notes') === 'true' ? true : searchParams.get('notes') === 'false' ? false : null,
+  }));
+
+  // Sync state to URL (Debounced for search)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const p = new URLSearchParams();
+      if (search) p.set('q', search);
+      if (statusFilter !== 'all') p.set('status', statusFilter);
+      if (page > 1) p.set('page', String(page));
+      
+      if (filters.brandIds.length) p.set('brands', filters.brandIds.join(','));
+      if (filters.categoryIds.length) p.set('categories', filters.categoryIds.join(','));
+      if (filters.subCategoryIds.length) p.set('subcategories', filters.subCategoryIds.join(','));
+      if (filters.statusIds.length) p.set('statuses', filters.statusIds.join(','));
+      
+      if (filters.minPrice) p.set('min', filters.minPrice);
+      if (filters.maxPrice) p.set('max', filters.maxPrice);
+      
+      if (filters.hasImage !== null) p.set('img', String(filters.hasImage));
+      if (filters.hasNotes !== null) p.set('notes', String(filters.hasNotes));
+
+      const newQuery = p.toString();
+      const currentQuery = searchParams.toString();
+      if (newQuery !== currentQuery) {
+        setSearchParams(p, { replace: true });
+      }
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search, statusFilter, page, filters, setSearchParams]);
+
+  // Sync URL to state (for browser back/forward)
+  useEffect(() => {
+    const urlQ = searchParams.get('q') || '';
+    if (urlQ !== search) setSearch(urlQ);
+
+    const urlStatus = searchParams.get('status') || 'all';
+    if (urlStatus !== statusFilter) setStatusFilter(urlStatus);
+
+    const urlPage = Number(searchParams.get('page')) || 1;
+    if (urlPage !== page) setPage(urlPage);
+
+    // Deep compare filters to avoid unnecessary state updates
+    const urlFilters = {
+      brandIds: searchParams.get('brands')?.split(',').filter(Boolean).map(Number) || [],
+      categoryIds: searchParams.get('categories')?.split(',').filter(Boolean).map(Number) || [],
+      subCategoryIds: searchParams.get('subcategories')?.split(',').filter(Boolean).map(Number) || [],
+      statusIds: searchParams.get('statuses')?.split(',').filter(Boolean).map(Number) || [],
+      minPrice: searchParams.get('min') || '',
+      maxPrice: searchParams.get('max') || '',
+      hasImage: searchParams.get('img') === 'true' ? true : searchParams.get('img') === 'false' ? false : null,
+      hasNotes: searchParams.get('notes') === 'true' ? true : searchParams.get('notes') === 'false' ? false : null,
+    };
+
+    if (JSON.stringify(urlFilters) !== JSON.stringify(filters)) {
+      setFilters(urlFilters);
+    }
+  }, [searchParams]);
+
   const [sortCol,        setSortCol]        = useState('product_name');
   const [sortDir,        setSortDir]        = useState('asc');
-  const [page,           setPage]           = useState(1);
   const [pageSize,       setPageSize]       = useState(80);
   const [isFormOpen,     setIsFormOpen]     = useState(false);
   const [isExportCenterOpen, setIsExportCenterOpen] = useState(false);
@@ -672,7 +741,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     hasImage: null,
     hasNotes: null,
   };
-  const [filters, setFilters] = useState(initialFilters);
+
   const activeAdvancedFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.brandIds?.length) count += filters.brandIds.length;
@@ -1509,13 +1578,9 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
               onSearchClear={() => { setSearch(''); setPage(1); }}
               onFilterChange={(newFilters) => {
                 setFilters(prev => ({ ...prev, ...newFilters }));
-                setPage(1);
               }}
               onClearAll={() => {
-                setSearch('');
-                setFilters(initialFilters);
-                setStatusFilter('all');
-                setPage(1);
+                setSearchParams(new URLSearchParams(), { replace: true });
               }}
               references={references}
               refLists={refLists}
@@ -1575,7 +1640,13 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
              <Button
                 variant="outline"
                 size="sm"
-                onClick={() => { setSearch(''); setFilters(initialFilters); setStatusFilter('all'); setPage(1); }}
+                onClick={() => {
+                  setSearchParams(prev => {
+                    const p = new URLSearchParams();
+                    // Preserve only non-filter params if any (like skuId in path, but here we only have query params)
+                    return p;
+                  }, { replace: true });
+                }}
                 className="mt-2 text-xs font-bold"
              >
                 Clear all filters

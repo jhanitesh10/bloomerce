@@ -241,13 +241,15 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
   , [options, search]);
 
   const toggleOption = (id) => {
-    const updated = selectedIds.includes(id) 
-      ? selectedIds.filter(x => x !== id) 
+    const isSelected = selectedIds.some(sid => String(sid) === String(id));
+    const updated = isSelected 
+      ? selectedIds.filter(x => String(x) !== String(id)) 
       : [...selectedIds, id];
     onChange(updated);
   };
 
   const activeCount = selectedIds.length;
+  const isSelected = (id) => selectedIds.some(sid => String(sid) === String(id));
 
   return (
     <div className="relative" ref={containerRef}>
@@ -305,13 +307,13 @@ function FilterDropdown({ label, icon: Icon, options, selectedIds, onChange, dis
                   onClick={() => toggleOption(opt.id)}
                   className={cn(
                     "flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all group mb-0.5",
-                    selectedIds.includes(opt.id) ? "bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/10" : "hover:bg-[var(--color-muted)]"
+                    isSelected(opt.id) ? "bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/10" : "hover:bg-[var(--color-muted)]"
                   )}
                 >
-                  <span className={cn("text-xs font-bold", selectedIds.includes(opt.id) ? "text-white" : "text-[var(--color-foreground)] uppercase tracking-tight")}>
+                  <span className={cn("text-xs font-bold", isSelected(opt.id) ? "text-white" : "text-[var(--color-foreground)] uppercase tracking-tight")}>
                     {opt.label}
                   </span>
-                  {selectedIds.includes(opt.id) && <Check size={14} className="text-white" strokeWidth={3} />}
+                  {isSelected(opt.id) && <Check size={14} className="text-white" strokeWidth={3} />}
                 </div>
               ))
             )}
