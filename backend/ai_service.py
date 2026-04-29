@@ -17,23 +17,66 @@ import mimetypes
 
 # --- Structured Output Models ---
 
+from pydantic import BaseModel, Field, model_validator
+
+class SmartField(BaseModel):
+    value: Any
+    confidence_score: Optional[int] = 100 # 0-100
+    confidence_level: Optional[str] = "high" # low, medium, high
+    basis: Optional[str] = "extracted" # extracted, inferred, market_estimate, user_input
+    warning: Optional[str] = None
+
 class SkuContentResponse(BaseModel):
-    product_name: Optional[str] = Field(None, description="Primary optimized product name (e.g. for Nykaa)")
-    brand: Optional[str] = Field(None, description="Identified or suggested brand name")
-    alternate_product_name: Optional[str] = Field(None, description="Secondary/Alternative brand-aligned product name")
-    category: Optional[str] = Field(None, description="Best-fit category from the provided list")
-    sub_category: Optional[str] = Field(None, description="Best-fit sub-category from the provided list")
-    description: Optional[str] = Field(None, description="Concise, engaging marketing description")
-    key_feature: Optional[str] = Field(None, description="Top 5-6 features in 'Heading: Description' format")
-    key_ingredients: Optional[str] = Field(None, description="Primary highlighting ingredients")
-    ingredients: Optional[str] = Field(None, description="Full INCI ingredient list")
-    how_to_use: Optional[str] = Field(None, description="Clear usage instructions")
-    product_care: Optional[str] = Field(None, description="Storage or care warnings")
-    caution: Optional[str] = Field(None, description="Safety warnings and cautions")
-    tax_rule_code: Optional[str] = Field(None, description="Suggested 4-digit HSN code (e.g. 3304)")
-    tax_percent: Optional[float] = Field(None, description="Suggested Tax % (e.g. 18.0)")
-    seo_keywords: Optional[str] = Field(None, description="Comma-separated SEO keywords")
-    color: Optional[str] = Field(None, description="Color or Shade of the product identified from image or text")
+    @model_validator(mode='before')
+    @classmethod
+    def wrap_raw_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+            
+        for key, val in data.items():
+            if val is not None:
+                # If it's a string that looks like a JSON object/list, try to parse it
+                if isinstance(val, str) and val.strip().startswith(('{', '[')):
+                    try:
+                        # Attempt to fix single quotes which AI sometimes uses
+                        fixed_val = val.replace("'", '"')
+                        val = json.loads(fixed_val)
+                    except:
+                        pass # Fallback to raw string if parsing fails
+
+                if not isinstance(val, dict):
+                    # Auto-wrap raw value into SmartField structure
+                    data[key] = {
+                        "value": val,
+                        "confidence_score": 100,
+                        "confidence_level": "high",
+                        "basis": "extracted"
+                    }
+                else:
+                    data[key] = val
+        return data
+
+    product_name: Optional[SmartField] = Field(None, description="Primary optimized product name")
+    brand: Optional[SmartField] = Field(None, description="Identified or suggested brand name")
+    alternate_product_name: Optional[SmartField] = Field(None, description="Secondary brand-aligned product name")
+    category: Optional[SmartField] = Field(None, description="Best-fit category")
+    sub_category: Optional[SmartField] = Field(None, description="Best-fit sub-category")
+    description: Optional[SmartField] = Field(None, description="Marketing description")
+    key_feature: Optional[SmartField] = Field(None, description="Top 5-6 features")
+    key_ingredients: Optional[SmartField] = Field(None, description="Primary highlighting ingredients")
+    ingredients: Optional[SmartField] = Field(None, description="Full INCI ingredient list")
+    how_to_use: Optional[SmartField] = Field(None, description="Usage instructions")
+    product_care: Optional[SmartField] = Field(None, description="Storage or care warnings")
+    caution: Optional[SmartField] = Field(None, description="Safety warnings")
+    tax_rule_code: Optional[SmartField] = Field(None, description="Suggested HSN code")
+    tax_percent: Optional[SmartField] = Field(None, description="Suggested Tax %")
+    seo_keywords: Optional[SmartField] = Field(None, description="SEO keywords")
+    colour: Optional[SmartField] = Field(None, description="Colour or Shade")
+    purchase_cost: Optional[SmartField] = Field(None, description="Estimated purchase cost")
+    net_quantity: Optional[SmartField] = Field(None, description="Net quantity value")
+    net_quantity_unit: Optional[SmartField] = Field(None, description="Unit for net quantity")
+    raw_product_weight_g: Optional[SmartField] = Field(None, description="Raw product weight")
+    package_weight_g: Optional[SmartField] = Field(None, description="Package weight")
 
 # --- Provider Interface ---
 
@@ -51,7 +94,8 @@ class BaseAIProvider(ABC):
         target_fields: Optional[List[str]] = None,
         custom_instruction: Optional[str] = None,
         valid_categories: Optional[List[str]] = None,
-        valid_sub_categories: Optional[List[str]] = None
+        valid_sub_categories: Optional[List[str]] = None,
+        chips: Optional[List[str]] = None
     ) -> SkuContentResponse:
         pass
 
@@ -140,68 +184,40 @@ class LiteLLMProvider(BaseAIProvider):
                 logger.error(f"Failed to convert local image {url}: {e}")
         return url
 
-    async def generate_sku_content(self, product_name, brand, category, image_url=None, image_urls=None, reference_urls=None, existing_data=None, target_fields=None, custom_instruction=None, valid_categories=None, valid_sub_categories=None):
+    def _load_styles(self) -> Dict[str, str]:
+        """Loads style mappings from styles.json."""
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.join(base_dir, "prompts", "styles.json")
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading styles: {e}")
+        return {}
+
+    def _load_prompt_template(self, filename: str) -> str:
+        """Loads a prompt template from the prompts directory."""
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.join(base_dir, "prompts", filename)
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    return f.read()
+            logger.warning(f"Prompt template not found at {path}")
+        except Exception as e:
+            logger.error(f"Error loading prompt template {filename}: {e}")
+        return ""
+
+    async def generate_sku_content(self, product_name, brand, category, image_url=None, image_urls=None, reference_urls=None, existing_data=None, target_fields=None, custom_instruction=None, valid_categories=None, valid_sub_categories=None, chips=None):
         # Intelligent URL Extraction from the instruction message
         auto_urls = self._extract_urls(custom_instruction) if custom_instruction else []
         active_ref_urls = list(set((reference_urls or []) + auto_urls))
 
-        prompt = self._build_prompt(product_name, brand, category, active_ref_urls, existing_data, target_fields, custom_instruction, valid_categories, valid_sub_categories)
-
-        # Enhanced Knowledge Base for Indian E-commerce
-        hsn_knowledge = """
-        TAXONOMY & HSN GUIDE (India):
-        - Skincare preparations (pre-makeup, sunscreen, face wash): HSN 3304, GST 18%
-        - Hair care (shampoo, oil, conditioner): HSN 3305, GST 18%
-        - Oral hygiene: HSN 3306, GST 12% or 18%
-        - Personal toilet preparations (bath, deodorant): HSN 3307, GST 18%
-        - Beauty/Makeup: HSN 3304, GST 18%
-        """
-
-        few_shot_example = """
-        EXAMPLE INPUT:
-        Product: [Product Name], Brand: [Brand Name]
-        Target Fields: product_name, description, tax_rule_code, tax_percent
-
-        EXAMPLE OUTPUT (JSON):
-        {
-          "product_name": "[Brand Name] [Product Name] [Hero Benefit]",
-          "description": "[A high-conversion, benefit-first description synthesizing all provided inputs...]",
-          "tax_rule_code": "3304",
-          "tax_percent": 18.0
-        }
-        """
-
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "ROLE:\n"
-                    "You are a Senior E-commerce Catalog Specialist for premium Indian marketplaces like Nykaa and Myntra. "
-                    "Your goal is to transform basic product facts and reference data into high-conversion, searchable, and luxury listings.\n\n"
-
-                    "STRICT INSTRUCTIONS:\n"
-                    "- TONE: High-end, persuasive, results-oriented, yet factually accurate.\n"
-                    "- ACTUAL CONTENT ONLY: Do not echo placeholders or instructions back as data. Write real product copy.\n"
-                    "- INFERENCE: If Product Name, Brand, or Category are 'Not provided', analyze the attached Images and Reference URLs to identify the product and brand. Use your internal knowledge of global and Indian brands to be accurate.\n"
-                    "- ACCURACY: Synthesize information from the provided Reference URLs and Images.\n"
-                    "- FORMAT: Return ONLY a valid JSON object. No markdown, no pre-amble.\n\n"
-
-                    f"{hsn_knowledge}\n\n"
-                    f"QUALITY REFERENCE:\n{few_shot_example}"
-                )
-            },
-            {"role": "user", "content": prompt}
-        ]
-
-        # For certain local models, merging system and user roles can prevent circular reference errors in some proxy layers
-        if self.custom_provider == "openai" and "gpt" not in self.model.lower():
-            merged_content = f"SYSTEM INSTRUCTIONS:\n{messages[0]['content']}\n\nUSER REQUEST:\n{messages[1]['content']}"
-            messages = [{"role": "user", "content": merged_content}]
-
+        # 1. Process Images first (to get accurate count for prompt)
         active_urls = []
         if image_url:
             local_processed = self._handle_local_image(image_url)
-            # Only add if it's not a dead localhost link
             if not ("localhost" in local_processed or "127.0.0.1" in local_processed):
                 active_urls.append(local_processed)
 
@@ -210,6 +226,40 @@ class LiteLLMProvider(BaseAIProvider):
                 local_processed = self._handle_local_image(u)
                 if not ("localhost" in local_processed or "127.0.0.1" in local_processed):
                     active_urls.append(local_processed)
+
+        # 2. Load consolidated prompts
+        system_content = self._load_prompt_template("sku_system.md")
+        user_template = self._load_prompt_template("sku_user.md")
+
+        # 3. Determine Tone from chips
+        styles = self._load_styles()
+        tone = "Professional & Balanced"
+        if chips:
+            for chip in chips:
+                clean_chip = re.sub(r'[^\w\s-]', '', chip).strip()
+                if clean_chip in styles:
+                    tone = clean_chip
+                    break
+
+        # 4. Format image context for the text prompt
+        image_count = len(active_urls)
+        image_inputs = f"{image_count} product image(s) attached to this request" if image_count > 0 else "No images provided"
+
+        # 5. Build user prompt
+        prompt = self._build_prompt(user_template, product_name, brand, category, active_ref_urls, existing_data, target_fields, custom_instruction, valid_categories, valid_sub_categories, chips, tone, image_inputs)
+
+        messages = [
+            {
+                "role": "system",
+                "content": system_content or "You are an AI assistant helping with product cataloging."
+            },
+            {"role": "user", "content": prompt}
+        ]
+
+        # For certain local models, merging system and user roles can prevent circular reference errors in some proxy layers
+        if self.custom_provider == "openai" and "gpt" not in self.model.lower():
+            merged_content = f"SYSTEM INSTRUCTIONS:\n{messages[0]['content']}\n\nUSER REQUEST:\n{messages[1]['content']}"
+            messages = [{"role": "user", "content": merged_content}]
 
         if active_urls:
             # LiteLLM handles multi-modal messages for compatible models
@@ -332,6 +382,24 @@ class LiteLLMProvider(BaseAIProvider):
         if 'tax_rule_code' in data and data['tax_rule_code']:
             data['tax_rule_code'] = str(data['tax_rule_code']).replace(" ", "").strip()
 
+        # Clean up numeric fields (purchase_cost, weights, etc)
+        numeric_fields = ['purchase_cost', 'net_quantity', 'raw_product_weight_g', 'package_weight_g']
+        for field in numeric_fields:
+            if field in data and data[field] is not None:
+                # If it's a dict (structured metadata), clean the value inside it
+                if isinstance(data[field], dict) and 'value' in data[field]:
+                    try:
+                        clean_val = re.sub(r'[^\d.]', '', str(data[field]['value']))
+                        data[field]['value'] = float(clean_val) if clean_val else 0.0
+                    except:
+                        data[field]['value'] = 0.0
+                else:
+                    try:
+                        clean_val = re.sub(r'[^\d.]', '', str(data[field]))
+                        data[field] = float(clean_val) if clean_val else 0.0
+                    except:
+                        data[field] = 0.0
+
         return data
 
     async def generate_generic_content(self, prompt, system_prompt=None, response_model=None):
@@ -362,110 +430,75 @@ class LiteLLMProvider(BaseAIProvider):
             logger.error(f"LiteLLM Generic Generation Error: {e}")
             raise
 
-    def _build_prompt(self, name, brand, cat, ref_url, existing, fields, instruction, valid_categories=None, valid_sub_categories=None):
+    def _build_prompt(self, template, name, brand, cat, ref_url, existing, fields, instruction, valid_categories=None, valid_sub_categories=None, chips=None, tone="Professional", image_inputs="No images"):
         fields = fields or [
             "product_name", "brand", "alternate_product_name", "category", "sub_category",
             "description", "key_feature", "key_ingredients", "ingredients",
             "how_to_use", "product_care", "caution", "tax_rule_code",
-            "tax_percent", "seo_keywords", "color"
+            "tax_percent", "seo_keywords", "colour", "purchase_cost", 
+            "net_quantity", "net_quantity_unit", "raw_product_weight_g", "package_weight_g"
         ]
 
-        # Define the full schema template
-        # Neutral Schema Template (no instructions inside values to prevent AI echoing)
+        # Neutral Schema Template
         schema_template = {
-            "product_name": "",
-            "brand": "",
-            "alternate_product_name": "",
-            "category": "",
-            "sub_category": "",
-            "description": "",
-            "key_feature": "",
-            "key_ingredients": "",
-            "ingredients": "",
-            "how_to_use": "",
-            "product_care": "",
-            "caution": "",
-            "tax_rule_code": "",
-            "tax_percent": 0.0,
-            "seo_keywords": "",
-            "color": ""
+            "product_name": "", "brand": "", "alternate_product_name": "",
+            "category": "", "sub_category": "", "description": "",
+            "key_feature": "", "key_ingredients": "", "ingredients": "",
+            "how_to_use": "", "product_care": "", "caution": "",
+            "tax_rule_code": "", "tax_percent": 0.0, "seo_keywords": "", "colour": "",
+            "purchase_cost": 0.0, "net_quantity": 0.0, "net_quantity_unit": "",
+            "raw_product_weight_g": 0.0, "package_weight_g": 0.0
         }
 
-        # Field-specific writing guidelines (outside JSON to keep schema clean)
-        field_guidelines = {
-            "product_name": "Premium title. Format: [Brand] [Product Name] [Key Benefit/Hero Ingredient] [Size]. Max 80 chars.",
-            "description": "Benefit-First framework. Problem -> Solution (Benefit) -> Sensory Details -> Soft CTA.",
-            "key_feature": "Bullet points in 'Heading: Detailed description' format. Focus on results.",
-            "key_ingredients": "Primary active ingredients only.",
-            "how_to_use": "Clear, step-by-step numbered steps.",
-            "tax_rule_code": "Suggested 4-digit HSN code (e.g. 3304).",
-            "seo_keywords": "High-intent search keywords (comma separated).",
-            "color": "The Color / Shade of the product. Infer from image if not in text."
-        }
-
-        # Filter schema based on requested fields
         target_schema = {k: schema_template[k] for k in fields if k in schema_template}
 
-        categories_str = ", ".join(valid_categories) if valid_categories else cat
-        sub_cats_str = ", ".join(valid_sub_categories) if valid_sub_categories else "Relevant sub-category"
+        # Build chips context using style mappings
+        styles = self._load_styles()
+        chips_context = ""
+        if chips:
+            style_instructions = []
+            for chip in chips:
+                # Remove emojis but keep hyphens and spaces
+                clean_chip = re.sub(r'[^\w\s-]', '', chip).strip()
+                if clean_chip in styles:
+                    style_instructions.append(f"- {clean_chip.upper()}: {styles[clean_chip]}")
+                else:
+                    style_instructions.append(f"- {chip}")
 
-        guidelines_str = "\n".join([f"- {k.replace('_', ' ').upper()}: {field_guidelines[k]}" for k in fields if k in field_guidelines])
+            if style_instructions:
+                chips_context = "\nSTYLE & CONTEXT MODIFIERS (Apply these strictly):\n" + "\n".join(style_instructions)
 
-        prompt = f"""
-        INPUT DATA:
-        Product Name (Draft): {name if name else "Not provided (Infer from images/links)"}
-        Brand: {brand if brand else "Not provided (Infer from images/links)"}
-        Current Category Selection: {cat if cat else "Not provided (Infer from images/links)"}
-        Reference URLs: {", ".join(ref_url) if isinstance(ref_url, list) and ref_url else (ref_url or "None provided")}
+        # Fallback if template loading fails
+        if not template:
+            # Absolute fallback if file is missing
+            template = "Product: {name}, Brand: {brand}. Fields: {target_fields}. Return JSON: {target_schema}"
 
-        AVAILABLE TAXONOMY:
-        Categories: {categories_str}
-        Sub-Categories: {sub_cats_str}
-
-        EXISTING DATA (Maintain consistency):
-        {json.dumps(existing, indent=2) if existing else "None"}
-
-        WRITING GUIDELINES FOR REQUESTED FIELDS:
-        {guidelines_str}
-
-        TASK:
-        Generate actual, high-quality content for: {", ".join(fields)}.
-        Analyze the Input Data and available Reference URLs to synthesize accurate facts.
-
-        TAXONOMY ENFORCEMENT:
-        - For 'category', you MUST select the best fit from: {categories_str}
-        - For 'sub_category', you MUST select the best fit from: {sub_cats_str}
-        - If the field is not in the requested fields, ignore it.
-
-        Return ONLY valid JSON following this structure:
-        {json.dumps(target_schema, indent=2)}
-
-        CRITICAL: Use meaningful words, not placeholders or instructions.
-        """
-
-        if instruction:
-            prompt += f"\nCLIENT SPECIFIC INSTRUCTION/MESSAGE: {instruction}\n"
-
-        prompt += f"""
-        REQUIRED JSON SCHEMA (Return ONLY these keys):
-        {json.dumps(target_schema, indent=4)}
-
-        MARKETPLACE GUIDELINES:
-        - Descriptions must follow the 'Benefit-First' framework.
-        - Ensure JSON is perfectly formatted. Do not include extra text.
-        """
-        return prompt
+        try:
+            return template.format(
+                name=name or "Not provided",
+                brand=brand or "Not provided",
+                cat=cat or "Not provided",
+                ref_urls=", ".join(ref_url) if ref_url else "None",
+                image_inputs=image_inputs,
+                tone=tone,
+                categories_str=", ".join(valid_categories) if valid_categories else cat,
+                sub_cats_str=", ".join(valid_sub_categories) if valid_sub_categories else "Relevant sub-category",
+                existing_data=json.dumps(existing, indent=2) if existing else "None",
+                target_fields=", ".join(fields),
+                target_schema_indented=json.dumps(target_schema, indent=4),
+                custom_instruction_block=f"CLIENT SPECIFIC INSTRUCTION/MESSAGE: {instruction}\n{chips_context}" if (instruction or chips_context) else "None"
+            )
+        except Exception as e:
+            logger.error(f"Prompt template formatting error: {e}")
+            return f"Error formatting prompt: {str(e)}"
 
 # --- Factory ---
 
 def get_ai_provider() -> Optional[BaseAIProvider]:
-    provider_type = os.getenv("AI_PROVIDER", "mock").lower()
+    provider_type = os.getenv("AI_PROVIDER", "litellm").lower()
     model = os.getenv("AI_MODEL", "gemini/gemini-1.5-flash")
     api_key = os.getenv("AI_API_KEY")
     api_base = os.getenv("AI_API_BASE") # Useful for local LLMs like Jan
-
-    if provider_type == "mock":
-        return MockProvider()
 
     # Check for specific keys if AI_API_KEY is not set generically
     if not api_key:
@@ -475,26 +508,3 @@ def get_ai_provider() -> Optional[BaseAIProvider]:
             api_key = os.getenv("OPENAI_API_KEY")
 
     return LiteLLMProvider(model=model, api_key=api_key, api_base=api_base)
-
-class MockProvider(BaseAIProvider):
-    async def generate_sku_content(self, product_name, brand, category, image_url=None, image_urls=None, reference_urls=None, existing_data=None, target_fields=None, custom_instruction=None, valid_categories=None, valid_sub_categories=None):
-        return SkuContentResponse(
-            product_name=f"{product_name} (AI Enhanced)",
-            category=valid_categories[0] if valid_categories else category,
-            sub_category=valid_sub_categories[0] if valid_sub_categories else "General",
-            alternate_product_name=f"{product_name} Premium Edition",
-            key_feature="Premium Quality\nDurable Design\nEco-friendly",
-            key_ingredients="Vitamin E, Natural Extracts",
-            ingredients="Aqua, Glycerin, AI Core",
-            how_to_use="Wet skin, massage gently in circular motions, rinse thoroughly with lukewarm water.",
-            product_care="Store in a cool, dry place. Avoid direct sunlight.",
-            caution="Suitable for all skin types.",
-            tax_rule_code="3304",
-            tax_percent=18.0,
-            seo_keywords="cleanser, face wash, hydrating cleanser, glow, radiant skin, gentle cleanser"
-        )
-
-    async def generate_generic_content(self, prompt, system_prompt=None, response_model=None):
-        if response_model:
-            return {"text": "Generic AI response"}
-        return "Generic AI response"

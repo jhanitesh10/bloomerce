@@ -628,6 +628,7 @@ class AIContentRequest(BaseModel):
     existing_data: Optional[Dict[str, Any]] = None
     target_fields: Optional[List[str]] = None
     custom_instruction: Optional[str] = None
+    chips: Optional[List[str]] = []
 
 @app.post("/api/ai/generate-content", response_model=ai_service.SkuContentResponse)
 async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_db)):
@@ -695,7 +696,8 @@ async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_d
             target_fields=req.target_fields,
             custom_instruction=instruction,
             valid_categories=valid_categories,
-            valid_sub_categories=valid_sub_categories
+            valid_sub_categories=valid_sub_categories,
+            chips=req.chips
         )
 
         logger.info("AI Content generated successfully")

@@ -235,7 +235,7 @@ function ImageBlock({ value, onChange, onStatus, catalogUrl }) {
 }
 
 // ─── Field + FieldRow helpers ─────────────────────────────────────
-function Field({ id, label, required, children, hint, error, isImproved, onAccept, onDiscard, onRegenerate }) {
+function Field({ id, label, required, children, hint, error, aiWarning, isImproved, onAccept, onDiscard, onRegenerate }) {
   return (
     <div className={cn("flex flex-col gap-1.5 transition-all duration-500", isImproved && "p-3 rounded-2xl bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm animate-bloom-pulse")}>
       <div className="flex items-center justify-between">
@@ -274,8 +274,33 @@ function Field({ id, label, required, children, hint, error, isImproved, onAccep
             </div>
           </div>
         )}
-      </div>
+    </div>
       {children}
+      {aiWarning && (
+        <div className={cn(
+          "mt-2 flex items-start gap-2.5 p-3 rounded-xl border animate-in slide-in-from-top-1 duration-300",
+          aiWarning.includes('100%') || aiWarning.includes('95%') || aiWarning.includes('90%')
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+            : aiWarning.toLowerCase().includes('low') || aiWarning.includes('50%') || aiWarning.includes('40%')
+              ? "bg-rose-50 border-rose-200 text-rose-800"
+              : "bg-amber-50 border-amber-200 text-amber-800"
+        )}>
+           <AlertCircle size={14} className="mt-0.5 shrink-0 opacity-70" />
+           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+             <div className="flex items-center justify-between gap-2">
+               <span className="text-[10px] font-black uppercase tracking-wider opacity-80">AI Trust Score</span>
+               {aiWarning.includes('%') && (
+                 <span className="px-1.5 py-0.5 rounded-md bg-white/50 text-[9px] font-black shadow-sm ring-1 ring-black/5">
+                   {aiWarning.match(/\d+%/)?.[0]}
+                 </span>
+               )}
+             </div>
+             <p className="text-[11px] leading-relaxed font-semibold">
+               {aiWarning.includes('Confidence:') ? "AI generated this based on similar products." : aiWarning}
+             </p>
+           </div>
+        </div>
+      )}
       {hint && !error && <span className="text-[11px] text-[var(--color-muted-foreground)]">{hint}</span>}
       {error && (
         <span className="flex items-center gap-1 text-[11px] text-red-500 font-medium">
@@ -427,15 +452,16 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
     }
 
     if (!initialData) {
-      // Set default status to "Draft" if available
-      const draftStatus = (statusOptions || []).find(s => s.label.toLowerCase() === 'draft');
+      // Set default status to the first available option
+      const defaultStatus = (statusOptions && statusOptions.length > 0) ? statusOptions[0] : null;
       return {
         ...EMPTY,
-        status_reference_id: draftStatus ? draftStatus.id : EMPTY.status_reference_id
+        status_reference_id: defaultStatus ? defaultStatus.id : EMPTY.status_reference_id
       };
     }
     return normalizeInitialData(initialData);
   });
+  
 
   // Sync draft to localStorage
   useEffect(() => {
@@ -487,9 +513,92 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
   const [isAIConsoleOpen, setIsAIConsoleOpen] = useState(false);
   const [bloomHistory, setBloomHistory] = useState(new Set());
   const [originalValues, setOriginalValues] = useState({});
+  const [aiWarnings, setAiWarnings] = useState({}); // { fieldId: string }
   const [regenField, setRegenField] = useState(null);
   const [channelUrls, setChannelUrls] = useState({});
   const [expandedPlatIdx, setExpandedPlatIdx] = useState(null);
+
+  // --- Core Handlers ---
+  const set = (name, value) => setForm(p => ({ ...p, [name]: value }));
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const val = type === 'checkbox' ? checked : value;
+
+    setForm(p => {
+      const next = { ...p, [name]: val };
+      // Mirror SKU code → barcode
+      if (name === 'sku_code') next.barcode = val;
+      
+      // Auto-calculate finished weight
+      if (name === 'package_weight' || name === 'raw_product_weight') {
+        const pWeight = parseFloat(next.package_weight) || 0;
+        const rWeight = parseFloat(next.raw_product_weight) || 0;
+        next.finished_product_weight = (pWeight > 0 || rWeight > 0) ? Math.round(pWeight + rWeight).toString() : '';
+      }
+      return next;
+    });
+
+    if (errors[name]) setErrors(p => ({ ...p, [name]: null }));
+  };
+
+  const handleAcceptField = (fieldId) => {
+    setBloomHistory(prev => {
+      const next = new Set(prev);
+      next.delete(fieldId);
+      return next;
+    });
+  };
+
+  const handleDiscardField = (fieldId) => {
+    if (fieldId in originalValues) {
+      setForm(prev => ({ ...prev, [fieldId]: originalValues[fieldId] }));
+    }
+    setBloomHistory(prev => {
+      const next = new Set(prev);
+      next.delete(fieldId);
+      return next;
+    });
+    setAiWarnings(prev => {
+      const next = { ...prev };
+      delete next[fieldId];
+      return next;
+    });
+  };
+
+  const handleRegenerateField = (fieldId) => {
+    setRegenField(fieldId);
+    setIsAIConsoleOpen(true);
+  };
+
+  const handleAcceptAll = () => {
+    setBloomHistory(new Set());
+    setAiWarnings({});
+    setStatusMessage({ type: 'success', text: "All AI improvements accepted." });
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+
+  const handleDiscardAll = () => {
+    console.log("AI Bloom: Discarding all improvements", { 
+      fields: Array.from(bloomHistory),
+      originalValuesCount: Object.keys(originalValues).length 
+    });
+    
+    setForm(prev => {
+      const next = { ...prev };
+      bloomHistory.forEach(fieldId => {
+        if (fieldId in originalValues) {
+          next[fieldId] = originalValues[fieldId];
+        }
+      });
+      return next;
+    });
+    setBloomHistory(new Set());
+    setAiWarnings({});
+    setStatusMessage({ type: 'info', text: "All AI improvements discarded." });
+    setTimeout(() => setStatusMessage(null), 3000);
+  };
+  // ---------------------
 
   useEffect(() => {
     refApi.getAll('CHANNEL').then(data => {
@@ -527,51 +636,100 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
   };
 
     const handleApplyAI = (results) => {
-    // Filter out null, undefined, or empty values from results
+    if (!results) return;
+    
     const filteredResults = {};
+    const newWarnings = { ...aiWarnings };
+
     Object.keys(results).forEach(key => {
-      const val = results[key];
-      // Only apply if the value is not null/undefined and not an empty string (after trimming)
-      if (val !== null && val !== undefined && String(val).trim() !== "") {
-        filteredResults[key] = val;
+      const rawVal = results[key];
+      if (rawVal === null || rawVal === undefined) return;
+
+      // --- UNIVERSAL SMART FIELD UNPACKING ---
+      let value = rawVal;
+      let metadata = null;
+
+      if (typeof rawVal === 'object' && !Array.isArray(rawVal) && rawVal.value !== undefined) {
+        value = rawVal.value;
+        metadata = rawVal;
+      }
+
+      // Skip if final value is empty
+      if (value === null || value === undefined || String(value).trim() === "") return;
+
+      // Format value (e.g. join ingredient arrays)
+      const finalValue = Array.isArray(value) ? value.join(", ") : value;
+
+      // Handle Field Mapping Bridge
+      let targetKey = key;
+      if (key === 'colour') targetKey = 'color';
+      else if (key === 'raw_product_weight_g') targetKey = 'raw_product_weight';
+      else if (key === 'package_weight_g') targetKey = 'package_weight';
+      else if (key === 'tax_percent') targetKey = 'tax_percent';
+      else if (key === 'tax_rule_code') targetKey = 'tax_rule_code';
+
+      // CRITICAL: Never allow a string value into a reference ID field
+      if (targetKey.endsWith('_reference_id') && isNaN(Number(finalValue))) {
+        // Skip direct assignment; let taxonomy resolve handle it later
+      } else {
+        filteredResults[targetKey] = finalValue;
+      }
+
+      // Store Metadata/Warnings
+      if (metadata) {
+        let warningText = metadata.warning;
+        if (!warningText && metadata.confidence_level === 'low') {
+          warningText = `AI Estimation (${metadata.confidence_score}% confidence). Basis: ${metadata.basis || 'inferred'}.`;
+        }
+        
+        if (warningText || (metadata.confidence_score && metadata.confidence_score < 90)) {
+          newWarnings[targetKey] = warningText || `Confidence: ${metadata.confidence_score}%`;
+        }
       }
     });
 
+    setAiWarnings(newWarnings);
+
     // --- AUTO-RESOLVE TAXONOMY IDs ---
-    // If AI suggested a Category label, find the ID in our refLists
-    if (results.category && refLists?.CATEGORY) {
+    const getVal = (k) => {
+      const r = results[k];
+      return (r && typeof r === 'object' && r.value) ? r.value : r;
+    };
+
+    const catVal = getVal('category');
+    if (catVal && refLists?.CATEGORY) {
       const match = refLists.CATEGORY.find(c => 
-        c.label?.toLowerCase() === results.category.toLowerCase() ||
-        c.key?.toLowerCase() === results.category.toLowerCase()
+        c.label?.toLowerCase() === String(catVal).toLowerCase() ||
+        c.key?.toLowerCase() === String(catVal).toLowerCase()
       );
-      if (match) {
-        filteredResults.category_reference_id = match.id;
-        console.log(`AI Mapping: Resolved Category "${results.category}" to ID ${match.id}`);
-      }
+      if (match) filteredResults.category_reference_id = match.id;
     }
 
-    // If AI suggested a Sub-Category label, find the ID in our refLists
-    if (results.sub_category && refLists?.SUB_CATEGORY) {
+    const subCatVal = getVal('sub_category');
+    if (subCatVal && refLists?.SUB_CATEGORY) {
       const match = refLists.SUB_CATEGORY.find(sc => 
-        sc.label?.toLowerCase() === results.sub_category.toLowerCase() ||
-        sc.key?.toLowerCase() === results.sub_category.toLowerCase()
+        sc.label?.toLowerCase() === String(subCatVal).toLowerCase() ||
+        sc.key?.toLowerCase() === String(subCatVal).toLowerCase()
       );
-      if (match) {
-        filteredResults.sub_category_reference_id = match.id;
-        console.log(`AI Mapping: Resolved Sub-Category "${results.sub_category}" to ID ${match.id}`);
-      }
+      if (match) filteredResults.sub_category_reference_id = match.id;
     }
 
-    // If AI suggested a Brand label, find the ID in our refLists
-    if (results.brand && refLists?.BRAND) {
+    const brandVal = getVal('brand');
+    if (brandVal && refLists?.BRAND) {
       const match = refLists.BRAND.find(b => 
-        b.label?.toLowerCase() === results.brand.toLowerCase() ||
-        b.key?.toLowerCase() === results.brand.toLowerCase()
+        b.label?.toLowerCase() === String(brandVal).toLowerCase() ||
+        b.key?.toLowerCase() === String(brandVal).toLowerCase()
       );
-      if (match) {
-        filteredResults.brand_reference_id = match.id;
-        console.log(`AI Mapping: Resolved Brand "${results.brand}" to ID ${match.id}`);
-      }
+      if (match) filteredResults.brand_reference_id = match.id;
+    }
+
+    const unitVal = getVal('net_quantity_unit');
+    if (unitVal && refLists?.UNIT) {
+      const match = refLists.UNIT.find(u => 
+        u.label?.toLowerCase() === String(unitVal).toLowerCase() ||
+        u.key?.toLowerCase() === String(unitVal).toLowerCase()
+      );
+      if (match) filteredResults.net_quantity_unit_reference_id = match.id;
     }
     // ---------------------------------
 
@@ -614,33 +772,6 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
     statusTimeoutRef.current = setTimeout(() => setStatusMessage(null), 8000);
 
     setRegenField(null);
-  };
-
-  const handleAcceptField = (fieldId) => {
-    setBloomHistory(prev => {
-      const next = new Set(prev);
-      next.delete(fieldId);
-      return next;
-    });
-  };
-
-  const handleDiscardField = (fieldId) => {
-    if (fieldId in originalValues) {
-      setForm(prev => ({
-        ...prev,
-        [fieldId]: originalValues[fieldId]
-      }));
-    }
-    setBloomHistory(prev => {
-      const next = new Set(prev);
-      next.delete(fieldId);
-      return next;
-    });
-  };
-
-  const handleRegenerateField = (fieldId) => {
-    setRegenField(fieldId);
-    setIsAIConsoleOpen(true);
   };
 
   const handleRegenerateClick = async (e, force = false) => {
@@ -832,8 +963,18 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
         payload[k] = null;
       } else {
         const isNumeric = ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'net_quantity', 'tax_percent'].includes(k);
+        const isId = k.endsWith('_reference_id');
         const num = Number(raw);
-        payload[k] = isNumeric ? (isNaN(num) ? null : num) : (isNaN(num) ? raw : num);
+        
+        if (isNumeric) {
+          payload[k] = isNaN(num) ? null : num;
+        } else if (isId) {
+          // IDs MUST be integers or null
+          payload[k] = (isNaN(num) || raw === "" || typeof raw === 'string') ? (isNaN(parseInt(raw)) ? null : parseInt(raw)) : num;
+          if (isNaN(payload[k])) payload[k] = null;
+        } else {
+          payload[k] = isNaN(num) ? raw : num;
+        }
       }
     });
     // Remove derived/legacy fields from payload
@@ -958,27 +1099,6 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
     setConfirmClose(false);
     onClose();
   };
-  const set = (name, value) => setForm(p => ({ ...p, [name]: value }));
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    setForm(p => {
-      const next = { ...p, [name]: value };
-      // Mirror SKU code → barcode (single input writes to both DB columns)
-      if (name === 'sku_code') {
-        next.barcode = value;
-      }
-      if (name === 'package_weight' || name === 'raw_product_weight') {
-        const pWeight = parseFloat(next.package_weight) || 0;
-        const rWeight = parseFloat(next.raw_product_weight) || 0;
-        next.finished_product_weight = (pWeight > 0 || rWeight > 0) ? Math.round(pWeight + rWeight).toString() : '';
-      }
-      return next;
-    });
-
-    if (errors[name]) setErrors(p => ({ ...p, [name]: null }));
-  };
-
   const validate = () => {
     const errs = {};
     if (!form.product_name?.trim()) errs.product_name = 'Product name is required';
@@ -1133,7 +1253,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
             <BloomAIConsole
               initialData={initialData}
               currentForm={form}
-              references={references}
+              references={refLists}
               initialSelectedFields={regenField ? [regenField] : null}
               onApply={handleApplyAI}
               onClose={() => {
@@ -1141,6 +1261,39 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                 setRegenField(null);
               }}
             />
+          </div>
+        )}
+
+        {/* AI Command Center (Sticky bar when suggestions are present) */}
+        {bloomHistory.size > 0 && (
+          <div className="flex-shrink-0 z-[75] px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between animate-in slide-in-from-top-2 duration-300 sticky top-0">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-sm">
+                <Zap size={12} fill="currentColor" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700">
+                AI Improvements Active ({bloomHistory.size} fields)
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleDiscardAll}
+                className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-100 border-none bg-transparent"
+              >
+                <RotateCcw size={12} className="mr-1.5" />
+                Clear All AI Content
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleAcceptAll}
+                className="h-8 px-4 text-[10px] font-black uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200"
+              >
+                <Check size={12} className="mr-1.5" />
+                Accept All
+              </Button>
+            </div>
           </div>
         )}
 
@@ -1222,14 +1375,14 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                     catalogUrl={form.catalog_url}
                   />
 
-                  <Field id="product_name" label="Product Name" required error={errors.product_name} isImproved={bloomHistory.has('product_name')}
+                  <Field id="product_name" label="Product Name" required error={errors.product_name} isImproved={bloomHistory.has('product_name')} aiWarning={aiWarnings.product_name}
                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="product_name" value={form.product_name} onChange={handleChange}
                       className={inputCls(errors.product_name)}
                       placeholder="e.g. Bloomerce Rose Petal Face Wash" />
                   </Field>
 
-                  <Field id="sku_code" label="SKU / EAN / Barcode ID" required error={errors.sku_code} hint="Saved as both SKU Code and Barcode/EAN in the database" isImproved={bloomHistory.has('sku_code')}
+                  <Field id="sku_code" label="SKU / EAN / Barcode ID" required error={errors.sku_code} hint="Saved as both SKU Code and Barcode/EAN in the database" isImproved={bloomHistory.has('sku_code')} aiWarning={aiWarnings.sku_code}
                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="sku_code" value={form.sku_code} onChange={handleChange}
                       className={cn(inputCls(errors.sku_code), "font-mono")}
@@ -1237,7 +1390,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                   </Field>
 
                   <FieldRow>
-                    <Field id="brand_reference_id" label="Brand" isImproved={bloomHistory.has('brand_reference_id')}
+                    <Field id="brand_reference_id" label="Brand" isImproved={bloomHistory.has('brand_reference_id')} aiWarning={aiWarnings.brand_reference_id || aiWarnings.brand}
                       onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <DynamicReferenceSelect label="" referenceType="BRAND" value={form.brand_reference_id}
                         isImproved={bloomHistory.has('brand_reference_id')}
@@ -1301,7 +1454,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
               {activeTab === 'classification' && (
                 <>
                   <FieldRow>
-                    <Field id="category_reference_id" label="Category" isImproved={bloomHistory.has('category_reference_id')}
+                    <Field id="category_reference_id" label="Category" isImproved={bloomHistory.has('category_reference_id')} aiWarning={aiWarnings.category_reference_id || aiWarnings.category}
                       onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <DynamicReferenceSelect label="" referenceType="CATEGORY" value={form.category_reference_id}
                         isImproved={bloomHistory.has('category_reference_id')}
@@ -1316,7 +1469,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                           }
                         }} placeholder="Select or add category…" />
                     </Field>
-                    <Field id="sub_category_reference_id" label="Sub-Category" isImproved={bloomHistory.has('sub_category_reference_id')}
+                    <Field id="sub_category_reference_id" label="Sub-Category" isImproved={bloomHistory.has('sub_category_reference_id')} aiWarning={aiWarnings.sub_category_reference_id || aiWarnings.sub_category}
                       onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <DynamicReferenceSelect label="" referenceType="SUB_CATEGORY" value={form.sub_category_reference_id}
                         parentId={form.category_reference_id}
@@ -1505,46 +1658,48 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                     </div>
                   </Field>
 
-                  <Field id="description" label="Description" hint="Main product description shown on listings" isImproved={bloomHistory.has('description')}
+                  <Field id="description" label="Description" hint="Main product description shown on listings" isImproved={bloomHistory.has('description')} aiWarning={aiWarnings.description}
                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <AutoTextarea name="description" value={form.description} onChange={handleChange} isImproved={bloomHistory.has('description')}
                       placeholder="Describe the product clearly for customers and search engines…" rows={3} />
                   </Field>
-                  <Field id="key_feature" label="Key Features / USPs" hint="One feature per line" isImproved={bloomHistory.has('key_feature')}
+                  <Field id="key_feature" label="Key Features / USPs" hint="One feature per line" isImproved={bloomHistory.has('key_feature')} aiWarning={aiWarnings.key_feature}
                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <AutoTextarea name="key_feature" value={form.key_feature} onChange={handleChange} isImproved={bloomHistory.has('key_feature')}
                       placeholder={"Sulphate-free\npH balanced\nSuitable for all skin types"} rows={3} />
                   </Field>
                   <FieldRow>
-                    <Field id="key_ingredients" label="Key Ingredients" isImproved={bloomHistory.has('key_ingredients')}
+                    <Field id="key_ingredients" label="Key Ingredients" isImproved={bloomHistory.has('key_ingredients')} aiWarning={aiWarnings.key_ingredients}
                       onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <AutoTextarea name="key_ingredients" value={form.key_ingredients} onChange={handleChange} isImproved={bloomHistory.has('key_ingredients')}
                         placeholder="Rose Water, Aloe Vera…" />
                     </Field>
-                    <Field id="ingredients" label="Full Ingredients" isImproved={bloomHistory.has('ingredients')}
+                    <Field id="ingredients" label="Full Ingredients" isImproved={bloomHistory.has('ingredients')} aiWarning={aiWarnings.ingredients}
                       onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <AutoTextarea name="ingredients" value={form.ingredients} onChange={handleChange} isImproved={bloomHistory.has('ingredients')}
                         placeholder="Aqua, Glycerin, Rosa Damascena…" />
                     </Field>
                   </FieldRow>
                   <FieldRow>
-                    <Field id="how_to_use" label="How to Use" isImproved={bloomHistory.has('how_to_use')}
+                    <Field id="how_to_use" label="How to Use" isImproved={bloomHistory.has('how_to_use')} aiWarning={aiWarnings.how_to_use}
                       onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <AutoTextarea name="how_to_use" value={form.how_to_use} onChange={handleChange} isImproved={bloomHistory.has('how_to_use')}
                         placeholder="Apply on wet face, massage gently, rinse." />
                     </Field>
-                    <Field id="product_care" label="Product Care" isImproved={bloomHistory.has('product_care')}
+                    <Field id="product_care" label="Product Care" isImproved={bloomHistory.has('product_care')} aiWarning={aiWarnings.product_care}
                       onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <AutoTextarea name="product_care" value={form.product_care} onChange={handleChange} isImproved={bloomHistory.has('product_care')}
                         placeholder="Store in a cool, dry place." />
                     </Field>
                   </FieldRow>
-                  <Field id="caution" label="Caution / Warnings" isImproved={bloomHistory.has('caution')}
-                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
-                    <AutoTextarea name="caution" value={form.caution} onChange={handleChange} isImproved={bloomHistory.has('caution')}
-                      placeholder="Keep out of reach of children. For external use only." />
-                  </Field>
-                  <Field id="seo_keywords" label="SEO Keywords" hint="Comma-separated" isImproved={bloomHistory.has('seo_keywords')}
+                  <FieldRow>
+                    <Field id="caution" label="Caution / Warnings" isImproved={bloomHistory.has('caution')} aiWarning={aiWarnings.caution}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
+                      <AutoTextarea name="caution" value={form.caution} onChange={handleChange} isImproved={bloomHistory.has('caution')}
+                        placeholder="Keep out of reach of children. For external use only." />
+                    </Field>
+                  </FieldRow>
+                  <Field id="seo_keywords" label="SEO Keywords" hint="Comma-separated" isImproved={bloomHistory.has('seo_keywords')} aiWarning={aiWarnings.seo_keywords}
                     onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <input type="text" name="seo_keywords" value={form.seo_keywords} onChange={handleChange}
                       className={inputCls(false)} placeholder="rose face wash, sulphate free" />
@@ -1556,53 +1711,63 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
               {activeTab === 'pricing' && (
                 <>
                   <FieldRow>
-                    <Field label="MRP (₹)" hint="Maximum Retail Price">
+                    <Field id="mrp" label="MRP (₹)" hint="Maximum Retail Price" isImproved={bloomHistory.has('mrp')} aiWarning={aiWarnings.mrp}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="number" name="mrp" value={form.mrp} onChange={handleChange}
                         className={inputCls(false)} placeholder="499.00" min="0" step="0.01" />
                     </Field>
-                    <Field label="Purchase Cost (₹)">
+                    <Field id="purchase_cost" label="Purchase Cost (₹)" isImproved={bloomHistory.has('purchase_cost')} aiWarning={aiWarnings.purchase_cost}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="number" name="purchase_cost" value={form.purchase_cost} onChange={handleChange}
                         className={inputCls(false)} placeholder="148.00" min="0" step="0.01" />
                     </Field>
                   </FieldRow>
                   <FieldRow>
-                    <Field label="Net Quantity">
+                    <Field id="net_quantity" label="Net Quantity" isImproved={bloomHistory.has('net_quantity')} aiWarning={aiWarnings.net_quantity}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="number" name="net_quantity" value={form.net_quantity} onChange={handleChange}
                         className={inputCls(false)} placeholder="100" min="0" step="0.01" />
                     </Field>
-                    <Field label="Net Quantity Unit">
+                    <Field id="net_quantity_unit_reference_id" label="Net Quantity Unit" isImproved={bloomHistory.has('net_quantity_unit_reference_id')} aiWarning={aiWarnings.net_quantity_unit_reference_id || aiWarnings.net_quantity_unit}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                        <DynamicReferenceSelect label="" referenceType="NET_QUANTITY_UNIT" value={form.net_quantity_unit_reference_id}
                         onChange={(v) => set('net_quantity_unit_reference_id', v)} placeholder="ml / g / pcs…" />
                     </Field>
                   </FieldRow>
-                  <Field label="Size Specification">
+                  <Field id="size_reference_id" label="Size Specification" isImproved={bloomHistory.has('size_reference_id')} aiWarning={aiWarnings.size_reference_id}
+                    onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                     <DynamicReferenceSelect label="" referenceType="SIZE" value={form.size_reference_id}
                       onChange={(v) => set('size_reference_id', v)} placeholder="Standard / Large / Custom Size…" />
                   </Field>
                   <FieldRow>
-                    <Field label="Color / Shade">
+                    <Field id="color" label="Color / Shade" isImproved={bloomHistory.has('color')} aiWarning={aiWarnings.color || aiWarnings.colour}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="text" name="color" value={form.color} onChange={handleChange}
                         className={inputCls(false)} placeholder="e.g. Rose Pink" />
                     </Field>
-                    <Field label="Raw Product Size">
+                    <Field id="raw_product_size" label="Raw Product Size" isImproved={bloomHistory.has('raw_product_size')} aiWarning={aiWarnings.raw_product_size}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="text" name="raw_product_size" value={form.raw_product_size} onChange={handleChange}
                         className={inputCls(false)} placeholder="e.g. 15x5x5 cm" />
                       {/* raw info removed */}
                     </Field>
                   </FieldRow>
                   <FieldRow>
-                    <Field label="Package Size">
+                    <Field id="package_size" label="Package Size" isImproved={bloomHistory.has('package_size')} aiWarning={aiWarnings.package_size}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="text" name="package_size" value={form.package_size} onChange={handleChange}
                         className={inputCls(false)} placeholder="e.g. 16x6x6 cm" />
                       {/* package info removed */}
                     </Field>
-                    <Field label="Package Weight (g)">
+                    <Field id="package_weight" label="Package Weight (g)" isImproved={bloomHistory.has('package_weight')} aiWarning={aiWarnings.package_weight || aiWarnings.package_weight_g}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="number" name="package_weight" value={form.package_weight} onChange={handleChange}
                         className={inputCls(false)} placeholder="25" min="0" step="0.01" />
                     </Field>
                   </FieldRow>
                   <FieldRow>
-                    <Field label="Raw Product Weight (g)">
+                    <Field id="raw_product_weight" label="Raw Product Weight (g)" isImproved={bloomHistory.has('raw_product_weight')} aiWarning={aiWarnings.raw_product_weight || aiWarnings.raw_product_weight_g}
+                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                       <input type="number" name="raw_product_weight" value={form.raw_product_weight} onChange={handleChange}
                         className={inputCls(false)} placeholder="100" min="0" step="0.01" />
                     </Field>
@@ -1631,12 +1796,12 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                {/* TAX & COMPLIANCE */}
                {activeTab === 'tax' && (
                  <FieldRow>
-                   <Field id="tax_rule_code" label="Tax Rule Code (HSN)" error={errors.tax_rule_code} isImproved={bloomHistory.has('tax_rule_code')}
+                   <Field id="tax_rule_code" label="Tax Rule Code (HSN)" error={errors.tax_rule_code} isImproved={bloomHistory.has('tax_rule_code')} aiWarning={aiWarnings.tax_rule_code}
                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                      <input type="text" name="tax_rule_code" value={form.tax_rule_code} onChange={handleChange}
                        className={cn(inputCls(errors.tax_rule_code), "font-mono")} placeholder="HSN-8517" />
                    </Field>
-                   <Field id="tax_percent" label="Tax %" isImproved={bloomHistory.has('tax_percent')}
+                   <Field id="tax_percent" label="Tax %" isImproved={bloomHistory.has('tax_percent')} aiWarning={aiWarnings.tax_percent}
                      onAccept={handleAcceptField} onDiscard={handleDiscardField} onRegenerate={handleRegenerateField}>
                      <input type="number" name="tax_percent" value={form.tax_percent} onChange={handleChange}
                        className={inputCls(false)} placeholder="18" min="0" max="100" step="0.1" />
