@@ -1388,54 +1388,67 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
           </div>
         </div>
 
-        {isAIConsoleOpen && (
-          <div className="flex-shrink-0 z-[80] sticky top-0">
-            <BloomAIConsole
-              initialData={initialData}
-              currentForm={form}
-              references={refLists}
-              initialSelectedFields={regenField ? [regenField] : null}
-              onApply={handleApplyAI}
-              onClose={() => {
-                setIsAIConsoleOpen(false);
-                setRegenField(null);
-              }}
-            />
-          </div>
-        )}
-
-        {/* AI Command Center (Sticky bar when suggestions are present) */}
-        {bloomHistory.size > 0 && (
-          <div className="flex-shrink-0 z-[75] px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between animate-in slide-in-from-top-2 duration-300 sticky top-0">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-sm">
-                <Zap size={12} fill="currentColor" />
+        {isAIConsoleOpen ? (
+          /* AI MODE: Only show the console */
+          <div className="flex-1 overflow-y-auto bg-slate-50/30">
+            <div className="max-w-4xl mx-auto p-4 md:p-8">
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Bloom AI Intelligence Engine</h2>
+                  <p className="text-xs text-slate-500 font-medium">Generate high-converting product content using AI</p>
+                </div>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700">
-                AI Improvements Active ({bloomHistory.size} fields)
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDiscardAll}
-                className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-100 border-none bg-transparent"
-              >
-                <RotateCcw size={12} className="mr-1.5" />
-                Clear All AI Content
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleAcceptAll}
-                className="h-8 px-4 text-[10px] font-black uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200"
-              >
-                <Check size={12} className="mr-1.5" />
-                Accept All
-              </Button>
+              
+              <div className="bg-white rounded-3xl shadow-xl shadow-indigo-500/5 border border-indigo-100 overflow-hidden">
+                <BloomAIConsole
+                  initialData={initialData}
+                  currentForm={form}
+                  references={refLists}
+                  initialSelectedFields={regenField ? [regenField] : null}
+                  onApply={handleApplyAI}
+                  onClose={() => {
+                    setIsAIConsoleOpen(false);
+                    setRegenField(null);
+                  }}
+                />
+              </div>
             </div>
           </div>
-        )}
+        ) : (
+          /* FORM MODE: Regular editing */
+          <>
+            {/* AI Command Center (Sticky bar when suggestions are present) */}
+            {bloomHistory.size > 0 && (
+              <div className="flex-shrink-0 z-[75] px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between animate-in slide-in-from-top-2 duration-300 sticky top-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-sm">
+                    <Zap size={12} fill="currentColor" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-700">
+                    AI Improvements Active ({bloomHistory.size} fields)
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDiscardAll}
+                    className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-100 border-none bg-transparent"
+                  >
+                    <RotateCcw size={12} className="mr-1.5" />
+                    Clear All AI Content
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleAcceptAll}
+                    className="h-8 px-4 text-[10px] font-black uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200"
+                  >
+                    <Check size={12} className="mr-1.5" />
+                    Accept All
+                  </Button>
+                </div>
+              </div>
+            )}
 
         {/* ── Notes panel ─────────────────────────────────────── */}
         {notesOpen && (
@@ -2398,6 +2411,8 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
             </Button>
           </div>
         </div>
+          </>
+        )}
       </div>
 
     </>
