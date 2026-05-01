@@ -86,9 +86,9 @@ You must support generation for all of these fields:
 20. mrp_est
 21. selling_price_est
 22. seo_keywords
-23. sku_code
+23. sku_code (Must be a unique 13-digit EAN-13 number if missing. Always use the Global GS1 India prefix '890'. Structure it like a real barcode: 890 followed by 10 unique digits. Ensure it looks like a real mock number each time.)
 24. brand
-25. barcode
+25. barcode (Must always match the 13-digit EAN generated in sku_code)
 
 Generate only fields requested in target_fields unless the user explicitly asks for all fields.
 

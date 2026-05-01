@@ -237,6 +237,17 @@ function ImageBlock({ value, onChange, onStatus, catalogUrl }) {
 function Field({ id, label, required, children, hint, error, aiWarning, isImproved, onAccept, onDiscard, onRegenerate }) {
   const [showAIContext, setShowAIContext] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
+  const hoverTimeoutRef = useRef(null);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => setShowAIContext(true), 200);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => setShowAIContext(false), 500);
+  };
 
   const score = aiWarning ? (typeof aiWarning === 'object' ? aiWarning.confidence_score : (parseInt(aiWarning.match(/\d+/)?.[0]) || 0)) : 0;
   const scoreColor = score >= 80 ? "text-emerald-500 bg-emerald-50 border-emerald-100" : (score < 50 ? "text-rose-500 bg-rose-50 border-rose-100" : "text-amber-500 bg-amber-50 border-amber-100");
@@ -256,9 +267,12 @@ function Field({ id, label, required, children, hint, error, aiWarning, isImprov
             {aiWarning && (
               <button 
                 type="button"
-                onClick={() => setShowAIContext(!showAIContext)}
-                onMouseEnter={() => setShowAIContext(true)}
-                onMouseLeave={() => setShowAIContext(false)}
+                onClick={() => {
+                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                  setShowAIContext(!showAIContext);
+                }}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 className={cn(
                   "flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[9px] font-black transition-all hover:scale-105 active:scale-95 cursor-help",
                   showAIContext ? "ring-2 ring-indigo-500/20 border-indigo-300 bg-indigo-50 text-indigo-600" : scoreColor
@@ -790,11 +804,24 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
           'package_weight_g': 'package_weight',
           'sku_id': 'sku_code',
           'sku_code': 'sku_code',
-          'barcode': 'barcode'
+          'barcode': 'barcode',
+          'tax_percent': 'tax_percent',
+          'net_quantity': 'net_quantity',
+          'quantity_unit': 'net_quantity_unit_reference_id'
         };
 
         if (keyMap[key]) {
           targetKey = keyMap[key];
+        }
+
+        // --- NUMERIC SANITIZATION ---
+        const numericFields = ['mrp', 'selling_price', 'purchase_cost', 'raw_product_weight', 'package_weight', 'tax_percent', 'net_quantity'];
+        if (numericFields.includes(targetKey)) {
+          // Extract first valid number (handle "₹ 499" or "100-200")
+          const numMatch = String(finalValue).replace(/,/g, '').match(/[\d.]+/);
+          if (numMatch) {
+            finalValue = numMatch[0];
+          }
         }
 
         // CRITICAL: Never allow a string value into a reference ID field
@@ -856,8 +883,8 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
     }
 
     const unitVal = getVal('quantity_unit') || getVal('net_quantity_unit');
-    if (unitVal && refLists?.UNIT) {
-      const match = refLists.UNIT.find(u =>
+    if (unitVal && refLists?.NET_QUANTITY_UNIT) {
+      const match = refLists.NET_QUANTITY_UNIT.find(u =>
         u.label?.toLowerCase() === String(unitVal).toLowerCase() ||
         u.key?.toLowerCase() === String(unitVal).toLowerCase()
       );
