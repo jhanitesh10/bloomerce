@@ -300,21 +300,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   useEffect(() => {
     if (activeCols.length > 0 && !importStats) {
-      setSelectedCols(prev => {
-        const next = new Set();
-        // Always add new active columns if they weren't unselected previously
-        // OR if this is the first time we have active columns
-        activeCols.forEach(col => {
-          if (prev.size === 0 || prev.has(col)) {
-            next.add(col);
-          }
-        });
-        // We only return a new Set if something actually changed to avoid infinite loops
-        if (next.size !== prev.size || [...next].some(c => !prev.has(c))) {
-           return next;
-        }
-        return prev;
-      });
+      setSelectedCols(new Set(activeCols));
     } else if (activeCols.length === 0) {
       setSelectedCols(new Set());
     }

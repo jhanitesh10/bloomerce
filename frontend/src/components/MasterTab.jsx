@@ -122,10 +122,10 @@ const GROUPS = [
     cols: [
       { id: 'bundle_type', label: 'Bundle Type', width: 200 },
       { id: 'pack_type',   label: 'Pack Type',   width: 180 },
-      { 
-        id: 'product_component_group_code', 
-        label: 'Shared Pools', 
-        width: 200, 
+      {
+        id: 'product_component_group_code',
+        label: 'Shared Pools',
+        width: 200,
         isMono: true,
         valueFormatter: (p) => {
           if (!p.value) return '-';
@@ -150,9 +150,9 @@ const GROUPS = [
     label: 'Marketplace Channels',
     color: 'sky',
     cols: [
-      { 
-        id: 'platform_identifiers', 
-        label: 'Linked Channels', 
+      {
+        id: 'platform_identifiers',
+        label: 'Linked Channels',
         width: 120,
         valueFormatter: (p) => {
           if (!p.value || !Array.isArray(p.value)) return '-';
@@ -613,15 +613,15 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
       if (search) p.set('q', search);
       if (statusFilter !== 'all') p.set('status', statusFilter);
       if (page > 1) p.set('page', String(page));
-      
+
       if (filters.brandIds.length) p.set('brands', filters.brandIds.join(','));
       if (filters.categoryIds.length) p.set('categories', filters.categoryIds.join(','));
       if (filters.subCategoryIds.length) p.set('subcategories', filters.subCategoryIds.join(','));
       if (filters.statusIds.length) p.set('statuses', filters.statusIds.join(','));
-      
+
       if (filters.minPrice) p.set('min', filters.minPrice);
       if (filters.maxPrice) p.set('max', filters.maxPrice);
-      
+
       if (filters.hasImage !== null) p.set('img', String(filters.hasImage));
       if (filters.hasNotes !== null) p.set('notes', String(filters.hasNotes));
 
@@ -706,8 +706,8 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     }
 
     // Try to find in current list first (by SKU code or ID)
-    const found = skus.find(s => 
-      String(s.sku_code) === skuId || 
+    const found = skus.find(s =>
+      String(s.sku_code) === skuId ||
       String(s.id) === skuId
     );
     if (found) {
@@ -1123,7 +1123,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
               if (!p.value || !Array.isArray(p.value) || p.value.length === 0) {
                 return (
                   <div className="flex items-center justify-center w-full h-full">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setFormInitialTab('platforms');
@@ -1144,7 +1144,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                       const officialIcon = channelIcons[plat.channel_name || plat.platform_name];
                       const baseUrl = channelUrls[plat.channel_name || plat.platform_name];
                       const finalUrl = baseUrl && plat.id ? (baseUrl.includes("{id}") ? baseUrl.replace("{id}", plat.id) : `${baseUrl}${plat.id}`) : "";
-                      
+
                       let faviconUrl = null;
                       if (officialIcon && (officialIcon.startsWith('http') || officialIcon.startsWith('/'))) {
                         faviconUrl = officialIcon;
@@ -1156,7 +1156,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                       }
 
                       return (
-                        <a 
+                        <a
                           key={idx}
                           href={finalUrl || "#"}
                           target={finalUrl ? "_blank" : undefined}
@@ -1167,9 +1167,9 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                           )}
                           style={{ zIndex: p.value.length - idx }}
                           title={finalUrl ? `View on ${plat.channel_name || plat.platform_name}: ${plat.id}` : `No listing URL for ${plat.channel_name}`}
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            if (!finalUrl) e.preventDefault(); 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!finalUrl) e.preventDefault();
                           }}
                           onDoubleClick={(e) => e.stopPropagation()}
                         >
@@ -1218,7 +1218,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                  </a>
                ) : (
                  <div className="flex items-center justify-center w-full h-full">
-                   <button 
+                   <button
                      onClick={(e) => {
                         e.stopPropagation();
                         setFormInitialTab('content');
@@ -1469,7 +1469,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
       )}>
         {/* Main Toolbar Row */}
         <div className={cn(
-          "flex p-2 gap-4", 
+          "flex p-2 gap-4",
           isMobile ? "flex-col" : "items-center justify-between",
           (isFilterOpen || isFilterActive) && "border-b border-[var(--color-border)]/50"
         )}>
@@ -1497,7 +1497,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
 
             {/* Search (Flexible to fill space) */}
             <div className={cn(
-              "flex-1 flex items-center gap-2 border border-[var(--color-border)] rounded-lg px-3 h-[36px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 focus-within:border-[var(--color-primary)]/40 transition-all bg-[var(--color-card)] group", 
+              "flex-1 flex items-center gap-2 border border-[var(--color-border)] rounded-lg px-3 h-[36px] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 focus-within:border-[var(--color-primary)]/40 transition-all bg-[var(--color-card)] group",
               isMobile ? "w-full h-[38px]" : "min-w-[280px] max-w-[600px]"
             )}>
               <Search size={15} className="text-[var(--color-muted-foreground)] group-focus-within:text-[var(--color-primary)] transition-colors" />
@@ -1516,7 +1516,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                 </div>
               )}
               {search && (
-                <button 
+                <button
                   onClick={() => { setSearch(''); setPage(1); }}
                   className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-red-500 transition-all"
                 >
