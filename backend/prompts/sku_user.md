@@ -1,3 +1,8 @@
+
+# SKU USER PROMPT (sku_user.md)
+
+---
+
 # INPUT DATA
 
 ## Product Basics
@@ -6,10 +11,11 @@
 - current_category: {cat}
 
 ## Context Inputs
+- user_context: {user_context}
 - reference_urls: {ref_urls}
 - product_images: {image_inputs}
 
-## User Intent (Dynamic Controls)
+## User Intent Controls
 - selected_tone: {tone}
 - custom_instructions: {custom_instruction_block}
 
@@ -23,7 +29,6 @@
 ## Existing Data (For Consistency)
 - existing_data: {existing_data}
 
-
 ## Output Schema
 - required_schema: {target_schema_indented}
 
@@ -31,116 +36,287 @@
 
 # TASK
 
-Generate high-quality, marketplace-ready content for the requested fields.
+Generate high-quality, marketplace-ready product listing content.
 
-You must:
-- strictly follow the system role, rules, and inference logic
-- use all available inputs intelligently (image, URLs, brand, category)
-- ensure outputs are accurate, relevant, and conversion-focused
-- maintain consistency with existing_data (if provided)
-
----
-
-# EXECUTION FLOW (MANDATORY)
-
-Follow this internal sequence before generating output:
-
-1. Resolve product identity (type, category, use-case)
-2. Identify target user and primary pain point
-3. Determine positioning (budget / premium / trend-based)
-4. Apply selected tone behavior
-5. Generate content per field logic
-
-Do NOT output this reasoning.
+The output must be:
+- accurate
+- structured
+- SEO-aware
+- conversion-focused
+- compliant with marketplace standards (Amazon, Flipkart, Myntra, Nykaa, etc.)
 
 ---
 
-# REFERENCE USAGE RULES
+# INPUT PRIORITY (STRICT)
 
-- Use reference URLs only for validation and enrichment
-- Do NOT copy content
-- Do NOT assume all references are correct
-- Cross-check signals across multiple inputs
-- If conflict exists → prefer safer, generic accuracy
+Always resolve using this order:
 
----
+1. user_context (highest priority)
+2. product_images
+3. reference_urls
+4. existing_data
+5. similar products / market patterns
+6. controlled inference (last resort)
 
-# CATEGORY ENFORCEMENT
-
-- "category" MUST be selected from: {categories_str}
-- "sub_category" MUST be selected from: {sub_cats_str}
-- Choose the closest valid match based on product understanding
-
----
-
-# FIELD EXECUTION RULES
-
-Generate ONLY the fields requested in target_fields.
-
-For each field:
-- follow the specific guideline (if provided)
-- adapt writing style accordingly
-- ensure no duplication across fields
+If inputs conflict:
+- prioritize user_context
+- then visible image facts
+- then references for enrichment
 
 ---
 
-# OUTPUT REQUIREMENTS (STRICT)
+# EXECUTION FLOW (MANDATORY INTERNAL LOGIC)
 
-- Return ONLY valid JSON
-- Follow the required_schema EXACTLY
-- Do NOT add extra keys
-- Do NOT include explanations or text outside JSON
+Before generating output:
 
-If a field cannot be confidently generated:
-- return null (only if schema allows)
+1. Identify product type and use-case
+2. Identify target buyer and intent
+3. Understand primary problem solved
+4. Determine product positioning (budget / premium / functional / trend)
+5. Validate or infer category and sub-category
+6. Adjust tone based on selected_tone
 
----
-
-# QUALITY CHECK (FINAL STEP BEFORE OUTPUT)
-
-Ensure:
-- no hallucinated claims
-- no keyword stuffing
-- no repetitive phrasing
-- tone consistency across all fields
-- marketplace readiness
-
----
-# OPERATIONAL AUTOFILL TASK
-
-If requested fields include purchase_cost, net_quantity, net_quantity_unit, colour, raw_product_weight_g, or package_weight_g:
-
-- Fill from user input first
-- Then use image/reference URLs
-- Then use safe market-based estimation only when reasonable
-- Never treat estimates as exact facts
-- Return null when confidence is too low
-- Use grams for weights
-- Use ml/g/pcs/pair/set for quantity units
+DO NOT output this reasoning.
 
 ---
 
-# INGREDIENT FALLBACK BEHAVIOR
+# FIELD GENERATION RULE
 
-If ingredient data is not available:
+Generate ONLY fields present in:
+target_fields
 
-- attempt extraction from image and references
-- if still missing, generate a safe estimated ingredient list
-- clearly mark as "estimated"
-- include a warning for user verification
-- assign low confidence
+Do NOT generate extra fields.
 
-Do NOT leave field empty if reasonable estimation is possible.
+Each field must:
+- follow system-level rules
+- be non-repetitive
+- be relevant to the product type
+- maintain consistency across all fields
 
 ---
 
-# FINAL INSTRUCTION
+# UNIVERSAL OUTPUT STRUCTURE (MANDATORY)
 
-Generate meaningful, real product content.
+Every field must strictly follow:
 
-DO NOT output:
+{{
+  "value": "...",
+  "confidence_score": 0-100,
+  "confidence_level": "high | medium | low",
+  "basis": "user_input | image | reference_url | existing_data | web_research | market_estimate | inferred",
+  "warning": null
+}}
+
+---
+
+# OUTPUT RULES
+
+- value must NEVER be a nested object
+- value can be string, number, array, or null
+- confidence_score must reflect actual certainty
+- confidence_level mapping:
+  - high: 80-100
+  - medium: 50-79
+  - low: 1-49
+- basis must reflect actual source of truth
+- warning is required when:
+  - estimation is used
+  - compliance risk exists
+  - ingredient/material is inferred
+  - classification may vary
+
+---
+
+# FIELD-SPECIFIC EXECUTION RULES
+
+## Titles (primary_title, alt_title)
+- must be SEO-friendly and human-readable
+- include product type + benefit + differentiator
+- avoid keyword stuffing
+- align with Amazon/Nykaa/Flipkart style
+- alt_title should be a variation, not duplicate
+
+---
+
+## Description
+- 60–120 words
+- explain product, use-case, and benefit
+- premium but factual tone
+- no fake claims
+
+---
+
+## Key Features
+- 5–6 bullet points
+- format: Heading: explanation
+- must help decision-making
+
+---
+
+## Ingredients / Materials
+
+If product is:
+- formulated (skincare, cosmetics, pet care, consumables):
+  - generate key_ingredients and full_ingredients
+
+If product is:
+- non-formulated (fashion, tools, accessories):
+  - convert to material/composition if applicable
+  - otherwise return null with warning
+
+Never hallucinate exact full ingredient list.
+
+---
+
+## How to Use
+- step-based instructions
+- adapted to product type
+- safe and practical
+
+---
+
+## Care Instructions
+- maintenance/storage guidance
+- based on product category
+
+---
+
+## Cautions
+- realistic safety instructions
+- no exaggeration
+- no legal/medical overclaim
+
+---
+
+## Category & Sub-Category
+- prefer allowed lists
+- if not suitable → generate logical taxonomy
+- sub-category must be more specific
+
+---
+
+## Colour / Shade
+- simple user-friendly names
+- prioritize user input → image → reference → inference
+
+---
+
+## Quantity & Unit
+
+quantity_unit must be one of:
+- ml, g, kg, pcs, pair, set, L, cm, m
+
+Examples:
+- 30 ml serum
+- 1 pcs shapewear
+- 1 pair nipple cover
+
+---
+
+## Weight Fields
+
+raw_weight_g:
+- product only
+
+package_weight_g:
+- shipping weight
+
+Use realistic estimates only.
+
+---
+
+## Pricing Fields
+
+mrp_est:
+- printed price estimate
+
+selling_price_est:
+- expected online selling price
+
+purchase_cost_est:
+- landed cost estimate
+
+Use:
+- ranges when uncertain
+- Indian market patterns
+
+---
+
+## HSN & Tax
+
+- infer based on product type
+- assign GST accordingly
+
+Always include warning:
+"Verify HSN/GST with tax professional before use."
+
+---
+
+## SEO Keywords
+- 10–20 keywords
+- include:
+  - product type
+  - use-case
+  - benefits
+  - variations
+- avoid spam and unrelated terms
+
+---
+
+# WEB RESEARCH RULE
+
+If available, use web research for:
+- pricing (MRP, selling price, cost)
+- SEO keyword trends
+- competitor titles
+- ingredient validation
+- category validation
+
+If NOT available:
+- rely on inputs and market_estimate
+
+---
+
+# CONSISTENCY RULE
+
+If existing_data is provided:
+- align tone and facts
+- do not contradict existing confirmed values
+- improve quality without changing meaning
+
+---
+
+# FAILURE / LOW CONFIDENCE RULE
+
+If a field cannot be safely generated:
+- return null (if allowed)
+- OR generate safe estimate with:
+  - low confidence
+  - warning message
+
+---
+
+# FINAL QUALITY CHECK
+
+Before output:
+
+- ensure JSON is valid
+- ensure schema is followed exactly
+- ensure no hallucinated claims
+- ensure no repetition across fields
+- ensure tone consistency
+- ensure marketplace readiness
+
+---
+
+# FINAL OUTPUT INSTRUCTION
+
+Return ONLY valid JSON.
+
+Do NOT include:
+- explanations
+- markdown
+- comments
 - placeholders
-- instructions
-- meta text
 
-ONLY return the final JSON response.
+Only the final structured response.

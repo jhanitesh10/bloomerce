@@ -11,26 +11,31 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const TARGET_FIELDS = [
-  { id: 'product_name', label: 'Primary Title', group: 'Basic' },
-  { id: 'alternate_product_name', label: 'Alt Title', group: 'Basic' },
-  { id: 'colour', label: 'Colour / Shade', group: 'Basic' },
+  { id: 'primary_title', label: 'Primary Title', group: 'Basic' },
+  { id: 'alt_title', label: 'Alt Title', group: 'Basic' },
+  { id: 'colour_shade', label: 'Colour / Shade', group: 'Basic' },
   { id: 'category', label: 'Category', group: 'Taxonomy' },
   { id: 'sub_category', label: 'Sub-Category', group: 'Taxonomy' },
   { id: 'description', label: 'Description', group: 'Content' },
-  { id: 'key_feature', label: 'Key Features', group: 'Content' },
+  { id: 'key_features', label: 'Key Features', group: 'Content' },
   { id: 'key_ingredients', label: 'Key Ingredients', group: 'Content' },
-  { id: 'ingredients', label: 'Full Ingredients', group: 'Content' },
+  { id: 'full_ingredients', label: 'Full Ingredients', group: 'Content' },
   { id: 'how_to_use', label: 'How to Use', group: 'Usage' },
-  { id: 'product_care', label: 'Care Instructions', group: 'Usage' },
-  { id: 'caution', label: 'Cautions', group: 'Usage' },
-  { id: 'purchase_cost', label: 'Purchase Cost (Est)', group: 'Logistics' },
+  { id: 'care_instructions', label: 'Care Instructions', group: 'Usage' },
+  { id: 'cautions', label: 'Cautions', group: 'Usage' },
+  { id: 'purchase_cost_est', label: 'Purchase Cost (Est)', group: 'Logistics' },
   { id: 'net_quantity', label: 'Net Quantity', group: 'Logistics' },
-  { id: 'net_quantity_unit', label: 'Quantity Unit', group: 'Logistics' },
-  { id: 'raw_product_weight_g', label: 'Raw Weight (g)', group: 'Logistics' },
+  { id: 'quantity_unit', label: 'Quantity Unit', group: 'Logistics' },
+  { id: 'raw_weight_g', label: 'Raw Weight (g)', group: 'Logistics' },
   { id: 'package_weight_g', label: 'Package Weight (g)', group: 'Logistics' },
-  { id: 'tax_rule_code', label: 'HSN Code', group: 'Compliance' },
+  { id: 'hsn_code', label: 'HSN Code', group: 'Compliance' },
   { id: 'tax_percent', label: 'Tax %', group: 'Compliance' },
-  { id: 'seo_keywords', label: 'SEO Keywords', group: 'Marketing' }
+  { id: 'mrp_est', label: 'MRP (Est)', group: 'Compliance' },
+  { id: 'selling_price_est', label: 'Selling Price (Est)', group: 'Compliance' },
+  { id: 'seo_keywords', label: 'SEO Keywords', group: 'Marketing' },
+  { id: 'sku_code', label: 'SKU Code', group: 'Basic' },
+  { id: 'barcode', label: 'Barcode', group: 'Basic' },
+  { id: 'brand', label: 'Brand Name', group: 'Basic' }
 ];
 
 const IS_IMAGE_REGEX = /\.(jpeg|jpg|gif|png|webp|bmp)$/i;

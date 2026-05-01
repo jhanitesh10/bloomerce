@@ -23,7 +23,7 @@ class SmartField(BaseModel):
     value: Any
     confidence_score: Optional[int] = 100 # 0-100
     confidence_level: Optional[str] = "high" # low, medium, high
-    basis: Optional[str] = "extracted" # extracted, inferred, market_estimate, user_input
+    basis: Optional[str] = "extracted" # extracted, inferred, market_estimate, user_input, web_research
     warning: Optional[str] = None
 
 class SkuContentResponse(BaseModel):
@@ -33,50 +33,78 @@ class SkuContentResponse(BaseModel):
         if not isinstance(data, dict):
             return data
             
+        # Field mapping bridge for backward compatibility or prompt variations
+        mapping = {
+            "product_name": "primary_title",
+            "alternate_product_name": "alt_title",
+            "colour": "colour_shade",
+            "color": "colour_shade",
+            "key_feature": "key_features",
+            "ingredients": "full_ingredients",
+            "product_care": "care_instructions",
+            "caution": "cautions",
+            "tax_rule_code": "hsn_code",
+            "mrp": "mrp_est",
+            "selling_price": "selling_price_est",
+            "purchase_cost": "purchase_cost_est",
+            "net_quantity_unit": "quantity_unit",
+            "raw_product_weight_g": "raw_weight_g",
+            "sku_id": "sku_code",
+            "barcode": "barcode"
+        }
+        
+        # Apply mapping
+        for old_key, new_key in mapping.items():
+            if old_key in data and new_key not in data:
+                data[new_key] = data.pop(old_key)
+
         for key, val in data.items():
             if val is not None:
                 # If it's a string that looks like a JSON object/list, try to parse it
                 if isinstance(val, str) and val.strip().startswith(('{', '[')):
                     try:
-                        # Attempt to fix single quotes which AI sometimes uses
                         fixed_val = val.replace("'", '"')
                         val = json.loads(fixed_val)
                     except:
-                        pass # Fallback to raw string if parsing fails
+                        pass
 
                 if not isinstance(val, dict):
                     # Auto-wrap raw value into SmartField structure
                     data[key] = {
                         "value": val,
-                        "confidence_score": 100,
-                        "confidence_level": "high",
-                        "basis": "extracted"
+                        "confidence_score": 60, # Lowered default to indicate fallback
+                        "confidence_level": "medium",
+                        "basis": "inferred"
                     }
                 else:
                     data[key] = val
         return data
 
-    product_name: Optional[SmartField] = Field(None, description="Primary optimized product name")
-    brand: Optional[SmartField] = Field(None, description="Identified or suggested brand name")
-    alternate_product_name: Optional[SmartField] = Field(None, description="Secondary brand-aligned product name")
+    primary_title: Optional[SmartField] = Field(None, description="Primary optimized product name")
+    alt_title: Optional[SmartField] = Field(None, description="Secondary brand-aligned product name")
+    colour_shade: Optional[SmartField] = Field(None, description="Colour or Shade")
     category: Optional[SmartField] = Field(None, description="Best-fit category")
     sub_category: Optional[SmartField] = Field(None, description="Best-fit sub-category")
     description: Optional[SmartField] = Field(None, description="Marketing description")
-    key_feature: Optional[SmartField] = Field(None, description="Top 5-6 features")
+    key_features: Optional[SmartField] = Field(None, description="Top 5-6 features")
     key_ingredients: Optional[SmartField] = Field(None, description="Primary highlighting ingredients")
-    ingredients: Optional[SmartField] = Field(None, description="Full INCI ingredient list")
+    full_ingredients: Optional[SmartField] = Field(None, description="Full INCI ingredient list")
     how_to_use: Optional[SmartField] = Field(None, description="Usage instructions")
-    product_care: Optional[SmartField] = Field(None, description="Storage or care warnings")
-    caution: Optional[SmartField] = Field(None, description="Safety warnings")
-    tax_rule_code: Optional[SmartField] = Field(None, description="Suggested HSN code")
+    care_instructions: Optional[SmartField] = Field(None, description="Storage or care warnings")
+    cautions: Optional[SmartField] = Field(None, description="Safety warnings")
+    hsn_code: Optional[SmartField] = Field(None, description="Suggested HSN code")
     tax_percent: Optional[SmartField] = Field(None, description="Suggested Tax %")
+    mrp_est: Optional[SmartField] = Field(None, description="Suggested MRP / Listing Price")
+    selling_price_est: Optional[SmartField] = Field(None, description="Suggested Selling Price")
     seo_keywords: Optional[SmartField] = Field(None, description="SEO keywords")
-    colour: Optional[SmartField] = Field(None, description="Colour or Shade")
-    purchase_cost: Optional[SmartField] = Field(None, description="Estimated purchase cost")
+    purchase_cost_est: Optional[SmartField] = Field(None, description="Estimated purchase cost")
     net_quantity: Optional[SmartField] = Field(None, description="Net quantity value")
-    net_quantity_unit: Optional[SmartField] = Field(None, description="Unit for net quantity")
-    raw_product_weight_g: Optional[SmartField] = Field(None, description="Raw product weight")
+    quantity_unit: Optional[SmartField] = Field(None, description="Unit for net quantity")
+    raw_weight_g: Optional[SmartField] = Field(None, description="Raw product weight")
     package_weight_g: Optional[SmartField] = Field(None, description="Package weight")
+    brand: Optional[SmartField] = Field(None, description="Identified brand")
+    sku_code: Optional[SmartField] = Field(None, description="Generated SKU code")
+    barcode: Optional[SmartField] = Field(None, description="Generated Barcode")
 
 # --- Provider Interface ---
 
@@ -246,7 +274,14 @@ class LiteLLMProvider(BaseAIProvider):
         image_inputs = f"{image_count} product image(s) attached to this request" if image_count > 0 else "No images provided"
 
         # 5. Build user prompt
-        prompt = self._build_prompt(user_template, product_name, brand, category, active_ref_urls, existing_data, target_fields, custom_instruction, valid_categories, valid_sub_categories, chips, tone, image_inputs)
+        try:
+            prompt = self._build_prompt(user_template, product_name, brand, category, active_ref_urls, existing_data, target_fields, custom_instruction, valid_categories, valid_sub_categories, chips, tone, image_inputs)
+            if prompt.startswith("Error formatting prompt:"):
+                raise Exception(prompt)
+            logger.info(f"Constructed Prompt (length: {len(prompt)})")
+        except Exception as pe:
+            logger.error(f"Prompt building failed: {pe}")
+            raise Exception(f"AI failed during prompt construction: {pe}")
 
         messages = [
             {
@@ -314,7 +349,17 @@ class LiteLLMProvider(BaseAIProvider):
                 content = response.choices[0].message.content
                 logger.info(f"AI Raw Content Received (Attempt {attempt+1}):\n{content}")
                 data = self._extract_json(content)
-                return SkuContentResponse(**data)
+                
+                try:
+                    return SkuContentResponse(**data)
+                except Exception as ve:
+                    logger.error(f"Validation Error for AI output: {ve}")
+                    logger.debug(f"Raw data that failed validation: {json.dumps(data, indent=2)}")
+                    if attempt == max_retries - 1:
+                        # On final attempt, if it's just validation failing, try to return a partially valid object
+                        # instead of crashing completely, or re-raise with detail
+                        raise Exception(f"AI failed to return schema-compliant data: {ve}")
+                    continue # Retry if validation fails and we have attempts left
 
             except Exception as e:
                 error_msg = str(e)
@@ -323,9 +368,12 @@ class LiteLLMProvider(BaseAIProvider):
                     logger.info(f"AI Provider error ({error_msg[:100]}), rotating model and retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
                     await asyncio.sleep(retry_delay)
                     continue
+                
+                if "AI failed" in error_msg:
+                    raise e # Pass through our custom error messages
 
                 logger.error(f"LiteLLM Final Generation Error: {error_msg}")
-                raise e
+                raise Exception(f"Internal AI Error: {error_msg}")
 
     def _extract_json(self, text: str) -> Dict[str, Any]:
         """Extracts JSON from text, handling markdown code blocks and normalizing list fields."""
@@ -378,27 +426,41 @@ class LiteLLMProvider(BaseAIProvider):
             except:
                 data['tax_percent'] = 0.0
 
-        # Clean up tax_rule_code
-        if 'tax_rule_code' in data and data['tax_rule_code']:
-            data['tax_rule_code'] = str(data['tax_rule_code']).replace(" ", "").strip()
+        # Clean up tax_rule_code / hsn_code
+        for k in ['tax_rule_code', 'hsn_code']:
+            if k in data and data[k]:
+                target = data[k]
+                is_metadata = isinstance(target, dict) and 'value' in target
+                val = target['value'] if is_metadata else target
+                if val:
+                    clean_val = str(val).replace(" ", "").strip()
+                    if is_metadata: data[k]['value'] = clean_val
+                    else: data[k] = clean_val
 
         # Clean up numeric fields (purchase_cost, weights, etc)
-        numeric_fields = ['purchase_cost', 'net_quantity', 'raw_product_weight_g', 'package_weight_g']
+        # Note: We now support string ranges (e.g. "100 - 200") for these fields to maintain consistency with the prompt.
+        numeric_fields = ['purchase_cost_est', 'net_quantity', 'raw_weight_g', 'package_weight_g', 'mrp_est', 'selling_price_est']
         for field in numeric_fields:
             if field in data and data[field] is not None:
-                # If it's a dict (structured metadata), clean the value inside it
-                if isinstance(data[field], dict) and 'value' in data[field]:
-                    try:
-                        clean_val = re.sub(r'[^\d.]', '', str(data[field]['value']))
-                        data[field]['value'] = float(clean_val) if clean_val else 0.0
-                    except:
-                        data[field]['value'] = 0.0
-                else:
-                    try:
-                        clean_val = re.sub(r'[^\d.]', '', str(data[field]))
-                        data[field] = float(clean_val) if clean_val else 0.0
-                    except:
-                        data[field] = 0.0
+                target = data[field]
+                is_metadata = isinstance(target, dict) and 'value' in target
+                val = target['value'] if is_metadata else target
+                
+                if val is not None:
+                    val_str = str(val).strip()
+                    # If it's a range (contains '-' or 'to'), keep it as a string
+                    if '-' in val_str or ' to ' in val_str.lower():
+                         if is_metadata: data[field]['value'] = val_str
+                         else: data[field] = val_str
+                    else:
+                        # Otherwise try to make it a clean float
+                        try:
+                            clean_val = re.sub(r'[^\d.]', '', val_str)
+                            final_val = float(clean_val) if clean_val else 0.0
+                            if is_metadata: data[field]['value'] = final_val
+                            else: data[field] = final_val
+                        except:
+                            pass
 
         return data
 
@@ -432,22 +494,24 @@ class LiteLLMProvider(BaseAIProvider):
 
     def _build_prompt(self, template, name, brand, cat, ref_url, existing, fields, instruction, valid_categories=None, valid_sub_categories=None, chips=None, tone="Professional", image_inputs="No images"):
         fields = fields or [
-            "product_name", "brand", "alternate_product_name", "category", "sub_category",
-            "description", "key_feature", "key_ingredients", "ingredients",
-            "how_to_use", "product_care", "caution", "tax_rule_code",
-            "tax_percent", "seo_keywords", "colour", "purchase_cost", 
-            "net_quantity", "net_quantity_unit", "raw_product_weight_g", "package_weight_g"
+            "primary_title", "alt_title", "colour_shade", "category", "sub_category",
+            "description", "key_features", "key_ingredients", "full_ingredients",
+            "how_to_use", "care_instructions", "cautions", "purchase_cost_est",
+            "net_quantity", "quantity_unit", "raw_weight_g", "package_weight_g",
+            "hsn_code", "tax_percent", "mrp_est", "selling_price_est", "seo_keywords",
+            "sku_code", "brand", "barcode"
         ]
 
-        # Neutral Schema Template
+        # Neutral Schema Template (Matches new Taxonomy)
         schema_template = {
-            "product_name": "", "brand": "", "alternate_product_name": "",
+            "primary_title": "", "alt_title": "", "colour_shade": "",
             "category": "", "sub_category": "", "description": "",
-            "key_feature": "", "key_ingredients": "", "ingredients": "",
-            "how_to_use": "", "product_care": "", "caution": "",
-            "tax_rule_code": "", "tax_percent": 0.0, "seo_keywords": "", "colour": "",
-            "purchase_cost": 0.0, "net_quantity": 0.0, "net_quantity_unit": "",
-            "raw_product_weight_g": 0.0, "package_weight_g": 0.0
+            "key_features": "", "key_ingredients": "", "full_ingredients": "",
+            "how_to_use": "", "care_instructions": "", "cautions": "",
+            "purchase_cost_est": 0.0, "net_quantity": 0.0, "quantity_unit": "",
+            "raw_weight_g": 0.0, "package_weight_g": 0.0,
+            "hsn_code": "", "tax_percent": 0.0, "mrp_est": 0.0, "selling_price_est": 0.0,
+            "seo_keywords": "", "sku_code": "", "brand": "", "barcode": ""
         }
 
         target_schema = {k: schema_template[k] for k in fields if k in schema_template}
@@ -486,6 +550,7 @@ class LiteLLMProvider(BaseAIProvider):
                 existing_data=json.dumps(existing, indent=2) if existing else "None",
                 target_fields=", ".join(fields),
                 target_schema_indented=json.dumps(target_schema, indent=4),
+                user_context=instruction or "None",
                 custom_instruction_block=f"CLIENT SPECIFIC INSTRUCTION/MESSAGE: {instruction}\n{chips_context}" if (instruction or chips_context) else "None"
             )
         except Exception as e:

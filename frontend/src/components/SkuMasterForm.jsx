@@ -279,24 +279,25 @@ function Field({ id, label, required, children, hint, error, aiWarning, isImprov
       {aiWarning && (
         <div className={cn(
           "mt-2 flex items-start gap-2.5 p-3 rounded-xl border animate-in slide-in-from-top-1 duration-300",
-          aiWarning.includes('100%') || aiWarning.includes('95%') || aiWarning.includes('90%')
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-            : aiWarning.toLowerCase().includes('low') || aiWarning.includes('50%') || aiWarning.includes('40%')
-              ? "bg-rose-50 border-rose-200 text-rose-800"
-              : "bg-amber-50 border-amber-200 text-amber-800"
+          (() => {
+            const score = typeof aiWarning === 'object' ? aiWarning.confidence_score : (parseInt(aiWarning.match(/\d+/)?.[0]) || 0);
+            if (score >= 80) return "bg-emerald-50 border-emerald-200 text-emerald-800";
+            if (score < 50) return "bg-rose-50 border-rose-200 text-rose-800";
+            return "bg-amber-50 border-amber-200 text-amber-800";
+          })()
         )}>
            <AlertCircle size={14} className="mt-0.5 shrink-0 opacity-70" />
            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
              <div className="flex items-center justify-between gap-2">
                <span className="text-[10px] font-black uppercase tracking-wider opacity-80">AI Trust Score</span>
-               {aiWarning.includes('%') && (
-                 <span className="px-1.5 py-0.5 rounded-md bg-white/50 text-[9px] font-black shadow-sm ring-1 ring-black/5">
-                   {aiWarning.match(/\d+%/)?.[0]}
-                 </span>
-               )}
+               <span className="px-1.5 py-0.5 rounded-md bg-white/50 text-[9px] font-black shadow-sm ring-1 ring-black/5">
+                 {typeof aiWarning === 'object' ? `${aiWarning.confidence_score}%` : (aiWarning.match(/\d+%/)?.[0] || 'Inferred')}
+               </span>
              </div>
              <p className="text-[11px] leading-relaxed font-semibold">
-               {aiWarning.includes('Confidence:') ? "AI generated this based on similar products." : aiWarning}
+               {typeof aiWarning === 'object' 
+                 ? (aiWarning.warning || `Generated with ${aiWarning.confidence_level} confidence based on ${aiWarning.basis.replace(/_/g, ' ')}.`)
+                 : (aiWarning.includes('Confidence:') ? "AI generated this based on similar products." : aiWarning)}
              </p>
            </div>
         </div>
@@ -461,7 +462,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
     }
     return normalizeInitialData(initialData);
   });
-  
+
 
   // Sync draft to localStorage
   useEffect(() => {
@@ -529,7 +530,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
       const next = { ...p, [name]: val };
       // Mirror SKU code → barcode
       if (name === 'sku_code') next.barcode = val;
-      
+
       // Auto-calculate finished weight
       if (name === 'package_weight' || name === 'raw_product_weight') {
         const pWeight = parseFloat(next.package_weight) || 0;
@@ -579,11 +580,11 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
   };
 
   const handleDiscardAll = () => {
-    console.log("AI Bloom: Discarding all improvements", { 
+    console.log("AI Bloom: Discarding all improvements", {
       fields: Array.from(bloomHistory),
-      originalValuesCount: Object.keys(originalValues).length 
+      originalValuesCount: Object.keys(originalValues).length
     });
-    
+
     setForm(prev => {
       const next = { ...prev };
       bloomHistory.forEach(fieldId => {
@@ -637,54 +638,110 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
 
     const handleApplyAI = (results) => {
     if (!results) return;
-    
+
     const filteredResults = {};
     const newWarnings = { ...aiWarnings };
 
     Object.keys(results).forEach(key => {
-      const rawVal = results[key];
-      if (rawVal === null || rawVal === undefined) return;
+      try {
+        const rawVal = results[key];
+        if (rawVal === null || rawVal === undefined) return;
 
-      // --- UNIVERSAL SMART FIELD UNPACKING ---
-      let value = rawVal;
-      let metadata = null;
+        // --- AGGRESSIVE UNIVERSAL UNPACKING ---
+        let value = null;
+        let metadata = null;
 
-      if (typeof rawVal === 'object' && !Array.isArray(rawVal) && rawVal.value !== undefined) {
-        value = rawVal.value;
-        metadata = rawVal;
-      }
-
-      // Skip if final value is empty
-      if (value === null || value === undefined || String(value).trim() === "") return;
-
-      // Format value (e.g. join ingredient arrays)
-      const finalValue = Array.isArray(value) ? value.join(", ") : value;
-
-      // Handle Field Mapping Bridge
-      let targetKey = key;
-      if (key === 'colour') targetKey = 'color';
-      else if (key === 'raw_product_weight_g') targetKey = 'raw_product_weight';
-      else if (key === 'package_weight_g') targetKey = 'package_weight';
-      else if (key === 'tax_percent') targetKey = 'tax_percent';
-      else if (key === 'tax_rule_code') targetKey = 'tax_rule_code';
-
-      // CRITICAL: Never allow a string value into a reference ID field
-      if (targetKey.endsWith('_reference_id') && isNaN(Number(finalValue))) {
-        // Skip direct assignment; let taxonomy resolve handle it later
-      } else {
-        filteredResults[targetKey] = finalValue;
-      }
-
-      // Store Metadata/Warnings
-      if (metadata) {
-        let warningText = metadata.warning;
-        if (!warningText && metadata.confidence_level === 'low') {
-          warningText = `AI Estimation (${metadata.confidence_score}% confidence). Basis: ${metadata.basis || 'inferred'}.`;
+        if (typeof rawVal === 'object' && rawVal !== null && !Array.isArray(rawVal)) {
+          // AI returns SmartField { value, confidence_score, ... }
+          if (rawVal.value !== undefined) {
+            value = rawVal.value;
+            metadata = rawVal;
+          } else if (rawVal.body !== undefined) {
+            value = rawVal.body;
+            metadata = { ...rawVal, value: rawVal.body };
+          } else if (rawVal.text !== undefined) {
+            value = rawVal.text;
+            metadata = { ...rawVal, value: rawVal.text };
+          } else if (rawVal.label !== undefined) {
+            value = rawVal.label;
+            metadata = { ...rawVal, value: rawVal.label };
+          } else {
+            // Fallback: use the object's first string-like property or stringify it
+            value = Object.values(rawVal).find(v => typeof v === 'string') || JSON.stringify(rawVal);
+            metadata = { ...rawVal, value };
+          }
+        } else {
+          // It's a primitive or an array
+          value = rawVal;
         }
-        
-        if (warningText || (metadata.confidence_score && metadata.confidence_score < 90)) {
-          newWarnings[targetKey] = warningText || `Confidence: ${metadata.confidence_score}%`;
+
+        // --- DEEP SANITIZATION (Prevent [object Object]) ---
+        let finalValue = value;
+
+        if (Array.isArray(value)) {
+          finalValue = value.map(item => {
+            if (typeof item === 'object' && item !== null) {
+              // Special formatting for Heading/Explanation objects (Key Features)
+              const h = item.heading || item.title || item.label || '';
+              const e = item.explanation || item.description || item.value || '';
+              if (h && e) return `${h}: ${e}`;
+              if (h || e) return h || e;
+              return JSON.stringify(item);
+            }
+            return item;
+          }).join("\n");
+        } else if (typeof value === 'object' && value !== null) {
+          // If we STILL have an object here (recursive check), pull the best possible string
+          finalValue = value.value !== undefined ? value.value : (value.body || value.text || value.label || JSON.stringify(value));
         }
+
+        // Clean up string values (trim, etc)
+        if (typeof finalValue === 'string') {
+          finalValue = finalValue.trim();
+        }
+
+        // Skip if final value is still garbage or empty
+        if (finalValue === null || finalValue === undefined || String(finalValue).trim() === "" || String(finalValue) === "[object Object]") return;
+
+        // Handle Field Mapping Bridge (AI names -> DB names)
+        let targetKey = key;
+        const keyMap = {
+          'primary_title': 'product_name',
+          'alt_title': 'alternate_product_name',
+          'colour_shade': 'color',
+          'key_features': 'key_feature',
+          'full_ingredients': 'ingredients',
+          'care_instructions': 'product_care',
+          'cautions': 'caution',
+          'hsn_code': 'tax_rule_code',
+          'mrp_est': 'mrp',
+          'selling_price_est': 'selling_price',
+          'purchase_cost_est': 'purchase_cost',
+          'raw_weight_g': 'raw_product_weight',
+          'raw_product_weight': 'raw_product_weight', // legacy
+          'package_weight_g': 'package_weight',
+          'sku_id': 'sku_code',
+          'sku_code': 'sku_code',
+          'barcode': 'barcode'
+        };
+
+        if (keyMap[key]) {
+          targetKey = keyMap[key];
+        }
+
+        // CRITICAL: Never allow a string value into a reference ID field
+        if (targetKey.endsWith('_reference_id') && isNaN(Number(finalValue))) {
+          // Skip direct assignment; let taxonomy resolve handle it later
+        } else {
+          filteredResults[targetKey] = finalValue;
+        }
+
+        // Store Metadata/Warnings
+        if (metadata) {
+          newWarnings[targetKey] = metadata;
+        }
+      } catch (err) {
+        console.warn(`Failed to process AI field '${key}':`, err);
       }
     });
 
@@ -693,43 +750,51 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
     // --- AUTO-RESOLVE TAXONOMY IDs ---
     const getVal = (k) => {
       const r = results[k];
-      return (r && typeof r === 'object' && r.value) ? r.value : r;
+      if (!r) return null;
+      if (typeof r === 'object' && !Array.isArray(r)) {
+        return r.value !== undefined ? r.value : null;
+      }
+      return r;
     };
 
     const catVal = getVal('category');
     if (catVal && refLists?.CATEGORY) {
-      const match = refLists.CATEGORY.find(c => 
+      const match = refLists.CATEGORY.find(c =>
         c.label?.toLowerCase() === String(catVal).toLowerCase() ||
         c.key?.toLowerCase() === String(catVal).toLowerCase()
       );
       if (match) filteredResults.category_reference_id = match.id;
+      else filteredResults.category_reference_id = catVal; // Virtual Option
     }
 
     const subCatVal = getVal('sub_category');
     if (subCatVal && refLists?.SUB_CATEGORY) {
-      const match = refLists.SUB_CATEGORY.find(sc => 
+      const match = refLists.SUB_CATEGORY.find(sc =>
         sc.label?.toLowerCase() === String(subCatVal).toLowerCase() ||
         sc.key?.toLowerCase() === String(subCatVal).toLowerCase()
       );
       if (match) filteredResults.sub_category_reference_id = match.id;
+      else filteredResults.sub_category_reference_id = subCatVal; // Virtual Option
     }
 
     const brandVal = getVal('brand');
     if (brandVal && refLists?.BRAND) {
-      const match = refLists.BRAND.find(b => 
+      const match = refLists.BRAND.find(b =>
         b.label?.toLowerCase() === String(brandVal).toLowerCase() ||
         b.key?.toLowerCase() === String(brandVal).toLowerCase()
       );
       if (match) filteredResults.brand_reference_id = match.id;
+      else filteredResults.brand_reference_id = brandVal; // Virtual Option
     }
 
-    const unitVal = getVal('net_quantity_unit');
+    const unitVal = getVal('quantity_unit') || getVal('net_quantity_unit');
     if (unitVal && refLists?.UNIT) {
-      const match = refLists.UNIT.find(u => 
+      const match = refLists.UNIT.find(u =>
         u.label?.toLowerCase() === String(unitVal).toLowerCase() ||
         u.key?.toLowerCase() === String(unitVal).toLowerCase()
       );
       if (match) filteredResults.net_quantity_unit_reference_id = match.id;
+      else filteredResults.net_quantity_unit_reference_id = unitVal; // Virtual Option
     }
     // ---------------------------------
 
@@ -953,7 +1018,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
 
   const preparePayload = (formData) => {
     const payload = { ...formData };
-    ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight',
+    ['mrp', 'purchase_cost', 'selling_price', 'package_weight', 'raw_product_weight',
       'net_quantity', 'tax_percent',
       'brand_reference_id', 'category_reference_id', 'sub_category_reference_id',
       'status_reference_id', 'net_quantity_unit_reference_id', 'size_reference_id'
@@ -962,16 +1027,23 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
       if (raw === "" || raw === undefined || raw === null) {
         payload[k] = null;
       } else {
-        const isNumeric = ['mrp', 'purchase_cost', 'package_weight', 'raw_product_weight', 'net_quantity', 'tax_percent'].includes(k);
+        const isNumeric = ['mrp', 'purchase_cost', 'selling_price', 'package_weight', 'raw_product_weight', 'net_quantity', 'tax_percent'].includes(k);
         const isId = k.endsWith('_reference_id');
         const num = Number(raw);
-        
+
         if (isNumeric) {
           payload[k] = isNaN(num) ? null : num;
         } else if (isId) {
-          // IDs MUST be integers or null
-          payload[k] = (isNaN(num) || raw === "" || typeof raw === 'string') ? (isNaN(parseInt(raw)) ? null : parseInt(raw)) : num;
-          if (isNaN(payload[k])) payload[k] = null;
+          // IDs can be integers (existing) or strings (new/ad-hoc)
+          // If it's a number-like string, convert it to a number.
+          // If it's a real string (like "New Category"), keep it as a string.
+          if (!isNaN(num) && typeof raw !== 'string') {
+            payload[k] = num;
+          } else if (!isNaN(num) && typeof raw === 'string' && raw.trim() !== "" && !isNaN(parseInt(raw))) {
+             payload[k] = parseInt(raw);
+          } else {
+            payload[k] = raw; // Keep as string for backend resolution
+          }
         } else {
           payload[k] = isNaN(num) ? raw : num;
         }
@@ -1276,17 +1348,17 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleDiscardAll}
                 className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-100 border-none bg-transparent"
               >
                 <RotateCcw size={12} className="mr-1.5" />
                 Clear All AI Content
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 onClick={handleAcceptAll}
                 className="h-8 px-4 text-[10px] font-black uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200"
               >

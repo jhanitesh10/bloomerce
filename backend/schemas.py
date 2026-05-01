@@ -43,11 +43,11 @@ class PlatformIdentifier(BaseModel):
         return data
 
 class SkuMasterBase(BaseModel):
-    brand_reference_id: Optional[int] = None
-    category_reference_id: Optional[int] = None
-    sub_category_reference_id: Optional[int] = None
+    brand_reference_id: Optional[Union[int, str]] = None
+    category_reference_id: Optional[Union[int, str]] = None
+    sub_category_reference_id: Optional[Union[int, str]] = None
     live_platform_reference_id: Optional[Union[Dict[str, Any], List[Any]]] = None
-    status_reference_id: Optional[int] = None
+    status_reference_id: Optional[Union[int, str]] = None
 
     product_name: Optional[str] = None
     description: Optional[str] = None
@@ -72,8 +72,8 @@ class SkuMasterBase(BaseModel):
     package_weight: Optional[float] = None
     raw_product_weight: Optional[float] = None
     net_quantity: Optional[float] = None
-    net_quantity_unit_reference_id: Optional[int] = None
-    size_reference_id: Optional[int] = None
+    net_quantity_unit_reference_id: Optional[Union[int, str]] = None
+    size_reference_id: Optional[Union[int, str]] = None
 
     metadata_json: Optional[Union[Dict[str, Any], List[Any]]] = None
     remark: Optional[str] = None

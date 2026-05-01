@@ -148,6 +148,9 @@ export default function DynamicReferenceSelect({
     (value && opt.label === value)
   );
 
+  // If we have a value but no matching option, it's a "Virtual Option" (likely from AI)
+  const isVirtual = value && !selectedOption && isNaN(value);
+
   return (
     <div className={cn("relative w-full", className)} ref={dropdownRef}>
       {label && (
@@ -166,7 +169,9 @@ export default function DynamicReferenceSelect({
                   "rounded-lg border px-3 py-2 text-sm cursor-pointer transition-all focus-within:ring-2",
                   isImproved
                     ? "border-emerald-400/30 bg-transparent text-emerald-900 focus-within:ring-emerald-500/10 font-bold"
-                    : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-[var(--color-primary)]/50 focus-within:ring-[var(--color-ring)] focus-within:border-transparent"
+                    : isVirtual 
+                      ? "border-indigo-300 bg-indigo-50/30 text-indigo-700 ring-1 ring-indigo-100"
+                      : "border-[var(--color-border)] bg-[var(--color-card)] hover:border-[var(--color-primary)]/50 focus-within:ring-[var(--color-ring)] focus-within:border-transparent"
                 ),
             className
           )}
@@ -175,9 +180,16 @@ export default function DynamicReferenceSelect({
           }}
           style={disabled ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
         >
-          <span className={cn("truncate", !selectedOption && "text-[var(--color-muted-foreground)]")}>
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
+          <div className="flex items-center gap-2 truncate">
+            {isVirtual && (
+              <span className="flex-shrink-0 px-1.5 py-0.5 rounded-md bg-indigo-500 text-white text-[8px] font-black uppercase tracking-tighter shadow-sm animate-pulse">
+                NEW
+              </span>
+            )}
+            <span className={cn("truncate", (!selectedOption && !isVirtual) && "text-[var(--color-muted-foreground)]")}>
+              {selectedOption ? selectedOption.label : (isVirtual ? (typeof value === 'object' ? (value.label || value.value || JSON.stringify(value)) : value) : placeholder)}
+            </span>
+          </div>
           <ChevronsUpDown size={15} className="text-[var(--color-muted-foreground)] flex-shrink-0 ml-1" />
         </div>
       )}

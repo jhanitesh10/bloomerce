@@ -421,7 +421,17 @@ def get_sku(id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/skus", response_model=schemas.SkuMaster)
 def create_sku(data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
-    db_item = models.SkuMaster(**data.model_dump())
+    payload = data.model_dump()
+    
+    # Resolve Ad-hoc references
+    payload["brand_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("brand_reference_id"), "BRAND")
+    payload["category_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("category_reference_id"), "CATEGORY")
+    payload["sub_category_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("sub_category_reference_id"), "SUB_CATEGORY", payload.get("category_reference_id"))
+    payload["status_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("status_reference_id"), "STATUS")
+    payload["net_quantity_unit_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("net_quantity_unit_reference_id"), "UNIT")
+    payload["size_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("size_reference_id"), "SIZE")
+
+    db_item = models.SkuMaster(**payload)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -431,7 +441,26 @@ def create_sku(data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
 def update_sku(id: int, data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
     db_item = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deleted_at == None).first()
     if not db_item: raise HTTPException(404, "Not Found")
-    for k, v in data.model_dump(exclude_unset=True).items():
+    
+    payload = data.model_dump(exclude_unset=True)
+    
+    # Resolve Ad-hoc references
+    if "brand_reference_id" in payload:
+        payload["brand_reference_id"] = _resolve_ad_hoc_ref(db, payload["brand_reference_id"], "BRAND")
+    if "category_reference_id" in payload:
+        payload["category_reference_id"] = _resolve_ad_hoc_ref(db, payload["category_reference_id"], "CATEGORY")
+    if "sub_category_reference_id" in payload:
+        # Note: We use the already resolved category_id from payload or from db_item
+        cat_id = payload.get("category_reference_id") or db_item.category_reference_id
+        payload["sub_category_reference_id"] = _resolve_ad_hoc_ref(db, payload["sub_category_reference_id"], "SUB_CATEGORY", cat_id)
+    if "status_reference_id" in payload:
+        payload["status_reference_id"] = _resolve_ad_hoc_ref(db, payload["status_reference_id"], "STATUS")
+    if "net_quantity_unit_reference_id" in payload:
+        payload["net_quantity_unit_reference_id"] = _resolve_ad_hoc_ref(db, payload["net_quantity_unit_reference_id"], "UNIT")
+    if "size_reference_id" in payload:
+        payload["size_reference_id"] = _resolve_ad_hoc_ref(db, payload["size_reference_id"], "SIZE")
+
+    for k, v in payload.items():
         setattr(db_item, k, v)
     db.commit()
     db.refresh(db_item)
@@ -452,6 +481,38 @@ def _get_ref_label(db: Session, ref_id: Optional[int]) -> str:
     if not ref: return "unknown"
     # Create a slug from the label
     return re.sub(r'[^a-zA-Z0-9]+', '_', ref.label.lower()).strip('_')
+
+def _resolve_ad_hoc_ref(db: Session, val: Any, ref_type: str, parent_id: Optional[int] = None) -> Optional[int]:
+    """Resolves a value (ID or Label) to a reference ID. Creates if new label."""
+    if val is None or val == "":
+        return None
+        
+    try:
+        # Check if it's already an integer (ID)
+        return int(val)
+    except (ValueError, TypeError):
+        # It's a string label - find or create
+        label = str(val).strip()
+        from sqlalchemy import func
+        existing = db.query(models.ReferenceData).filter(
+            func.lower(models.ReferenceData.label) == label.lower(),
+            models.ReferenceData.reference_data_type == ref_type.upper(),
+            models.ReferenceData.deleted_at == None
+        )
+        if parent_id:
+            existing = existing.filter(models.ReferenceData.parent_reference_id == parent_id)
+            
+        found = existing.first()
+        if found:
+            return found.id
+            
+        # Create new ad-hoc reference using our existing controller logic
+        new_ref = create_reference(schemas.ReferenceDataCreate(
+            reference_data_type=ref_type.upper(),
+            label=label,
+            parent_reference_id=parent_id
+        ), db)
+        return new_ref.id
 
 def parse_codes(c):
     """Normalizes both old (dict) and new (list) group code formats to a list of {type, id}."""
@@ -704,8 +765,8 @@ async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_d
         return content
     except Exception as e:
         logger.exception(f"AI Generation Failed for '{req.product_name}'")
-        # Return a more descriptive error if possible
-        detail = str(e) if "AI failed" in str(e) else "An internal error occurred during AI generation."
+        # Return the actual error message for debugging
+        detail = str(e)
         raise HTTPException(status_code=500, detail=detail)
 
 @app.get("/api/skus/{id}/pool-discovery")
