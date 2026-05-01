@@ -3,7 +3,8 @@ import Papa from 'papaparse';
 import { 
   X, Upload, Save, FileSpreadsheet, AlertCircle, 
   CheckCircle2, ChevronRight, XCircle, Search, RefreshCcw,
-  Globe, ShoppingBag, Database, ArrowRight
+  Globe, ShoppingBag, Database, ArrowRight,
+  ShoppingCart, Sparkles, Package, Layers, Store, Zap, Tag, Clock, Flower2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,19 +24,7 @@ const MAPPABLE_FIELDS = [
   { key: 'courier_name', label: 'Courier' },
 ];
 
-const DEFAULT_PLATFORMS = [
-  { id: 'amazon', label: 'Amazon' },
-  { id: 'flipkart', label: 'Flipkart' },
-  { id: 'myntra', label: 'Myntra' },
-  { id: 'nykaa', label: 'Nykaa' },
-  { id: 'nykaa_fashion', label: 'Nykaa Fashion' },
-  { id: 'ajio', label: 'Ajio' },
-  { id: 'meesho', label: 'Meesho' },
-  { id: 'tata_cliq', label: 'Tata CLiQ' },
-  { id: 'jiomart', label: 'JioMart' },
-  { id: 'glowroad', label: 'GlowRoad' },
-  { id: 'other', label: 'Other/Direct' },
-];
+// Default platforms removed, now using dynamic fetching from ECOMMERCE_CHANNEL reference data.
 
 const SYNONYMS = {
   external_order_id: ['order id', 'order_id', 'order-id', 'amazon-order-id', 'order number'],
@@ -45,6 +34,42 @@ const SYNONYMS = {
   unit_selling_price: ['price', 'unit price', 'selling price', 'item-price'],
   total_amount: ['total', 'order total', 'grand total', 'amount'],
 };
+
+const ICON_MAP = {
+  'shopping-cart': ShoppingCart,
+  'shopping-bag': ShoppingBag,
+  'sparkles': Sparkles,
+  'package': Package,
+  'layers': Layers,
+  'store': Store,
+  'zap': Zap,
+  'tag': Tag,
+  'clock': Clock,
+  'flower-2': Flower2,
+  'globe': Globe
+};
+
+function ChannelIcon({ name, label, size = 14, className, channels = [] }) {
+  let iconName = name;
+  if (!iconName && label && channels.length > 0) {
+    const chan = channels.find(c => c.label === label || c.id === label || c.key === label);
+    if (chan) iconName = chan.icon;
+  }
+  
+  if (iconName && (iconName.startsWith('http') || iconName.startsWith('/'))) {
+    return (
+      <div 
+        className={cn("flex items-center justify-center overflow-hidden bg-white rounded-sm border border-slate-200/50 shadow-sm", className)} 
+        style={{ width: size, height: size }}
+      >
+        <img src={iconName} alt="channel" className="w-full h-full object-contain p-0.5" />
+      </div>
+    );
+  }
+  
+  const Icon = ICON_MAP[iconName] || Globe;
+  return <Icon size={size} className={className} />;
+}
 
 // --- Sub-component: Searchable Dropdown ---
 function SearchableSelect({ label, value, options, onChange, placeholder = "Select..." }) {
@@ -71,7 +96,8 @@ function SearchableSelect({ label, value, options, onChange, placeholder = "Sele
           value ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5" : "border-[var(--color-border)] bg-[var(--color-card)]"
         )}
       >
-        <span className={cn("text-sm font-bold truncate", !value && "text-[var(--color-muted-foreground)]")}>
+        <span className={cn("text-sm font-bold truncate flex items-center gap-2", !value && "text-[var(--color-muted-foreground)]")}>
+          {selected && <ChannelIcon name={selected.icon} className="opacity-60" />}
           {selected ? selected.label : value || placeholder}
         </span>
         <ChevronRight size={16} className={cn("transition-transform", isOpen && "rotate-90")} />
@@ -95,7 +121,10 @@ function SearchableSelect({ label, value, options, onChange, placeholder = "Sele
                   (value === o.id || value === o.label) ? "bg-[var(--color-primary)] text-white" : "hover:bg-[var(--color-muted)]"
                 )}
               >
-                {o.label}
+                <div className="flex items-center gap-2">
+                  <ChannelIcon name={o.icon} className={cn("opacity-40", (value === o.id || value === o.label) && "opacity-100")} />
+                  {o.label}
+                </div>
               </div>
             ))}
             {filtered.length === 0 && <div className="p-4 text-xs text-center text-[var(--color-muted-foreground)]">No results</div>}
@@ -183,7 +212,20 @@ export default function SalesImportSlideOver({ onClose, onSuccess }) {
   const [importStats, setImportStats] = useState(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [channels, setChannels] = useState([]);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const loadChannels = async () => {
+      try {
+        const data = await refApi.getAll('ECOMMERCE_CHANNEL');
+        setChannels(data);
+      } catch (err) {
+        console.error("Failed to load channels", err);
+      }
+    };
+    loadChannels();
+  }, []);
 
   const handleFileUpload = (e) => {
     const f = e.target.files[0];
@@ -334,9 +376,9 @@ export default function SalesImportSlideOver({ onClose, onSuccess }) {
           {!file && !importStats && (
             <div className="p-8 space-y-8 animate-in fade-in duration-500">
                <SearchableSelect 
-                 label="1. Sales Channel"
+                 label="1. Ecommerce Channel"
                  value={platform} 
-                 options={DEFAULT_PLATFORMS} 
+                 options={channels} 
                  onChange={setPlatform} 
                  placeholder="Search or Select Channel (Amazon, Myntra...)"
                />
@@ -404,7 +446,10 @@ export default function SalesImportSlideOver({ onClose, onSuccess }) {
 
           {importStats && (
              <div className="p-10 flex flex-col items-center text-center animate-in zoom-in-95 duration-500">
-                <div className="w-24 h-24 rounded-[2.5rem] bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-6 shadow-inner">
+                <div className="w-24 h-24 rounded-[2.5rem] bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-6 shadow-inner relative">
+                   <div className="absolute -top-2 -right-2 bg-white p-2.5 rounded-full shadow-lg text-[var(--color-primary)] border border-[var(--color-border)]">
+                      <ChannelIcon label={platform} channels={channels} size={18} />
+                   </div>
                    <CheckCircle2 size={48} />
                 </div>
                 <h2 className="text-2xl font-black tracking-tight mb-2">Ingestion Complete</h2>

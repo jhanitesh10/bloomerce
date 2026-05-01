@@ -3,12 +3,42 @@ import {
   BarChart3, Plus, Search, Filter, 
   ArrowUpRight, Download, Upload,
   ShoppingBag, RotateCcw, TrendingUp,
-  FileSpreadsheet, Globe
+  FileSpreadsheet, Globe, 
+  ShoppingCart, Sparkles, Package, Layers, Store, Zap, Tag, Clock, Flower2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import SalesImportSlideOver from './SalesImportSlideOver';
-import { salesApi } from '../api';
+import { salesApi, refApi } from '../api';
+
+const ICON_MAP = {
+  'shopping-cart': ShoppingCart,
+  'shopping-bag': ShoppingBag,
+  'sparkles': Sparkles,
+  'package': Package,
+  'layers': Layers,
+  'store': Store,
+  'zap': Zap,
+  'tag': Tag,
+  'clock': Clock,
+  'flower-2': Flower2,
+  'globe': Globe
+};
+
+function ChannelIcon({ name, size = 12, className }) {
+  if (name && (name.startsWith('http') || name.startsWith('/'))) {
+    return (
+      <div 
+        className={cn("flex items-center justify-center overflow-hidden bg-white rounded-sm border border-slate-200/50 shadow-sm", className)} 
+        style={{ width: size, height: size }}
+      >
+        <img src={name} alt="channel" className="w-full h-full object-contain p-0.5 opacity-80 hover:opacity-100 transition-opacity" />
+      </div>
+    );
+  }
+  const Icon = ICON_MAP[name] || Globe;
+  return <Icon size={size} className={className} />;
+}
 
 export default function SalesDashboard({ isMobile }) {
   const [orders, setOrders] = useState([]);
@@ -18,7 +48,17 @@ export default function SalesDashboard({ isMobile }) {
 
   useEffect(() => {
     loadData();
+    loadChannels();
   }, []);
+
+  const loadChannels = async () => {
+    try {
+      const data = await refApi.getAll('ECOMMERCE_CHANNEL');
+      setPlatforms(data);
+    } catch (err) {
+      console.error("Failed to load channels", err);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -73,12 +113,12 @@ export default function SalesDashboard({ isMobile }) {
            <div className="max-w-md">
              <h2 className="text-xl font-bold tracking-tight mb-2">Build Your Sales Engine</h2>
              <p className="text-[var(--color-muted-foreground)] text-sm mb-8 leading-relaxed font-medium">
-               Import your sales reports from Amazon, Flipkart, Myntra, or Nykaa to start visualizing your business performance across all channels.
+               Import your sales reports from Amazon, Flipkart, Myntra, Nykaa, and more to start visualizing your business performance across all your ecommerce channels.
              </p>
              <div className="flex flex-wrap justify-center gap-4 mb-4">
-                {['Amazon', 'Flipkart', 'Myntra', 'Nykaa'].map(p => (
-                  <div key={p} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-muted)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-muted-foreground)]">
-                    <Globe size={12} className="opacity-50" /> {p}
+                {platforms.map(p => (
+                  <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-muted)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-muted-foreground)] hover:bg-[var(--color-primary)]/5 hover:border-[var(--color-primary)]/20 transition-all">
+                    <ChannelIcon name={p.icon} className="opacity-70" /> {p.label}
                   </div>
                 ))}
              </div>

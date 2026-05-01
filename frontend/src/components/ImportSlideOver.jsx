@@ -1,6 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
-import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, XCircle, Search, RefreshCcw, Check, PlusCircle, Link } from 'lucide-react';
+import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, XCircle, Search, RefreshCw, Check, PlusCircle, Link, 
+  ShoppingCart, ShoppingBag, Sparkles, Package, Layers, Store, Zap, Tag, Clock, Flower2, Globe
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { skuApi, refApi } from '../api';
@@ -20,7 +22,7 @@ const FIELD_LABELS = {
   finished_product_weight: "Fin Wt (calculated)",
   bundle_type: "Bundle Type", pack_type: "Pack Type", tax_rule_code: "Tax Rule Code (HSN)", tax_percent: "Tax Percent",
   product_type: "Product Type", remark: "Remark", metadata_json: "Metadata (JSON)",
-  live_platform_reference_id: "Live Platforms",
+  live_platform_reference_id: "Live Ecommerce Channels",
   platform_identifiers: "Channel Identifiers"
 };
 
@@ -113,6 +115,35 @@ function CsvHeaderSelect({ currentVal, onChange, headers }) {
   );
 }
 
+const ICON_MAP = {
+  'shopping-cart': ShoppingCart,
+  'shopping-bag': ShoppingBag,
+  'sparkles': Sparkles,
+  'package': Package,
+  'layers': Layers,
+  'store': Store,
+  'zap': Zap,
+  'tag': Tag,
+  'clock': Clock,
+  'flower-2': Flower2,
+  'globe': Globe
+};
+
+function ChannelIcon({ name, size = 14, className }) {
+  if (name && (name.startsWith('http') || name.startsWith('/'))) {
+    return (
+      <div 
+        className={cn("flex items-center justify-center overflow-hidden bg-white rounded-sm border border-slate-200/50 shadow-sm", className)} 
+        style={{ width: size, height: size }}
+      >
+        <img src={name} alt="channel" className="w-full h-full object-contain p-0.5" />
+      </div>
+    );
+  }
+  const Icon = ICON_MAP[name] || Globe;
+  return <Icon size={size} className={className} />;
+}
+
 function ChannelSelect({ currentVal, onChange, channels }) {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
@@ -136,7 +167,10 @@ function ChannelSelect({ currentVal, onChange, channels }) {
           currentVal ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-foreground)] font-medium" : "border-[var(--color-border)] bg-white text-[var(--color-muted-foreground)]"
         )}
       >
-        <span className="truncate">{currentVal || "Select Channel"}</span>
+        <span className={cn("text-[11px] truncate flex items-center gap-2", !currentVal && "text-[var(--color-muted-foreground)]")}>
+          {currentVal && <ChannelIcon name={channels.find(c => c.label === currentVal)?.icon} size={12} className="opacity-60" />}
+          {currentVal || "Select Channel"}
+        </span>
         <ChevronDown size={14} className={cn("transition-transform opacity-50", isOpen && "rotate-180")} />
       </div>
 
@@ -155,7 +189,10 @@ function ChannelSelect({ currentVal, onChange, channels }) {
                   currentVal === p.label && "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium"
                 )}
               >
-                {p.label}
+                <div className="flex items-center gap-2">
+                  <ChannelIcon name={p.icon} size={12} className={cn("opacity-40", currentVal === p.label && "opacity-100")} />
+                  {p.label}
+                </div>
               </div>
             ))}
             {channels.length === 0 && (
@@ -185,7 +222,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   const [availableChannels, setAvailableChannels] = useState([]);
 
   useEffect(() => {
-    refApi.getAll('CHANNEL').then(setAvailableChannels).catch(console.error);
+    refApi.getAll('ECOMMERCE_CHANNEL').then(setAvailableChannels).catch(console.error);
   }, []);
 
   const [csvData, setCsvData] = useState(() => {
@@ -237,8 +274,12 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   const activeCols = useMemo(() => {
     if (!mappings || typeof mappings !== 'object') return [];
-    return Object.keys(mappings).filter(id => mappings[id]);
-  }, [mappings]);
+    const base = Object.keys(mappings).filter(id => mappings[id]);
+    if (Array.isArray(platformMappings) && platformMappings.some(m => m.csvHeader && m.channel_name)) {
+      base.push('platform_identifiers');
+    }
+    return base;
+  }, [mappings, platformMappings]);
 
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [selectedCols, setSelectedCols] = useState(new Set());
@@ -258,10 +299,26 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   }, [csvData]);
 
   useEffect(() => {
-    if (activeCols.length > 0 && selectedCols.size === 0 && !importStats) {
-      setSelectedCols(new Set(activeCols));
+    if (activeCols.length > 0 && !importStats) {
+      setSelectedCols(prev => {
+        const next = new Set();
+        // Always add new active columns if they weren't unselected previously
+        // OR if this is the first time we have active columns
+        activeCols.forEach(col => {
+          if (prev.size === 0 || prev.has(col)) {
+            next.add(col);
+          }
+        });
+        // We only return a new Set if something actually changed to avoid infinite loops
+        if (next.size !== prev.size || [...next].some(c => !prev.has(c))) {
+           return next;
+        }
+        return prev;
+      });
+    } else if (activeCols.length === 0) {
+      setSelectedCols(new Set());
     }
-  }, [activeCols]);
+  }, [activeCols, importStats]);
 
   const fileRef = useRef(null);
 
@@ -390,7 +447,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     });
 
     // Add platform identifiers
-    if (platformMappings.length > 0) {
+    if (Array.isArray(platformMappings) && platformMappings.length > 0) {
       const platforms = platformMappings
         .filter(m => m.csvHeader && rawRow[m.csvHeader] !== undefined && rawRow[m.csvHeader] !== null && String(rawRow[m.csvHeader]).trim() !== "")
         .filter(m => m.channel_name && m.channel_name.trim() !== "") // Skip if no channel selected
@@ -480,22 +537,29 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         ];
         
         numericFields.forEach(k => {
-          const raw = backendRow[k];
-          if (raw === "" || raw === undefined || raw === null) {
-            backendRow[k] = null;
-          } else {
-            const num = Number(raw);
-            backendRow[k] = isNaN(num) ? null : num;
+          // Only process numeric conversion if the field is actually in the mapped row
+          if (mappedRow[k] !== undefined) {
+            const raw = mappedRow[k];
+            if (raw === "" || raw === undefined || raw === null) {
+              backendRow[k] = null;
+            } else {
+              const num = Number(raw);
+              backendRow[k] = isNaN(num) ? null : num;
+            }
           }
         });
 
-        if (!backendRow.product_name) backendRow.product_name = backendRow.sku_code;
+        // Only set product_name as fallback if it was actually selected or we want to ensure it's there for new items
+        // but we'll let the backend handle the "new vs update" fallback logic to avoid overwriting.
+        // if (!backendRow.product_name && selectedCols.has('product_name')) backendRow.product_name = backendRow.sku_code;
         
         // Apply field-level filtering
         const finalPayload = {};
         Object.keys(backendRow).forEach(key => {
-          // If the field is selected, OR if it's a mandatory identifier/system field
-          if (selectedCols.has(key) || key === 'sku_code' || key === 'barcode' || key === 'product_name' || key === 'platform_identifiers') {
+          // Only include if it's an active mapping OR if it's a mandatory identifier
+          // We check activeCols directly to be safe, rather than just selectedCols
+          const isActive = activeCols.includes(key);
+          if (isActive || key === 'sku_code' || key === 'barcode' || key === 'platform_identifiers') {
             finalPayload[key] = backendRow[key];
           }
         });
@@ -578,7 +642,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                 disabled={isImporting}
                 className="gap-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8"
               >
-                <RefreshCcw size={14} />
+                <RefreshCw size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Start Over</span>
               </Button>
             )}
@@ -881,7 +945,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                                       />
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                      <label className="text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase">Sales Channel</label>
+                                      <label className="text-[9px] font-bold text-[var(--color-muted-foreground)] uppercase">Ecommerce Channel</label>
                                       <ChannelSelect 
                                         currentVal={m.channel_name}
                                         channels={availableChannels}

@@ -9,6 +9,7 @@ class ReferenceDataBase(BaseModel):
     key: Optional[str] = None
     parent_reference_id: Optional[int] = None
     description: Optional[str] = None
+    icon: Optional[str] = None
     display_order: Optional[int] = 0
     is_active: Optional[bool] = True
     metadata_json: Optional[Union[Dict[str, Any], List[Any]]] = None
@@ -138,7 +139,7 @@ class BulkImportRequest(BaseModel):
 class SalesOrderBase(BaseModel):
     tenant_id: Optional[str] = None
     platform_reference_id: Optional[int] = None
-    channel_reference_id: Optional[int] = None
+    ecommerce_channel_reference_id: Optional[int] = None
     sku_master_id: Optional[int] = None
     order_type: Optional[str] = 'ORDER'
     external_order_id: Optional[str] = None

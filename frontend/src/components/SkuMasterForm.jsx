@@ -588,6 +588,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
   const [aiWarnings, setAiWarnings] = useState({}); // { fieldId: string }
   const [regenField, setRegenField] = useState(null);
   const [channelUrls, setChannelUrls] = useState({});
+  const [channelIcons, setChannelIcons] = useState({});
   const [expandedPlatIdx, setExpandedPlatIdx] = useState(null);
 
   // --- Core Handlers ---
@@ -673,21 +674,26 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
   // ---------------------
 
   useEffect(() => {
-    refApi.getAll('CHANNEL').then(data => {
-      const mapping = {};
+    refApi.getAll('ECOMMERCE_CHANNEL').then(data => {
+      const urlMapping = {};
+      const iconMapping = {};
       data.forEach(ch => {
         if (ch.metadata_json && ch.metadata_json.base_url) {
-          mapping[ch.label] = ch.metadata_json.base_url;
+          urlMapping[ch.label] = ch.metadata_json.base_url;
+        }
+        if (ch.icon) {
+          iconMapping[ch.label] = ch.icon;
         }
       });
-      setChannelUrls(mapping);
+      setChannelUrls(urlMapping);
+      setChannelIcons(iconMapping);
     }).catch(err => console.error("Failed to fetch channel URLs:", err));
   }, []);
 
   const handleUpdateChannelUrl = async (channelLabel, newUrl) => {
     if (!channelLabel) return;
     try {
-      const allChannels = await refApi.getAll('CHANNEL');
+      const allChannels = await refApi.getAll('ECOMMERCE_CHANNEL');
       const channel = allChannels.find(c => c.label === channelLabel);
       if (channel) {
         const meta = channel.metadata_json || {};
@@ -1994,7 +2000,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                  <div className="flex flex-col gap-6">
                    <div className="flex items-center justify-between">
                      <div>
-                       <h3 className="text-sm font-bold text-[var(--color-foreground)] uppercase tracking-tight">Platform-Specific Identifiers</h3>
+                       <h3 className="text-sm font-bold text-[var(--color-foreground)] uppercase tracking-tight">Ecommerce Channel Identifiers</h3>
                        <p className="text-[10px] text-[var(--color-muted-foreground)] mt-0.5">Map this SKU to external marketplace IDs (e.g. Amazon ASIN, Myntra Style ID)</p>
                      </div>
                      <Button
@@ -2008,7 +2014,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                        }}
                        className="gap-2 h-8 text-[10px] font-bold uppercase tracking-wider"
                      >
-                       <PlusCircle size={14} /> Add Platform
+                       <PlusCircle size={14} /> Add Channel
                      </Button>
                    </div>
 
@@ -2019,7 +2025,7 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                            <ExternalLink size={24} />
                          </div>
                          <div>
-                           <p className="font-bold text-[var(--color-foreground)]">No platform IDs linked</p>
+                           <p className="font-bold text-[var(--color-foreground)]">No channel IDs linked</p>
                            <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">Add identifiers to help with marketplace synchronization and tracking.</p>
                          </div>
                        </div>
@@ -2050,8 +2056,14 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
 
                                 <div className="flex items-center gap-4">
                                   {/* Avatar Icon */}
-                                  <div className="w-[62px] h-[62px] shrink-0 self-end mb-1 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-3 shadow-sm overflow-hidden">
-                                    {faviconUrl ? (
+                                  <div className="w-[62px] h-[62px] shrink-0 self-end mb-1 bg-white border border-slate-200 rounded-xl flex items-center justify-center p-2 shadow-sm overflow-hidden">
+                                    {channelIcons[plat.channel_name] ? (
+                                      <img 
+                                        src={channelIcons[plat.channel_name]} 
+                                        alt={`${plat.channel_name} icon`} 
+                                        className="w-full h-full object-contain drop-shadow-sm" 
+                                      />
+                                    ) : faviconUrl ? (
                                       <img src={faviconUrl} alt={`${plat.channel_name} icon`} className="w-full h-full object-contain drop-shadow-sm" />
                                     ) : (
                                       <Store size={24} className="text-slate-300" />
@@ -2061,9 +2073,9 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
                                   {/* Main 2 columns: Channel & ID */}
                                   <div className="flex-1 grid grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-1.5">
-                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Sales Channel</label>
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Ecommerce Channel</label>
                                       <DynamicReferenceSelect
-                                        referenceType="CHANNEL"
+                                        referenceType="ECOMMERCE_CHANNEL"
                                         value={plat.channel_name}
                                         placeholder="Select Channel"
                                         onChange={(id, label) => {

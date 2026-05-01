@@ -670,6 +670,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
   const [isImportOpen,   setIsImportOpen]   = useState(false);
   const [isFilterOpen,   setIsFilterOpen]   = useState(true);
   const [channelUrls,    setChannelUrls]    = useState({});
+  const [channelIcons,   setChannelIcons]   = useState({});
   const [formInitialTab, setFormInitialTab] = useState(null);
   const searchInputRef = useRef(null);
 
@@ -816,16 +817,22 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
         refApi.getAll('NET_QUANTITY_UNIT'),
         refApi.getAll('SIZE'),
         refApi.getAll('COLOR'),
-        refApi.getAll('CHANNEL')
+        refApi.getAll('ECOMMERCE_CHANNEL')
       ]);
 
       const chUrls = {};
+      const chIcons = {};
       (channels || []).forEach(ch => {
         if (ch.metadata_json && ch.metadata_json.base_url) {
           chUrls[ch.label] = ch.metadata_json.base_url;
         }
+        if (ch.icon) {
+          chIcons[ch.label] = ch.icon;
+          chIcons[ch.key] = ch.icon;
+        }
       });
       setChannelUrls(chUrls);
+      setChannelIcons(chIcons);
       let subcats = [];
       try { subcats = await refApi.getAll('SUB_CATEGORY'); } catch { /* ignore */ }
       const toMap = arr => (arr || []).reduce((a, r) => ({
@@ -1134,11 +1141,14 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                 <div className="flex items-center justify-center w-full h-full group/stack">
                   <div className="flex -space-x-3 group-hover/stack:space-x-1.5 transition-all duration-300 ml-1.5">
                     {p.value.map((plat, idx) => {
+                      const officialIcon = channelIcons[plat.channel_name || plat.platform_name];
                       const baseUrl = channelUrls[plat.channel_name || plat.platform_name];
                       const finalUrl = baseUrl && plat.id ? (baseUrl.includes("{id}") ? baseUrl.replace("{id}", plat.id) : `${baseUrl}${plat.id}`) : "";
                       
                       let faviconUrl = null;
-                      if (baseUrl) {
+                      if (officialIcon && (officialIcon.startsWith('http') || officialIcon.startsWith('/'))) {
+                        faviconUrl = officialIcon;
+                      } else if (baseUrl) {
                         try {
                           const u = new URL(baseUrl);
                           faviconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
@@ -1151,13 +1161,20 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                           href={finalUrl || "#"}
                           target={finalUrl ? "_blank" : undefined}
                           rel={finalUrl ? "noopener noreferrer" : undefined}
-                          className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-400 hover:z-50 hover:-translate-y-1 transition-all duration-200 group"
+                          className={cn(
+                            "relative flex items-center justify-center w-8 h-8 rounded-full bg-white border border-slate-200 shadow-sm transition-all duration-200 group p-1",
+                            finalUrl ? "hover:shadow-md hover:border-indigo-400 hover:z-50 hover:-translate-y-1 cursor-pointer" : "cursor-default opacity-60"
+                          )}
                           style={{ zIndex: p.value.length - idx }}
-                          title={`View on ${plat.channel_name || plat.platform_name}: ${plat.id}`}
-                          onClick={(e) => { e.stopPropagation(); if (!finalUrl) e.preventDefault(); }}
+                          title={finalUrl ? `View on ${plat.channel_name || plat.platform_name}: ${plat.id}` : `No listing URL for ${plat.channel_name}`}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (!finalUrl) e.preventDefault(); 
+                          }}
+                          onDoubleClick={(e) => e.stopPropagation()}
                         >
                            {faviconUrl ? (
-                             <img src={faviconUrl} alt={plat.channel_name || "channel"} className="w-4 h-4 object-contain" />
+                             <img src={faviconUrl} alt={plat.channel_name || "channel"} className="w-full h-full object-contain" />
                            ) : (
                              <span className="text-[10px] font-bold text-slate-500">{(plat.channel_name || plat.platform_name || "C").charAt(0)}</span>
                            )}

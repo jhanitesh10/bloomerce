@@ -42,7 +42,7 @@ pip install -r requirements.txt
 DATABASE_URL=sqlite:///./bloomerce_local.db
 GOOGLE_DRIVE_CREDENTIALS={"type": "service_account", ...}
 GOOGLE_DRIVE_ROOT_FOLDER_ID=your_folder_id
-AI_PROVIDER=gemini # or mock/openai
+AI_PROVIDER=gemini # or openai
 GEMINI_API_KEY=your_key
 ```
 

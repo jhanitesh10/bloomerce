@@ -31,245 +31,11 @@ from sqlalchemy.exc import IntegrityError
 # Table creation is handled in the lifespan to avoid crashing on module load in serverless environments
 # models.Base.metadata.create_all(bind=engine)
 
-def seed_mock_data():
-    db = SessionLocal()
-    if db.query(models.ReferenceData).first():
-        db.close()
-        return
-
-    # ── BRANDS ────────────────────────────────────────────────────────────────
-    brands = [
-        models.ReferenceData(reference_data_type="BRAND", label="Bloomerce", key="brand_bloomerce", display_order=1),
-        models.ReferenceData(reference_data_type="BRAND", label="Glow Republic", key="brand_glow_republic", display_order=2),
-        models.ReferenceData(reference_data_type="BRAND", label="PureNatura", key="brand_purenatura", display_order=3),
-    ]
-    db.add_all(brands)
-    db.flush()
-
-    # ── CATEGORIES ────────────────────────────────────────────────────────────
-    categories = [
-        models.ReferenceData(reference_data_type="CATEGORY", label="Skin Care", key="cat_skin_care", display_order=1),
-        models.ReferenceData(reference_data_type="CATEGORY", label="Hair Care", key="cat_hair_care", display_order=2),
-        models.ReferenceData(reference_data_type="CATEGORY", label="Body Care", key="cat_body_care", display_order=3),
-        models.ReferenceData(reference_data_type="CATEGORY", label="Lip Care", key="cat_lip_care", display_order=4),
-    ]
-    db.add_all(categories)
-    db.flush()
-
-    # ── SUB-CATEGORIES ────────────────────────────────────────────────────────
-    sub_cats = [
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Face Wash", key="sc_face_wash", parent_reference_id=categories[0].id),
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Moisturiser", key="sc_moisturiser", parent_reference_id=categories[0].id),
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Serum", key="sc_serum", parent_reference_id=categories[0].id),
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Mask & Scrub", key="sc_mask_scrub", parent_reference_id=categories[0].id),
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Shampoo", key="sc_shampoo", parent_reference_id=categories[1].id),
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Conditioner", key="sc_conditioner", parent_reference_id=categories[1].id),
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Body Lotion", key="sc_body_lotion", parent_reference_id=categories[2].id),
-        models.ReferenceData(reference_data_type="SUB_CATEGORY", label="Lip Balm", key="sc_lip_balm", parent_reference_id=categories[3].id),
-    ]
-    db.add_all(sub_cats)
-    db.flush()
-
-    # ── STATUSES ──────────────────────────────────────────────────────────────
-    statuses = [
-        models.ReferenceData(reference_data_type="STATUS", label="Active", key="status_active", display_order=1),
-        models.ReferenceData(reference_data_type="STATUS", label="Inactive", key="status_inactive", display_order=2),
-        models.ReferenceData(reference_data_type="STATUS", label="Archived", key="status_archived", display_order=3),
-        models.ReferenceData(reference_data_type="STATUS", label="Upcoming Launches", key="status_upcoming", display_order=4),
-    ]
-    db.add_all(statuses)
-    db.flush()
-
-    # ── PLATFORMS ──────────────────────────────────────────────────────────────
-    platforms = [
-        models.ReferenceData(reference_data_type="PLATFORM", label="Amazon", key="plat_amz", display_order=1),
-        models.ReferenceData(reference_data_type="PLATFORM", label="Myntra", key="plat_myn", display_order=2),
-        models.ReferenceData(reference_data_type="PLATFORM", label="Nykaa", key="plat_nykaa", display_order=3),
-        models.ReferenceData(reference_data_type="PLATFORM", label="Flipkart", key="plat_fk", display_order=4),
-        models.ReferenceData(reference_data_type="PLATFORM", label="AJIO", key="plat_ajio", display_order=5),
-    ]
-    db.add_all(platforms)
-    db.commit()
-
-    # ── BUNDLE TYPES ──────────────────────────────────────────────────────────
-    bundle_types = [
-        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Single", key="bt_single", display_order=1),
-        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Combo", key="bt_combo", display_order=2),
-        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Pack of 2", key="bt_pack2", display_order=3),
-        models.ReferenceData(reference_data_type="BUNDLE_TYPE", label="Pack of 3", key="bt_pack3", display_order=4),
-    ]
-    db.add_all(bundle_types)
-
-    # ── PACK TYPES ────────────────────────────────────────────────────────────
-    pack_types = [
-        models.ReferenceData(reference_data_type="PACK_TYPE", label="Mono Carton", key="pt_mono_carton", display_order=1),
-        models.ReferenceData(reference_data_type="PACK_TYPE", label="Glass Bottle", key="pt_glass_bottle", display_order=2),
-        models.ReferenceData(reference_data_type="PACK_TYPE", label="Plastic Jar", key="pt_plastic_jar", display_order=3),
-        models.ReferenceData(reference_data_type="PACK_TYPE", label="Tube", key="pt_tube", display_order=4),
-        models.ReferenceData(reference_data_type="PACK_TYPE", label="Box", key="pt_box", display_order=5),
-    ]
-    db.add_all(pack_types)
-    db.flush()
-
-    B = brands; C = categories; SC = sub_cats; S = statuses; P = platforms; BT = bundle_types; PT = pack_types
-
-    # ── 15 REALISTIC SKUs ─────────────────────────────────────────────────────
-    products = [
-        models.SkuMaster(
-            product_name="Bloomerce Rose Petal Face Wash", sku_code="BL-RFW-001", barcode="8901234567001",
-            brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[0].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[2].id],
-            mrp=499.00, purchase_cost=148.00, color="Rose Pink",
-            raw_product_size="15x5x5 cm", package_weight=25.0, net_quantity=100.0,
-            description="A gentle sulphate-free face wash with rose extract for a radiant glow.",
-            key_ingredients="Rose Water, Aloe Vera, Vitamin E",
-            how_to_use="Apply on wet face, massage gently, rinse.",
-            seo_keywords="rose face wash, gentle cleanser", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Bloomerce Aloe Vera Soothing Gel", sku_code="BL-ALG-002", barcode="8901234567002",
-            brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[1].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=299.00, purchase_cost=80.00, net_quantity=150.0,
-            description="Pure aloe vera gel for deep hydration and skin soothing.",
-            key_ingredients="Aloe Vera, Cucumber Extract, Hyaluronic Acid", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Bloomerce Charcoal Deep Cleanse Mask", sku_code="BL-CHM-003", barcode="8901234567003",
-            brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[3].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id],
-            mrp=599.00, purchase_cost=195.00, net_quantity=100.0,
-            description="Activated charcoal mask for deep pore cleansing and blackhead removal.",
-            key_ingredients="Activated Charcoal, Kaolin Clay, Tea Tree Oil", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Bloomerce Vitamin C Night Serum", sku_code="BL-NSR-004", barcode="8901234567004",
-            brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[2].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id, P[3].id],
-            mrp=899.00, purchase_cost=260.00, net_quantity=30.0,
-            description="High potency Vitamin C serum for overnight brightening and anti-ageing.",
-            key_ingredients="15% Vitamin C, Niacinamide, Hyaluronic Acid", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Bloomerce SPF 50 Lip Balm", sku_code="BL-LBS-005", barcode="8901234567005",
-            brand_reference_id=B[0].id, category_reference_id=C[3].id, sub_category_reference_id=SC[7].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[2].id, P[3].id],
-            mrp=199.00, purchase_cost=42.00, color="Clear",
-            net_quantity=4.0,
-            description="SPF 50 lip balm with shea butter for long-lasting sun protection.",
-            key_ingredients="Shea Butter, SPF 50, Vitamin E", tax_percent=12.0,
-            primary_image_url="https://images.unsplash.com/photo-1586495777744-4e6232bf2b33?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Glow Republic Hyaluronic Acid Toner", sku_code="GR-HAT-006", barcode="8901234567006",
-            brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[1].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[2].id, P[3].id],
-            mrp=650.00, purchase_cost=180.00, net_quantity=200.0,
-            description="Alcohol-free toner with hyaluronic acid for intense hydration.",
-            key_ingredients="Hyaluronic Acid, Niacinamide, Rose Hip", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Glow Republic Retinol Anti-Ageing Serum", sku_code="GR-RAS-007", barcode="8901234567007",
-            brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[2].id,
-            status_reference_id=S[1].id, live_platform_reference_id=[P[0].id],
-            mrp=1299.00, purchase_cost=380.00, net_quantity=30.0,
-            description="Encapsulated retinol serum for wrinkle reduction and cell renewal.",
-            key_ingredients="0.5% Retinol, Ceramides, Peptides", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Glow Republic Brightening Papaya Scrub", sku_code="GR-BPS-008", barcode="8901234567008",
-            brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[3].id,
-            status_reference_id=S[2].id, live_platform_reference_id=[],
-            mrp=349.00, purchase_cost=90.00, net_quantity=100.0,
-            description="Papaya enzyme scrub for gentle exfoliation and even skin tone.",
-            key_ingredients="Papaya Extract, Walnut Shell Powder, Lactic Acid", tax_percent=18.0,
-        ),
-        models.SkuMaster(
-            product_name="PureNatura Argan Oil Shampoo", sku_code="PN-AOS-009", barcode="8901234567009",
-            brand_reference_id=B[2].id, category_reference_id=C[1].id, sub_category_reference_id=SC[4].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[2].id, P[3].id, P[4].id],
-            mrp=449.00, purchase_cost=130.00, color="Amber",
-            net_quantity=250.0,
-            description="Sulphate-free shampoo with Moroccan argan oil for frizz-free shiny hair.",
-            key_ingredients="Argan Oil, Keratin, Biotin", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1585751119414-ef2636f8aede?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="PureNatura Deep Repair Conditioner", sku_code="PN-DRC-010", barcode="8901234567010",
-            brand_reference_id=B[2].id, category_reference_id=C[1].id, sub_category_reference_id=SC[5].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=399.00, purchase_cost=110.00, net_quantity=250.0,
-            description="Intensive repair conditioner for dry, damaged, and colour-treated hair.",
-            key_ingredients="Keratin Protein, Coconut Milk, Shea Butter", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1526045612212-70caf35c14df?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="PureNatura Lavender Body Lotion", sku_code="PN-LBL-011", barcode="8901234567011",
-            brand_reference_id=B[2].id, category_reference_id=C[2].id, sub_category_reference_id=SC[6].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[1].id, P[3].id],
-            mrp=349.00, purchase_cost=95.00, color="Lavender",
-            net_quantity=400.0,
-            description="Non-greasy moisturising body lotion with calming lavender oil.",
-            key_ingredients="Lavender Oil, Shea Butter, Vitamin B5", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Bloomerce Niacinamide 10% Serum", sku_code="BL-NIA-012", barcode="8901234567012",
-            brand_reference_id=B[0].id, category_reference_id=C[0].id, sub_category_reference_id=SC[2].id,
-            status_reference_id=S[0].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=599.00, purchase_cost=155.00, net_quantity=30.0,
-            description="10% Niacinamide + 1% Zinc serum for pore minimising and oil control.",
-            key_ingredients="10% Niacinamide, 1% Zinc PCA", tax_percent=18.0,
-            primary_image_url="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?w=300&q=80",
-        ),
-        models.SkuMaster(
-            product_name="Glow Republic Sunscreen SPF 60 PA+++", sku_code="GR-SS6-013", barcode="8901234567013",
-            brand_reference_id=B[1].id, category_reference_id=C[0].id, sub_category_reference_id=SC[1].id,
-            status_reference_id=S[1].id, live_platform_reference_id=[P[0].id, P[2].id],
-            mrp=499.00, purchase_cost=140.00, net_quantity=50.0,
-            description="Lightweight, non-greasy sunscreen SPF 60 PA+++ broad spectrum protection.",
-            key_ingredients="Zinc Oxide, Titanium Dioxide, Vitamin C", tax_percent=12.0,
-        ),
-        models.SkuMaster(
-            product_name="PureNatura Onion Hair Oil", sku_code="PN-OHO-014", barcode="8901234567014",
-            brand_reference_id=B[2].id, category_reference_id=C[1].id, sub_category_reference_id=SC[4].id,
-            status_reference_id=S[2].id, live_platform_reference_id=[],
-            mrp=299.00, purchase_cost=75.00, net_quantity=200.0,
-            description="Cold-pressed onion seed oil for hair fall control and scalp nourishment.",
-            key_ingredients="Onion Seed Oil, Castor Oil, Bhringraj",
-            tax_percent=18.0, remark="Pending final label artwork approval",
-        ),
-        models.SkuMaster(
-            product_name="Bloomerce 2-in-1 Lip & Cheek Tint", sku_code="BL-LCT-015", barcode="8901234567015",
-            brand_reference_id=B[0].id, category_reference_id=C[3].id, sub_category_reference_id=SC[7].id,
-            status_reference_id=S[2].id, live_platform_reference_id=[P[1].id, P[2].id],
-            mrp=349.00, purchase_cost=88.00, color="Coral Red",
-            net_quantity=8.0,
-            description="Buildable, blendable tint for lips and cheeks with a dewy finish.",
-            key_ingredients="Damask Rose Extract, Jojoba Oil, Vitamin E",
-            tax_percent=12.0, remark="Launch batch — QC ongoing",
-        ),
-    ]
-
-    db.add_all(products)
-    db.commit()
-    db.close()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Ensure tables are created on startup
     try:
         models.Base.metadata.create_all(bind=engine)
-        # Only seed if the flag is explicitly set to true
-        if os.getenv("SEED_MOCK_DATA", "false").lower() == "true":
-            seed_mock_data()
     except Exception as e:
         print(f"Startup error: {e}")
     yield
@@ -1006,6 +772,9 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
                             else:
                                 setattr(existing_sku, k, v)
                     else:
+                        # For new SKUs, ensure product_name is present
+                        if not payload.get("product_name"):
+                            payload["product_name"] = s_data.sku_code
                         new_sku = models.SkuMaster(**payload)
                         db.add(new_sku)
                         sku_id_map[s_data.sku_code] = new_sku
@@ -1057,7 +826,7 @@ def bulk_import_sales(data: schemas.BulkSalesImportRequest, db: Session = Depend
         platform_map = {}
         if unique_platforms:
             existing = db.query(models.ReferenceData).filter(
-                models.ReferenceData.reference_data_type == "PLATFORM",
+                models.ReferenceData.reference_data_type == "ECOMMERCE_CHANNEL",
                 func.lower(models.ReferenceData.label).in_([l.lower() for l in unique_platforms]),
                 models.ReferenceData.deleted_at == None
             ).all()
@@ -1068,7 +837,7 @@ def bulk_import_sales(data: schemas.BulkSalesImportRequest, db: Session = Depend
                 if l.lower() not in platform_map:
                     slug = re.sub(r'[^a-z0-9]+', '_', l.lower()).strip('_')
                     new_ref = models.ReferenceData(
-                        reference_data_type="PLATFORM",
+                        reference_data_type="ECOMMERCE_CHANNEL",
                         label=l,
                         key=f"platform_{slug}_{uuid.uuid4().hex[:6]}",
                         is_active=True
@@ -1111,7 +880,7 @@ def bulk_import_sales(data: schemas.BulkSalesImportRequest, db: Session = Depend
                     if not sku_id:
                         raise ValueError(f"SKU '{o_data.sku_code or o_data.barcode}' resolution failed")
 
-                    payload["platform_reference_id"] = plt_id
+                    payload["ecommerce_channel_reference_id"] = plt_id
                     payload["sku_master_id"] = sku_id
 
                     # Defaults
@@ -1126,7 +895,7 @@ def bulk_import_sales(data: schemas.BulkSalesImportRequest, db: Session = Depend
                     ext_order_id = payload.get("external_order_id")
 
                     existing_order = db.query(models.SalesOrder).filter(
-                        models.SalesOrder.platform_reference_id == plt_id,
+                        models.SalesOrder.ecommerce_channel_reference_id == plt_id,
                         models.SalesOrder.external_order_id == ext_order_id,
                         models.SalesOrder.sku_master_id == sku_id
                     ).first()
