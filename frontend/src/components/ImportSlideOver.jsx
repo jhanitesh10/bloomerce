@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
-import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, XCircle, Search, RefreshCcw, Check, PlusCircle } from 'lucide-react';
+import { X, Upload, Save, FileSpreadsheet, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, XCircle, Search, RefreshCcw, Check, PlusCircle, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { skuApi, refApi } from '../api';
@@ -243,6 +243,12 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [selectedCols, setSelectedCols] = useState(new Set());
   const [isHighlighting, setIsHighlighting] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  
+  // Manifest confirmations
+  const [confRows, setConfRows] = useState(false);
+  const [confAttrs, setConfAttrs] = useState(false);
+  const [confChannels, setConfChannels] = useState(false);
 
   // Keep selection in sync
   useEffect(() => {
@@ -326,6 +332,10 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     setPlatformMappings([]);
     setSelectedRows(new Set());
     setSelectedCols(new Set());
+    setHasReviewed(false);
+    setConfRows(false);
+    setConfAttrs(false);
+    setConfChannels(false);
     setImportStats(null);
     setImportErrors([]);
     setImportProgress(0);
@@ -335,9 +345,11 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   const scrollToPreview = () => {
     if (previewRef.current) {
+      setExpandedGroups(new Set()); // Collapse all groups to make room
       previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setIsHighlighting(true);
-      setTimeout(() => setIsHighlighting(false), 2000);
+      setHasReviewed(true);
+      setTimeout(() => setIsHighlighting(false), 4000);
     }
   };
 
@@ -482,8 +494,8 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
         // Apply field-level filtering
         const finalPayload = {};
         Object.keys(backendRow).forEach(key => {
-          // If the field is selected, OR if it's the identifier (SKU/Barcode/Name)
-          if (selectedCols.has(key) || key === 'sku_code' || key === 'barcode' || key === 'product_name') {
+          // If the field is selected, OR if it's a mandatory identifier/system field
+          if (selectedCols.has(key) || key === 'sku_code' || key === 'barcode' || key === 'product_name' || key === 'platform_identifiers') {
             finalPayload[key] = backendRow[key];
           }
         });
@@ -529,7 +541,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
   const previewRows = useMemo(() => {
     if (!csvData) return [];
-    return csvData.slice(0,3).map(r => getMappedRow(r));
+    return csvData.slice(0,10).map(r => getMappedRow(r));
   }, [csvData, mappings, platformMappings]);
 
   const safeSelectedRows = selectedRows || new Set();
@@ -559,27 +571,16 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
             </div>
 
             {(file || hasRestoredData) && !importStats && (
-              <div className="flex gap-1.5 sm:gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleReset} 
-                  disabled={isImporting}
-                  className="gap-1.5 px-2 sm:px-3 h-9"
-                >
-                  <RefreshCcw size={14} />
-                  <span className="hidden sm:inline">Start Over</span>
-                </Button>
-                <Button 
-                  size="sm" 
-                  onClick={scrollToPreview} 
-                  disabled={isImporting || !mappedSkuCode || activeMappingsCount===0} 
-                  className="gap-1.5 h-9 px-3 sm:px-5 shadow-lg shadow-[var(--color-primary)]/20 text-white"
-                >
-                  <Search size={14}/>
-                  <span className="hidden sm:inline">Review & Run</span><span className="sm:hidden text-xs">Review</span>
-                </Button>
-              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleReset} 
+                disabled={isImporting}
+                className="gap-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8"
+              >
+                <RefreshCcw size={14} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Start Over</span>
+              </Button>
             )}
 
             {importStats && (
@@ -916,11 +917,35 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                   </div>
                 </div>
 
-                <div className="px-5 sm:px-6 py-6 pb-12 bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] shrink-0" ref={previewRef}>
+                <div 
+                  className={cn(
+                    "px-5 sm:px-6 py-8 pb-12 bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] shrink-0 transition-all duration-500",
+                    isHighlighting && "bg-indigo-50/50 shadow-[inset_0_0_40px_rgba(79,70,229,0.1)]"
+                  )} 
+                  ref={previewRef}
+                >
+                  {/* Review Mode Banner */}
+                  {isHighlighting && (
+                    <div className="mb-6 animate-[bounce_2s_infinite] flex justify-center">
+                      <div className="bg-indigo-600 text-white px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-2">
+                        <AlertCircle size={14} />
+                        Please verify selected data below
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between mb-4 px-1">
                     <div className="flex items-center gap-2">
-                      <FileSpreadsheet size={15} className="text-[var(--color-primary)]" />
-                      <h3 className="text-sm font-semibold">Ready to Import Preview</h3>
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                        isHighlighting ? "bg-indigo-600 text-white" : "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                      )}>
+                        <FileSpreadsheet size={16} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold">Ready to Import Preview</h3>
+                        <p className="text-[10px] text-[var(--color-muted-foreground)]">Final check of your mapped data structure</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                        <div className="text-[10px] font-bold text-[var(--color-muted-foreground)] uppercase">
@@ -935,11 +960,14 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden overflow-x-auto custom-scrollbar">
-                        <table className="w-full text-left" style={{ borderSpacing: 0 }}>
+                      <div className={cn(
+                        "bg-[var(--color-card)] rounded-xl border transition-all duration-500 shadow-sm overflow-auto custom-scrollbar max-h-[500px]",
+                        isHighlighting ? "border-indigo-500 ring-4 ring-indigo-500/20 shadow-indigo-200" : "border-[var(--color-border)]"
+                      )}>
+                        <table className="w-full text-left border-separate border-spacing-0">
                           <thead>
-                            <tr className="bg-[var(--color-muted)] border-b border-[var(--color-border)]">
-                              <th className="px-3 py-2 w-10 border-r border-[var(--color-border)]">
+                            <tr className="bg-[var(--color-muted)] sticky top-0 z-30">
+                              <th className="px-3 py-2 w-10 border-r border-b border-[var(--color-border)] sticky left-0 z-40 bg-[var(--color-muted)] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                                 <div className="flex items-center justify-center">
                                   <input 
                                     type="checkbox" 
@@ -955,7 +983,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                               {activeCols.map((sysId, i) => {
                                 const isColSelected = safeSelectedCols.has(sysId);
                                 return (
-                                  <th key={i} className="px-3 py-2 text-[10px] font-bold tracking-wider uppercase whitespace-nowrap border-r border-[var(--color-border)] last:border-0 text-[var(--color-muted-foreground)] min-w-[150px]">
+                                  <th key={i} className="px-3 py-2 text-[10px] font-bold tracking-wider uppercase whitespace-nowrap border-r border-b border-[var(--color-border)] last:border-r-0 text-[var(--color-muted-foreground)] min-w-[150px] bg-[var(--color-muted)]">
                                     <div className="flex items-center gap-2">
                                       <input 
                                         type="checkbox" 
@@ -980,8 +1008,8 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                             {previewRows.map((row, rowIdx) => {
                               const isRowSelected = safeSelectedRows.has(rowIdx);
                               return (
-                                <tr key={rowIdx} className={cn("border-b border-[var(--color-border)] last:border-0 transition-colors", !isRowSelected && "bg-slate-50/50 grayscale-[0.8] opacity-60")}>
-                                  <td className="px-3 py-2 border-r border(--color-border)]">
+                                <tr key={rowIdx} className={cn("transition-colors", !isRowSelected && "bg-slate-50/50 grayscale-[0.8] opacity-60")}>
+                                  <td className="px-3 py-2 border-r border-b border-[var(--color-border)] sticky left-0 z-20 bg-white shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                                     <div className="flex items-center justify-center">
                                       <input 
                                         type="checkbox" 
@@ -998,14 +1026,59 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                                   {activeCols.map((sysId, colIdx) => {
                                     const val = row[sysId];
                                     const isColSelected = safeSelectedCols.has(sysId);
+                                    
+                                    // Image detection
+                                    const isImageField = sysId.toLowerCase().includes('image') || sysId.toLowerCase().includes('media');
+                                    const isUrlField = sysId.toLowerCase().includes('url') || (typeof val === 'string' && (val.startsWith('http') || val.startsWith('www')));
+
+                                    const renderCellContent = () => {
+                                      if (!val) return <EmptyState />;
+                                      
+                                      if (isImageField && typeof val === 'string' && val.includes('http')) {
+                                        let src = val;
+                                        // Google Drive conversion
+                                        if (val.includes('drive.google.com')) {
+                                          const idMatch = val.match(/\/d\/(.+?)\//) || val.match(/id=(.+?)(&|$)/);
+                                          if (idMatch) src = `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
+                                        }
+                                        return (
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded border border-slate-200 overflow-hidden bg-slate-50 shrink-0 shadow-sm">
+                                              <img 
+                                                src={src} 
+                                                alt="Preview" 
+                                                className="w-full h-full object-cover hover:scale-110 transition-transform cursor-zoom-in"
+                                                onError={(e) => {
+                                                  e.target.onerror = null;
+                                                  e.target.src = 'https://via.placeholder.com/40?text=?';
+                                                }}
+                                              />
+                                            </div>
+                                            <span className="truncate text-[10px] text-slate-400 font-mono">...{String(val).slice(-8)}</span>
+                                          </div>
+                                        );
+                                      }
+
+                                      if (isUrlField && typeof val === 'string') {
+                                        return (
+                                          <a href={val} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 font-medium">
+                                            <Link size={10} />
+                                            <span className="truncate max-w-[100px]">View Link</span>
+                                          </a>
+                                        );
+                                      }
+
+                                      return typeof val === 'object' ? JSON.stringify(val) : String(val);
+                                    };
+
                                     return (
                                        <td key={colIdx} className={cn(
-                                         "px-3 py-2 text-[11px] whitespace-nowrap border-r border-[var(--color-border)] last:border-0 max-w-[150px] truncate transition-all",
+                                         "px-3 py-2 text-[11px] whitespace-nowrap border-r border-b border-[var(--color-border)] last:border-r-0 max-w-[180px] transition-all",
                                          isRowSelected && isColSelected ? "text-[var(--color-foreground)]" : "text-slate-400 italic line-through opacity-40"
                                        )} title={typeof val === 'object' ? JSON.stringify(val) : val}>
-                                         {val !== undefined && val !== null && val !== "" ? 
-                                           (typeof val === 'object' ? JSON.stringify(val) : String(val)) 
-                                           : <EmptyState />}
+                                         <div className="truncate">
+                                           {renderCellContent()}
+                                         </div>
                                        </td>
                                     );
                                   })}
@@ -1015,7 +1088,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                           </tbody>
                         </table>
                         <div className="bg-[var(--color-muted)] border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-muted-foreground)] flex items-center justify-between gap-4">
-                           <span className="truncate">Previewing first 3 rows.</span>
+                           <span className="truncate">Previewing first 10 rows.</span>
                            <div className="flex items-center gap-3">
                               <span className="whitespace-nowrap font-medium text-[var(--color-primary)]">Auto-resolve references is ON</span>
                            </div>
@@ -1030,27 +1103,94 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
           {/* Sticky Confirmation Footer */}
           {(file || hasRestoredData) && !importStats && activeCols.length > 0 && (
-            <div className="shrink-0 p-4 bg-[var(--color-card)] border-t border-[var(--color-border)] shadow-[0_-8px_20px_rgba(0,0,0,0.04)] z-50">
+            <div className={cn(
+              "shrink-0 p-4 border-t transition-all duration-500 z-50",
+              isHighlighting ? "bg-indigo-50 border-indigo-200 shadow-[0_-12px_30px_rgba(79,70,229,0.15)]" : "bg-[var(--color-card)] border-[var(--color-border)] shadow-[0_-8px_20px_rgba(0,0,0,0.04)]"
+            )}>
                <div className="max-w-2xl mx-auto flex flex-col gap-3">
                   {isHighlighting && (
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 uppercase tracking-widest animate-pulse px-1">
-                      <Search size={12} /> Final Confirmation Required
+                    <div className="flex items-center justify-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] animate-pulse px-1">
+                      <Search size={12} strokeWidth={3} /> Final Step: Confirm Data Above
                     </div>
                   )}
-                  <Button 
-                    onClick={executeImport}
-                    disabled={isImporting || safeSelectedRows.size === 0}
-                    className={cn(
-                      "w-full h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest shadow-xl shadow-indigo-100 gap-3 transition-all",
-                      isHighlighting ? "ring-4 ring-indigo-400 ring-offset-2 scale-[1.01] shadow-indigo-300" : "hover:scale-[1.01] active:scale-[0.99]"
-                    )}
-                  >
-                    {isImporting ? (
-                      <><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Processing Import...</>
-                    ) : (
-                      <><Check size={20} /> Confirm & Run Import Selected ({safeSelectedRows.size})</>
-                    )}
-                  </Button>
+                  {hasReviewed && (
+                    <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 mb-3 shadow-inner">
+                      <div className="flex flex-col mb-3 text-center">
+                        <h4 className="text-[11px] font-black text-indigo-900 uppercase tracking-widest flex items-center justify-center gap-2">
+                           <Save size={12} /> Final Verification
+                        </h4>
+                        <p className="text-[10px] text-indigo-600/70 font-medium mt-0.5">Acknowledge the data scope to unlock the import</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        <label className={cn(
+                          "group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all cursor-pointer",
+                          confRows ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-dashed border-indigo-200/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
+                        )}>
+                          <div className="relative">
+                            <input type="checkbox" checked={confRows} onChange={e => setConfRows(e.target.checked)} className="peer w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                          </div>
+                          <div className="text-center">
+                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Rows</span>
+                            <span className="block text-xs font-black text-indigo-600">{safeSelectedRows.size}</span>
+                          </div>
+                        </label>
+                        
+                        <label className={cn(
+                          "group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all cursor-pointer",
+                          confAttrs ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-dashed border-indigo-200/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
+                        )}>
+                          <div className="relative">
+                            <input type="checkbox" checked={confAttrs} onChange={e => setConfAttrs(e.target.checked)} className="peer w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                          </div>
+                          <div className="text-center">
+                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Attrs</span>
+                            <span className="block text-xs font-black text-indigo-600">{safeSelectedCols.size}</span>
+                          </div>
+                        </label>
+
+                        <label className={cn(
+                          "group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all cursor-pointer",
+                          confChannels ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-dashed border-indigo-200/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
+                        )}>
+                          <div className="relative">
+                            <input type="checkbox" checked={confChannels} onChange={e => setConfChannels(e.target.checked)} className="peer w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                          </div>
+                          <div className="text-center">
+                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Channels</span>
+                            <span className="block text-xs font-black text-indigo-600">{platformMappings.filter(m => m.csvHeader).length}</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {!hasReviewed ? (
+                    <Button 
+                      onClick={scrollToPreview}
+                      className="w-full h-12 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                    >
+                      <Search size={18} /> Review Data to Unlock Import
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={executeImport}
+                      disabled={isImporting || safeSelectedRows.size === 0 || !(confRows && confAttrs && confChannels)}
+                      className={cn(
+                        "w-full h-12 rounded-2xl text-white font-black uppercase tracking-widest shadow-xl transition-all",
+                        confRows && confAttrs && confChannels
+                          ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200"
+                          : "bg-slate-300 cursor-not-allowed grayscale",
+                        isHighlighting && "ring-4 ring-indigo-500/30 ring-offset-2 scale-[1.02] shadow-indigo-300 animate-[pulse_1.5s_infinite]"
+                      )}
+                    >
+                      {isImporting ? (
+                        <><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Processing Import...</>
+                      ) : (
+                        <><Check size={20} /> Run Import ({safeSelectedRows.size} Rows • {safeSelectedCols.size} Attrs)</>
+                      )}
+                    </Button>
+                  )}
                </div>
             </div>
           )}
