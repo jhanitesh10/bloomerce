@@ -171,9 +171,8 @@ Avoid:
 
 # TITLE GENERATION RULES
 
-Generate two title styles:
-
 primary_title:
+- MUST return an array of exactly 5 alternate variations
 - marketplace-ready main title
 - optimized for search and conversion
 - around 70-120 characters where possible
@@ -183,9 +182,26 @@ primary_title:
 - include quantity/spec if known
 
 alt_title:
-- alternate listing title
-- slightly different keyword angle
-- useful for A/B testing or another marketplace
+- MUST return an array of exactly 5 alternate variations
+- can be shorter, punchier, or marketplace-specific
+- should not duplicate primary_title patterns
+
+Each variation must represent a DIFFERENT strategy:
+
+1. SEO-focused
+2. Benefit-focused
+3. Premium/brand tone
+4. Feature/specification-focused
+5. Use-case/target audience-focused
+
+Rules:
+- Each title must be unique
+- Avoid repeating same keyword patterns
+- Keep ~70–120 characters
+- Maintain readability
+- No keyword stuffing
+- No fake claims
+
 
 Title structure:
 [Brand] + [Product Type] + [Core Benefit/Use Case] + [Key Feature/Material/Ingredient] + [Quantity/Size]

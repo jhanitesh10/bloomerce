@@ -10,7 +10,7 @@ import {
   X, Save, UploadCloud, RefreshCw, Trash2, Link, ArrowLeft, Search,
   Package, Tag, FileText, BarChart2, Layers, Info, StickyNote,
   AlertCircle, FolderPlus, ExternalLink, BookmarkCheck, Check, Copy,
-  Zap, Users, Compass, PlusCircle, Bookmark, RotateCcw, Globe, Settings, Store
+  Zap, Users, Compass, PlusCircle, Bookmark, RotateCcw, Globe, Settings, Store, Sparkles
 } from 'lucide-react';
 
 
@@ -234,74 +234,131 @@ function ImageBlock({ value, onChange, onStatus, catalogUrl }) {
   );
 }
 
-// ─── Field + FieldRow helpers ─────────────────────────────────────
 function Field({ id, label, required, children, hint, error, aiWarning, isImproved, onAccept, onDiscard, onRegenerate }) {
+  const [showAIContext, setShowAIContext] = useState(false);
+  const [showVariants, setShowVariants] = useState(false);
+
+  const score = aiWarning ? (typeof aiWarning === 'object' ? aiWarning.confidence_score : (parseInt(aiWarning.match(/\d+/)?.[0]) || 0)) : 0;
+  const scoreColor = score >= 80 ? "text-emerald-500 bg-emerald-50 border-emerald-100" : (score < 50 ? "text-rose-500 bg-rose-50 border-rose-100" : "text-amber-500 bg-amber-50 border-amber-100");
+
+  const hasVariants = aiWarning?.variants && aiWarning.variants.length > 0;
+
   return (
-    <div className={cn("flex flex-col gap-1.5 transition-all duration-500", isImproved && "p-3 rounded-2xl bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm animate-bloom-pulse")}>
+    <div className={cn("flex flex-col gap-1 transition-all duration-500", isImproved && "p-3 rounded-2xl bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm animate-bloom-pulse")}>
       <div className="flex items-center justify-between">
-        <label className={cn("text-xs font-medium", isImproved ? "text-indigo-700 font-bold" : "text-[var(--color-foreground)]")}>
-          {label}
-          {required && <span className="ml-0.5 text-red-500">*</span>}
-        </label>
+        <div className="flex items-center gap-2">
+          <label className={cn("text-xs font-medium", isImproved ? "text-indigo-700 font-bold" : "text-[var(--color-foreground)]")}>
+            {label}
+            {required && <span className="ml-0.5 text-red-500">*</span>}
+          </label>
+          
+          <div className="flex items-center gap-1">
+            {aiWarning && (
+              <button 
+                type="button"
+                onClick={() => setShowAIContext(!showAIContext)}
+                onMouseEnter={() => setShowAIContext(true)}
+                onMouseLeave={() => setShowAIContext(false)}
+                className={cn(
+                  "flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[9px] font-black transition-all hover:scale-105 active:scale-95 cursor-help",
+                  showAIContext ? "ring-2 ring-indigo-500/20 border-indigo-300 bg-indigo-50 text-indigo-600" : scoreColor
+                )}
+              >
+                <Zap size={8} fill="currentColor" />
+                {score}% Trust
+              </button>
+            )}
+
+            {hasVariants && (
+              <button 
+                type="button"
+                onClick={() => setShowVariants(!showVariants)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9px] font-black transition-all hover:scale-105 active:scale-95 shadow-sm",
+                  showVariants ? "bg-indigo-600 text-white border-indigo-700 ring-2 ring-indigo-500/20" : "bg-white text-indigo-600 border-indigo-100 hover:border-indigo-300"
+                )}
+              >
+                <Sparkles size={8} fill={showVariants ? "white" : "currentColor"} />
+                {showVariants ? "Hide Options" : `${aiWarning.variants.length} Style Variations`}
+              </button>
+            )}
+          </div>
+        </div>
+
         {isImproved && (
           <div className="flex items-center gap-1 p-0.5 rounded-full bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 animate-in zoom-in-50 duration-300 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-600/50 rounded-l-full border-r border-indigo-400/30">
-              <Zap size={8} fill="currentColor" />
               <span className="text-[7px] font-black uppercase tracking-widest">AI improved</span>
             </div>
             <div className="flex items-center">
-              <button
-                onClick={() => onRegenerate?.(id)}
-                className="p-1 px-1.5 hover:bg-white/20 transition-colors border-none text-white flex items-center justify-center"
-                title="Regenerate this field"
-              >
-                <RefreshCw size={10} />
-              </button>
-              <button
-                onClick={() => onDiscard?.(id)}
-                className="p-1 px-1.5 hover:bg-rose-500 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30"
-                title="Discard & Revert"
-              >
-                <RotateCcw size={10} />
-              </button>
-              <button
-                onClick={() => onAccept?.(id)}
-                className="p-1 px-2 hover:bg-indigo-400 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30"
-                title="Accept Change"
-              >
-                <Check size={10} strokeWidth={4} />
-              </button>
+              <button type="button" onClick={() => onRegenerate?.(id)} className="p-1 px-1.5 hover:bg-white/20 transition-colors border-none text-white flex items-center justify-center" title="Regenerate"><RefreshCw size={10} /></button>
+              <button type="button" onClick={() => onDiscard?.(id)} className="p-1 px-1.5 hover:bg-rose-500 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30" title="Discard"><RotateCcw size={10} /></button>
+              <button type="button" onClick={() => onAccept?.(id)} className="p-1 px-2 hover:bg-indigo-400 transition-colors border-none text-white flex items-center justify-center border-l border-indigo-400/30" title="Accept"><Check size={10} strokeWidth={4} /></button>
             </div>
           </div>
         )}
-    </div>
+      </div>
+
       {children}
-      {aiWarning && (
+
+      {/* AI TRUST PANEL (Hover/Click Context) */}
+      {aiWarning && showAIContext && (
         <div className={cn(
-          "mt-2 flex items-start gap-2.5 p-3 rounded-xl border animate-in slide-in-from-top-1 duration-300",
-          (() => {
-            const score = typeof aiWarning === 'object' ? aiWarning.confidence_score : (parseInt(aiWarning.match(/\d+/)?.[0]) || 0);
-            if (score >= 80) return "bg-emerald-50 border-emerald-200 text-emerald-800";
-            if (score < 50) return "bg-rose-50 border-rose-200 text-rose-800";
-            return "bg-amber-50 border-amber-200 text-amber-800";
-          })()
+          "mt-1.5 p-3 rounded-xl border animate-in slide-in-from-top-1 duration-200 pointer-events-none",
+          score >= 80 ? "bg-emerald-50/80 border-emerald-100 text-emerald-900" : (score < 50 ? "bg-rose-50/80 border-rose-100 text-rose-900" : "bg-amber-50/80 border-amber-100 text-amber-900")
         )}>
-           <AlertCircle size={14} className="mt-0.5 shrink-0 opacity-70" />
-           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-             <div className="flex items-center justify-between gap-2">
-               <span className="text-[10px] font-black uppercase tracking-wider opacity-80">AI Trust Score</span>
-               <span className="px-1.5 py-0.5 rounded-md bg-white/50 text-[9px] font-black shadow-sm ring-1 ring-black/5">
-                 {typeof aiWarning === 'object' ? `${aiWarning.confidence_score}%` : (aiWarning.match(/\d+%/)?.[0] || 'Inferred')}
-               </span>
-             </div>
+           <div className="flex items-center gap-2">
+             <AlertCircle size={12} className="opacity-50" />
              <p className="text-[11px] leading-relaxed font-semibold">
                {typeof aiWarning === 'object' 
                  ? (aiWarning.warning || `Generated with ${aiWarning.confidence_level} confidence based on ${aiWarning.basis.replace(/_/g, ' ')}.`)
-                 : (aiWarning.includes('Confidence:') ? "AI generated this based on similar products." : aiWarning)}
+                 : aiWarning}
              </p>
            </div>
         </div>
       )}
+
+      {/* INDEPENDENT VARIANT SELECTOR */}
+      {hasVariants && showVariants && (
+        <div className="mt-2 p-3 rounded-2xl bg-indigo-50/50 border border-indigo-100 shadow-inner animate-in zoom-in-95 duration-200">
+           <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-1">AI Generated Title Strategies</p>
+           <div className="grid grid-cols-1 gap-1.5">
+             {aiWarning.variants.map((variant, idx) => {
+               const isSelected = variant === children.props.value;
+               const strategies = ['SEO Optimized', 'Benefit Focused', 'Premium Tone', 'Feature Focused', 'Target Audience'];
+               const strategy = strategies[idx] || 'Alternate';
+               
+               return (
+                 <button
+                   key={idx}
+                   type="button"
+                   onClick={() => {
+                     const event = { target: { name: id, value: variant } };
+                     children.props.onChange?.(event);
+                   }}
+                   className={cn(
+                     "text-left px-3 py-2.5 rounded-xl text-[11px] font-medium transition-all border relative overflow-hidden group/var",
+                     isSelected 
+                       ? "bg-indigo-600 text-white border-indigo-700 shadow-md scale-[1.01] z-10" 
+                       : "bg-white/80 text-indigo-900 border-indigo-100 hover:bg-white hover:border-indigo-300 hover:shadow-sm"
+                   )}
+                 >
+                   <div className="flex items-center justify-between mb-0.5">
+                     <span className={cn("text-[8px] font-black uppercase tracking-tighter opacity-50", isSelected ? "text-indigo-200" : "text-indigo-500")}>
+                       {strategy}
+                     </span>
+                     {isSelected && <Check size={10} className="text-white" strokeWidth={4} />}
+                   </div>
+                   <div className="line-clamp-2 leading-tight pr-4">
+                     {variant}
+                   </div>
+                 </button>
+               );
+             })}
+           </div>
+        </div>
+      )}
+
       {hint && !error && <span className="text-[11px] text-[var(--color-muted-foreground)]">{hint}</span>}
       {error && (
         <span className="flex items-center gap-1 text-[11px] text-red-500 font-medium">
@@ -698,6 +755,17 @@ export default function SkuMasterForm({ initialData, statusOptions, references, 
         // Clean up string values (trim, etc)
         if (typeof finalValue === 'string') {
           finalValue = finalValue.trim();
+        }
+
+        // --- TITLE VARIANT HANDLING ---
+        if ((key === 'primary_title' || key === 'alt_title' || key === 'product_name' || key === 'alternate_product_name') && Array.isArray(value)) {
+          // If it's a list of titles, pick the first as default but keep variants in metadata
+          finalValue = value[0];
+          if (metadata) {
+            metadata.variants = value;
+          } else {
+            metadata = { value: finalValue, variants: value, confidence_score: 100, basis: 'multi_variant' };
+          }
         }
 
         // Skip if final value is still garbage or empty

@@ -494,7 +494,7 @@ class LiteLLMProvider(BaseAIProvider):
 
     def _build_prompt(self, template, name, brand, cat, ref_url, existing, fields, instruction, valid_categories=None, valid_sub_categories=None, chips=None, tone="Professional", image_inputs="No images"):
         fields = fields or [
-            "primary_title", "alt_title", "colour_shade", "category", "sub_category",
+            "primary_title", "colour_shade", "category", "sub_category",
             "description", "key_features", "key_ingredients", "full_ingredients",
             "how_to_use", "care_instructions", "cautions", "purchase_cost_est",
             "net_quantity", "quantity_unit", "raw_weight_g", "package_weight_g",
