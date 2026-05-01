@@ -172,6 +172,7 @@ function ChannelSelect({ currentVal, onChange, channels }) {
 
 export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onImportComplete }) {
   const [file, setFile] = useState(null);
+  const previewRef = useRef(null);
 
   const [csvHeaders, setCsvHeaders] = useState(() => {
     try {
@@ -234,6 +235,28 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
   const [importErrors, setImportErrors] = useState([]);
   const [expandedGroups, setExpandedGroups] = useState(new Set(['identity']));
 
+  const activeCols = useMemo(() => {
+    if (!mappings || typeof mappings !== 'object') return [];
+    return Object.keys(mappings).filter(id => mappings[id]);
+  }, [mappings]);
+
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [selectedCols, setSelectedCols] = useState(new Set());
+  const [isHighlighting, setIsHighlighting] = useState(false);
+
+  // Keep selection in sync
+  useEffect(() => {
+    if (csvData.length > 0 && selectedRows.size === 0 && !importStats) {
+      setSelectedRows(new Set(csvData.map((_, i) => i)));
+    }
+  }, [csvData]);
+
+  useEffect(() => {
+    if (activeCols.length > 0 && selectedCols.size === 0 && !importStats) {
+      setSelectedCols(new Set(activeCols));
+    }
+  }, [activeCols]);
+
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -295,13 +318,27 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     localStorage.removeItem('bloomerce_import_data');
     localStorage.removeItem('bloomerce_import_headers');
     localStorage.removeItem('bloomerce_import_mappings');
+    localStorage.removeItem('bloomerce_import_platform_mappings');
+    setFile(null);
+    setCsvData([]);
+    setCsvHeaders([]);
     setMappings({});
     setPlatformMappings([]);
+    setSelectedRows(new Set());
+    setSelectedCols(new Set());
     setImportStats(null);
     setImportErrors([]);
     setImportProgress(0);
     setProgressStatus("");
     if(fileRef.current) fileRef.current.value = "";
+  };
+
+  const scrollToPreview = () => {
+    if (previewRef.current) {
+      previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setIsHighlighting(true);
+      setTimeout(() => setIsHighlighting(false), 2000);
+    }
   };
 
   const activeMappingsCount = Object.values(mappings).filter(Boolean).length;
@@ -366,9 +403,14 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
       return alert("You must map a column to 'SKU Code' or 'Barcode' because it is mandatory.");
     }
 
+    const dataToImport = csvData.filter((_, idx) => selectedRows.has(idx));
+    if (dataToImport.length === 0) {
+       return alert("Please select at least one row to import.");
+    }
+
     setIsImporting(true);
     setImportProgress(0);
-    setImportStats(null);
+    setImportStats({ success: 0, skipped: 0, failed: 0, total: dataToImport.length });
     setImportErrors([]);
 
     let success = 0;
@@ -401,10 +443,10 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
       return payload;
     };
 
-    for (let i = 0; i < csvData.length; i += BATCH_SIZE) {
-      const end = Math.min(i + BATCH_SIZE, csvData.length);
+    for (let i = 0; i < dataToImport.length; i += BATCH_SIZE) {
+      const end = Math.min(i + BATCH_SIZE, dataToImport.length);
       const batchNum = i / BATCH_SIZE + 1;
-      const chunk = csvData.slice(i, end);
+      const chunk = dataToImport.slice(i, end);
       const batchPayload = [];
 
       chunk.forEach(rawRow => {
@@ -437,8 +479,17 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
 
         if (!backendRow.product_name) backendRow.product_name = backendRow.sku_code;
         
+        // Apply field-level filtering
+        const finalPayload = {};
+        Object.keys(backendRow).forEach(key => {
+          // If the field is selected, OR if it's the identifier (SKU/Barcode/Name)
+          if (selectedCols.has(key) || key === 'sku_code' || key === 'barcode' || key === 'product_name') {
+            finalPayload[key] = backendRow[key];
+          }
+        });
+
         // Convert reference IDs to labels so backend handles resolution
-        batchPayload.push(mapToLabelFields(backendRow));
+        batchPayload.push(mapToLabelFields(finalPayload));
       });
 
       if (batchPayload.length > 0) {
@@ -461,7 +512,7 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
       // Update progress state
       const prog = Math.min(100, Math.round((end / csvData.length) * 100));
       setImportProgress(prog);
-      setImportStats({ success, skipped, failed, total: csvData.length });
+      setImportStats({ success, skipped, failed, total: dataToImport.length });
       setImportErrors(errorsCollected);
     }
 
@@ -480,7 +531,9 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
     if (!csvData) return [];
     return csvData.slice(0,3).map(r => getMappedRow(r));
   }, [csvData, mappings, platformMappings]);
-  const activeCols = Object.keys(mappings).filter(id => mappings[id]);
+
+  const safeSelectedRows = selectedRows || new Set();
+  const safeSelectedCols = selectedCols || new Set();
 
   return (
     <>
@@ -519,12 +572,12 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                 </Button>
                 <Button 
                   size="sm" 
-                  onClick={executeImport} 
+                  onClick={scrollToPreview} 
                   disabled={isImporting || !mappedSkuCode || activeMappingsCount===0} 
                   className="gap-1.5 h-9 px-3 sm:px-5 shadow-lg shadow-[var(--color-primary)]/20 text-white"
                 >
-                  {isImporting ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Save size={14}/>}
-                  {isImporting ? 'Importing' : <><span className="hidden sm:inline">Run Import</span><span className="sm:hidden text-xs">Import</span></>}
+                  <Search size={14}/>
+                  <span className="hidden sm:inline">Review & Run</span><span className="sm:hidden text-xs">Review</span>
                 </Button>
               </div>
             )}
@@ -863,10 +916,17 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                   </div>
                 </div>
 
-                <div className="px-5 sm:px-6 py-6 pb-12 bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] shrink-0">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileSpreadsheet size={15} className="text-[var(--color-primary)]" />
-                    <h3 className="text-sm font-semibold">Ready to Import Preview</h3>
+                <div className="px-5 sm:px-6 py-6 pb-12 bg-[var(--color-muted)]/30 border-t border-[var(--color-border)] shrink-0" ref={previewRef}>
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet size={15} className="text-[var(--color-primary)]" />
+                      <h3 className="text-sm font-semibold">Ready to Import Preview</h3>
+                    </div>
+                    <div className="flex items-center gap-3">
+                       <div className="text-[10px] font-bold text-[var(--color-muted-foreground)] uppercase">
+                         {safeSelectedRows.size} / {csvData.length} Rows Selected
+                       </div>
+                    </div>
                   </div>
 
                   {activeCols.length === 0 ? (
@@ -874,45 +934,126 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                       Map at least one column to see a preview
                     </div>
                   ) : (
-                    <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden overflow-x-auto custom-scrollbar">
-                      <table className="w-full text-left" style={{ borderSpacing: 0 }}>
-                        <thead>
-                          <tr className="bg-[var(--color-muted)] border-b border-[var(--color-border)]">
-                            {activeCols.map((sysId, i) => (
-                              <th key={i} className="px-3 py-2 text-[10px] font-bold tracking-wider uppercase whitespace-nowrap border-r border-[var(--color-border)] last:border-0 text-[var(--color-muted-foreground)] truncate max-w-[150px]">
-                                {FIELD_LABELS[sysId] || sysId}
+                    <div className="space-y-6">
+                      <div className="bg-[var(--color-card)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left" style={{ borderSpacing: 0 }}>
+                          <thead>
+                            <tr className="bg-[var(--color-muted)] border-b border-[var(--color-border)]">
+                              <th className="px-3 py-2 w-10 border-r border-[var(--color-border)]">
+                                <div className="flex items-center justify-center">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={safeSelectedRows.size === csvData.length && csvData.length > 0}
+                                    onChange={() => {
+                                      if (safeSelectedRows.size === csvData.length) setSelectedRows(new Set());
+                                      else setSelectedRows(new Set(csvData.map((_, i) => i)));
+                                    }}
+                                    className="w-4 h-4 rounded border-slate-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
+                                  />
+                                </div>
                               </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {previewRows.map((row, rowIdx) => (
-                            <tr key={rowIdx} className="border-b border-[var(--color-border)] last:border-0">
-                              {activeCols.map((sysId, colIdx) => {
-                                const val = row[sysId];
+                              {activeCols.map((sysId, i) => {
+                                const isColSelected = safeSelectedCols.has(sysId);
                                 return (
-                                   <td key={colIdx} className="px-3 py-2 text-[11px] whitespace-nowrap border-r border-[var(--color-border)] last:border-0 max-w-[150px] truncate text-[var(--color-foreground)]" title={typeof val === 'object' ? JSON.stringify(val) : val}>
-                                     {val !== undefined && val !== null && val !== "" ? 
-                                       (typeof val === 'object' ? JSON.stringify(val) : String(val)) 
-                                       : <EmptyState />}
-                                   </td>
+                                  <th key={i} className="px-3 py-2 text-[10px] font-bold tracking-wider uppercase whitespace-nowrap border-r border-[var(--color-border)] last:border-0 text-[var(--color-muted-foreground)] min-w-[150px]">
+                                    <div className="flex items-center gap-2">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={isColSelected}
+                                        onChange={() => {
+                                          const next = new Set(safeSelectedCols);
+                                          next.has(sysId) ? next.delete(sysId) : next.add(sysId);
+                                          setSelectedCols(next);
+                                        }}
+                                        className="w-3.5 h-3.5 rounded border-slate-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
+                                      />
+                                      <span className={cn(isColSelected ? "text-[var(--color-foreground)]" : "text-slate-400 opacity-60")}>
+                                        {FIELD_LABELS[sysId] || sysId}
+                                      </span>
+                                    </div>
+                                  </th>
                                 );
                               })}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <div className="bg-[var(--color-muted)] border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-muted-foreground)] flex items-center justify-between gap-4">
-                         <span className="truncate">Showing 3 of {csvData.length} rows.</span>
-                         <span className="whitespace-nowrap font-medium text-[var(--color-primary)]">Auto-resolve references is ON</span>
+                          </thead>
+                          <tbody>
+                            {previewRows.map((row, rowIdx) => {
+                              const isRowSelected = safeSelectedRows.has(rowIdx);
+                              return (
+                                <tr key={rowIdx} className={cn("border-b border-[var(--color-border)] last:border-0 transition-colors", !isRowSelected && "bg-slate-50/50 grayscale-[0.8] opacity-60")}>
+                                  <td className="px-3 py-2 border-r border(--color-border)]">
+                                    <div className="flex items-center justify-center">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={isRowSelected}
+                                        onChange={() => {
+                                          const next = new Set(safeSelectedRows);
+                                          next.has(rowIdx) ? next.delete(rowIdx) : next.add(rowIdx);
+                                          setSelectedRows(next);
+                                        }}
+                                        className="w-4 h-4 rounded border-slate-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer"
+                                      />
+                                    </div>
+                                  </td>
+                                  {activeCols.map((sysId, colIdx) => {
+                                    const val = row[sysId];
+                                    const isColSelected = safeSelectedCols.has(sysId);
+                                    return (
+                                       <td key={colIdx} className={cn(
+                                         "px-3 py-2 text-[11px] whitespace-nowrap border-r border-[var(--color-border)] last:border-0 max-w-[150px] truncate transition-all",
+                                         isRowSelected && isColSelected ? "text-[var(--color-foreground)]" : "text-slate-400 italic line-through opacity-40"
+                                       )} title={typeof val === 'object' ? JSON.stringify(val) : val}>
+                                         {val !== undefined && val !== null && val !== "" ? 
+                                           (typeof val === 'object' ? JSON.stringify(val) : String(val)) 
+                                           : <EmptyState />}
+                                       </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        <div className="bg-[var(--color-muted)] border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-muted-foreground)] flex items-center justify-between gap-4">
+                           <span className="truncate">Previewing first 3 rows.</span>
+                           <div className="flex items-center gap-3">
+                              <span className="whitespace-nowrap font-medium text-[var(--color-primary)]">Auto-resolve references is ON</span>
+                           </div>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
               </>
             )}
-
           </div>
+
+          {/* Sticky Confirmation Footer */}
+          {(file || hasRestoredData) && !importStats && activeCols.length > 0 && (
+            <div className="shrink-0 p-4 bg-[var(--color-card)] border-t border-[var(--color-border)] shadow-[0_-8px_20px_rgba(0,0,0,0.04)] z-50">
+               <div className="max-w-2xl mx-auto flex flex-col gap-3">
+                  {isHighlighting && (
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 uppercase tracking-widest animate-pulse px-1">
+                      <Search size={12} /> Final Confirmation Required
+                    </div>
+                  )}
+                  <Button 
+                    onClick={executeImport}
+                    disabled={isImporting || safeSelectedRows.size === 0}
+                    className={cn(
+                      "w-full h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest shadow-xl shadow-indigo-100 gap-3 transition-all",
+                      isHighlighting ? "ring-4 ring-indigo-400 ring-offset-2 scale-[1.01] shadow-indigo-300" : "hover:scale-[1.01] active:scale-[0.99]"
+                    )}
+                  >
+                    {isImporting ? (
+                      <><span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Processing Import...</>
+                    ) : (
+                      <><Check size={20} /> Confirm & Run Import Selected ({safeSelectedRows.size})</>
+                    )}
+                  </Button>
+               </div>
+            </div>
+          )}
         </div>
       </>
     );
