@@ -1122,43 +1122,43 @@ export default function ImportSlideOver({ onClose, skus = [], refLists = {}, onI
                         <p className="text-[10px] text-indigo-600/70 font-medium mt-0.5">Acknowledge the data scope to unlock the import</p>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                         <label className={cn(
-                          "group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all cursor-pointer",
+                          "group flex flex-col items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2.5 rounded-xl border transition-all cursor-pointer",
                           confRows ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-dashed border-indigo-200/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
                         )}>
                           <div className="relative">
-                            <input type="checkbox" checked={confRows} onChange={e => setConfRows(e.target.checked)} className="peer w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                            <input type="checkbox" checked={confRows} onChange={e => setConfRows(e.target.checked)} className="peer w-3 sm:w-3.5 h-3 sm:h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                           </div>
                           <div className="text-center">
-                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Rows</span>
-                            <span className="block text-xs font-black text-indigo-600">{safeSelectedRows.size}</span>
+                            <span className="block text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Rows</span>
+                            <span className="block text-[10px] sm:text-xs font-black text-indigo-600">{safeSelectedRows.size}</span>
                           </div>
                         </label>
                         
                         <label className={cn(
-                          "group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all cursor-pointer",
+                          "group flex flex-col items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2.5 rounded-xl border transition-all cursor-pointer",
                           confAttrs ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-dashed border-indigo-200/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
                         )}>
                           <div className="relative">
-                            <input type="checkbox" checked={confAttrs} onChange={e => setConfAttrs(e.target.checked)} className="peer w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                            <input type="checkbox" checked={confAttrs} onChange={e => setConfAttrs(e.target.checked)} className="peer w-3 sm:w-3.5 h-3 sm:h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                           </div>
                           <div className="text-center">
-                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Attrs</span>
-                            <span className="block text-xs font-black text-indigo-600">{safeSelectedCols.size}</span>
+                            <span className="block text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Attrs</span>
+                            <span className="block text-[10px] sm:text-xs font-black text-indigo-600">{safeSelectedCols.size}</span>
                           </div>
                         </label>
 
                         <label className={cn(
-                          "group flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all cursor-pointer",
+                          "group flex flex-col items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2.5 rounded-xl border transition-all cursor-pointer",
                           confChannels ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-dashed border-indigo-200/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0"
                         )}>
                           <div className="relative">
-                            <input type="checkbox" checked={confChannels} onChange={e => setConfChannels(e.target.checked)} className="peer w-3.5 h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                            <input type="checkbox" checked={confChannels} onChange={e => setConfChannels(e.target.checked)} className="peer w-3 sm:w-3.5 h-3 sm:h-3.5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                           </div>
                           <div className="text-center">
-                            <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Channels</span>
-                            <span className="block text-xs font-black text-indigo-600">{platformMappings.filter(m => m.csvHeader).length}</span>
+                            <span className="block text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Channels</span>
+                            <span className="block text-[10px] sm:text-xs font-black text-indigo-600">{platformMappings.filter(m => m.csvHeader).length}</span>
                           </div>
                         </label>
                       </div>

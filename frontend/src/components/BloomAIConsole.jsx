@@ -283,76 +283,79 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
         <div className="p-4 sm:p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
           
           {/* Omni-Input Box */}
-          <div className="flex flex-col gap-0 bg-white rounded-3xl border border-indigo-500/20 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/5 focus-within:border-indigo-500/40 transition-all overflow-hidden">
-            <div className="relative group/inputbox">
-              <textarea 
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onPaste={handlePaste}
-                placeholder="Describe how to bloom this product (e.g. 'Make it sound luxurious') or paste URLs..."
-                rows={2}
-                className="w-full px-5 py-4 bg-transparent text-sm placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed min-h-[100px]"
-              />
-              {message && (
-                <button 
-                  onClick={() => {
-                    setMessage('');
-                    setAttachments(prev => prev.filter(a => a.isDefault));
-                  }}
-                  className="absolute right-4 top-4 p-1.5 rounded-lg bg-slate-100 text-slate-400 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover/inputbox:opacity-100"
-                  title="Clear Input"
-                >
-                  <RotateCcw size={12} />
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 px-3 py-3 bg-slate-50/50 border-t border-slate-100 overflow-x-auto no-scrollbar min-h-[52px]">
-              <div className="flex items-center gap-2 shrink-0 mr-1">
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm flex items-center justify-center shrink-0"
-                >
-                  {isUploading ? <RefreshCw size={14} className="animate-spin" /> : <Paperclip size={14} />}
-                </button>
-                <div className="relative group/miniurl">
-                  <input 
-                    type="url" 
-                    placeholder="Link..."
-                    className="w-20 focus:w-32 text-[10px] pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-300 transition-all shadow-sm"
-                    value={newAttachmentUrl}
-                    onPaste={handlePaste}
-                    onChange={(e) => setNewAttachmentUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addAttachmentManually()}
-                  />
-                  <button onClick={addAttachmentManually} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-indigo-500"><Plus size={12} /></button>
-                </div>
+          {!showTargets && (
+            <div className="flex flex-col gap-0 bg-white rounded-3xl border border-indigo-500/20 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/5 focus-within:border-indigo-500/40 transition-all overflow-hidden">
+              <div className="relative group/inputbox">
+                <textarea 
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onPaste={handlePaste}
+                  placeholder="Describe how to bloom this product (e.g. 'Make it sound luxurious') or paste URLs..."
+                  rows={2}
+                  className="w-full px-5 py-4 bg-transparent text-sm placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed min-h-[100px]"
+                />
+                {message && (
+                  <button 
+                    onClick={() => {
+                      setMessage('');
+                      setAttachments(prev => prev.filter(a => a.isDefault));
+                    }}
+                    className="absolute right-4 top-4 p-1.5 rounded-lg bg-slate-100 text-slate-400 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover/inputbox:opacity-100"
+                    title="Clear Input"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                )}
               </div>
 
-              {attachments.map(item => (
-                <div key={item.id} className={cn(
-                  "flex items-center gap-2 px-2 py-1.5 rounded-xl border transition-all shrink-0 cursor-pointer",
-                  item.selected ? "bg-white border-indigo-200 shadow-sm" : "bg-slate-100/50 border-transparent opacity-50"
-                )} onClick={() => toggleAttachment(item.id)}>
-                  {item.type === 'image' ? (
-                    <div className="w-6 h-6 rounded-lg overflow-hidden border border-slate-200"><img src={item.url} alt="" className="w-full h-full object-cover" /></div>
-                  ) : (
-                    <Link size={12} className="text-indigo-500" />
-                  )}
-                  <span className="text-[9px] font-bold text-slate-600 max-w-[60px] truncate uppercase tracking-tighter">{item.label || 'Item'}</span>
-                  {!item.isDefault && (
-                    <button onClick={(e) => { e.stopPropagation(); removeAttachment(item.id); }} className="p-0.5 text-slate-300 hover:text-rose-500"><X size={10} /></button>
-                  )}
+              <div className="flex items-center gap-2 px-3 py-3 bg-slate-50/50 border-t border-slate-100 overflow-x-auto no-scrollbar min-h-[52px]">
+                <div className="flex items-center gap-2 shrink-0 mr-1">
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm flex items-center justify-center shrink-0"
+                  >
+                    {isUploading ? <RefreshCw size={14} className="animate-spin" /> : <Paperclip size={14} />}
+                  </button>
+                  <div className="relative group/miniurl">
+                    <input 
+                      type="url" 
+                      placeholder="Link..."
+                      className="w-20 focus:w-32 text-[10px] pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-300 transition-all shadow-sm"
+                      value={newAttachmentUrl}
+                      onPaste={handlePaste}
+                      onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addAttachmentManually()}
+                    />
+                    <button onClick={addAttachmentManually} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-indigo-500"><Plus size={12} /></button>
+                  </div>
                 </div>
-              ))}
+
+                {attachments.map(item => (
+                  <div key={item.id} className={cn(
+                    "flex items-center gap-2 px-2 py-1.5 rounded-xl border transition-all shrink-0 cursor-pointer",
+                    item.selected ? "bg-white border-indigo-200 shadow-sm" : "bg-slate-100/50 border-transparent opacity-50"
+                  )} onClick={() => toggleAttachment(item.id)}>
+                    {item.type === 'image' ? (
+                      <div className="w-6 h-6 rounded-lg overflow-hidden border border-slate-200"><img src={item.url} alt="" className="w-full h-full object-cover" /></div>
+                    ) : (
+                      <Link size={12} className="text-indigo-500" />
+                    )}
+                    <span className="text-[9px] font-bold text-slate-600 max-w-[60px] truncate uppercase tracking-tighter">{item.label || 'Item'}</span>
+                    {!item.isDefault && (
+                      <button onClick={(e) => { e.stopPropagation(); removeAttachment(item.id); }} className="p-0.5 text-slate-300 hover:text-rose-500"><X size={10} /></button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Style Presets */}
-          <div className="flex items-center gap-2 px-1 overflow-x-auto no-scrollbar">
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 mr-2">Style:</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-1">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 shrink-0">Style:</span>
+            <div className="flex flex-wrap items-center gap-2">
             {PRESETS.map(p => {
               const isSelected = selectedChips.includes(p.label);
               return (
@@ -370,6 +373,7 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
                 </button>
               );
             })}
+            </div>
           </div>
 
           {/* Refine Targets Section */}
@@ -414,7 +418,7 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
                     Clear All
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                   {TARGET_FIELDS.map(field => {
                     const isSelected = selectedFields.includes(field.id);
                     return (
@@ -428,8 +432,8 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
                             : "bg-transparent border-slate-200 text-slate-400"
                         )}
                       >
-                        {isSelected ? <Check size={12} /> : <Circle size={12} className="opacity-20" />}
-                        {field.label}
+                        {isSelected ? <Check size={12} className="shrink-0" /> : <Circle size={12} className="shrink-0 opacity-20" />}
+                        <span className="truncate">{field.label}</span>
                       </button>
                     );
                   })}
@@ -439,19 +443,19 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
           </div>
 
           {/* Action Bar */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-inner">
-                <BrainCircuit size={16} />
+          <div className="flex flex-col sm:flex-row items-center justify-between pt-4 gap-4 border-t border-slate-100">
+            <div className="flex items-center gap-3 text-center sm:text-left">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-inner shrink-0">
+                <BrainCircuit size={20} />
               </div>
               <div className="flex flex-col">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Product Intelligence Engine</span>
-                <span className="text-[10px] font-bold text-indigo-500">Bloom v2 · AI-Powered Engine</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Product Intelligence Engine</span>
+                <span className="text-[10px] font-bold text-indigo-500">Bloom v2 · AI-Powered Analysis</span>
               </div>
             </div>
             
             <Button 
-              className="h-12 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest gap-3 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all group"
+              className="w-full sm:w-auto h-14 sm:h-12 px-10 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest gap-3 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all group shrink-0"
               onClick={handleGenerate}
               disabled={loading || selectedFields.length === 0}
             >
