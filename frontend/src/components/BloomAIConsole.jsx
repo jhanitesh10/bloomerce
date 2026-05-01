@@ -283,74 +283,72 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
         <div className="p-4 sm:p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
           
           {/* Omni-Input Box */}
-          {!showTargets && (
-            <div className="flex flex-col gap-0 bg-white rounded-3xl border border-indigo-500/20 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/5 focus-within:border-indigo-500/40 transition-all overflow-hidden">
-              <div className="relative group/inputbox">
-                <textarea 
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onPaste={handlePaste}
-                  placeholder="Describe how to bloom this product (e.g. 'Make it sound luxurious') or paste URLs..."
-                  rows={2}
-                  className="w-full px-5 py-4 bg-transparent text-sm placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed min-h-[100px]"
-                />
-                {message && (
-                  <button 
-                    onClick={() => {
-                      setMessage('');
-                      setAttachments(prev => prev.filter(a => a.isDefault));
-                    }}
-                    className="absolute right-4 top-4 p-1.5 rounded-lg bg-slate-100 text-slate-400 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover/inputbox:opacity-100"
-                    title="Clear Input"
-                  >
-                    <RotateCcw size={12} />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-3 bg-slate-50/50 border-t border-slate-100 overflow-x-auto no-scrollbar min-h-[52px]">
-                <div className="flex items-center gap-2 shrink-0 mr-1">
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm flex items-center justify-center shrink-0"
-                  >
-                    {isUploading ? <RefreshCw size={14} className="animate-spin" /> : <Paperclip size={14} />}
-                  </button>
-                  <div className="relative group/miniurl">
-                    <input 
-                      type="url" 
-                      placeholder="Link..."
-                      className="w-20 focus:w-32 text-[10px] pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-300 transition-all shadow-sm"
-                      value={newAttachmentUrl}
-                      onPaste={handlePaste}
-                      onChange={(e) => setNewAttachmentUrl(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addAttachmentManually()}
-                    />
-                    <button onClick={addAttachmentManually} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-indigo-500"><Plus size={12} /></button>
-                  </div>
-                </div>
-
-                {attachments.map(item => (
-                  <div key={item.id} className={cn(
-                    "flex items-center gap-2 px-2 py-1.5 rounded-xl border transition-all shrink-0 cursor-pointer",
-                    item.selected ? "bg-white border-indigo-200 shadow-sm" : "bg-slate-100/50 border-transparent opacity-50"
-                  )} onClick={() => toggleAttachment(item.id)}>
-                    {item.type === 'image' ? (
-                      <div className="w-6 h-6 rounded-lg overflow-hidden border border-slate-200"><img src={item.url} alt="" className="w-full h-full object-cover" /></div>
-                    ) : (
-                      <Link size={12} className="text-indigo-500" />
-                    )}
-                    <span className="text-[9px] font-bold text-slate-600 max-w-[60px] truncate uppercase tracking-tighter">{item.label || 'Item'}</span>
-                    {!item.isDefault && (
-                      <button onClick={(e) => { e.stopPropagation(); removeAttachment(item.id); }} className="p-0.5 text-slate-300 hover:text-rose-500"><X size={10} /></button>
-                    )}
-                  </div>
-                ))}
-              </div>
+          <div className="flex flex-col gap-0 bg-white rounded-3xl border border-indigo-500/20 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/5 focus-within:border-indigo-500/40 transition-all overflow-hidden">
+            <div className="relative group/inputbox">
+              <textarea 
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onPaste={handlePaste}
+                placeholder="Describe how to bloom this product (e.g. 'Make it sound luxurious') or paste URLs..."
+                rows={2}
+                className="w-full px-5 py-4 bg-transparent text-sm placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed min-h-[100px]"
+              />
+              {message && (
+                <button 
+                  onClick={() => {
+                    setMessage('');
+                    setAttachments(prev => prev.filter(a => a.isDefault));
+                  }}
+                  className="absolute right-4 top-4 p-1.5 rounded-lg bg-slate-100 text-slate-400 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover/inputbox:opacity-100"
+                  title="Clear Input"
+                >
+                  <RotateCcw size={12} />
+                </button>
+              )}
             </div>
-          )}
+
+            <div className="flex items-center gap-2 px-3 py-3 bg-slate-50/50 border-t border-slate-100 overflow-x-auto no-scrollbar min-h-[52px]">
+              <div className="flex items-center gap-2 shrink-0 mr-1">
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm flex items-center justify-center shrink-0"
+                >
+                  {isUploading ? <RefreshCw size={14} className="animate-spin" /> : <Paperclip size={14} />}
+                </button>
+                <div className="relative group/miniurl">
+                  <input 
+                    type="url" 
+                    placeholder="Link..."
+                    className="w-20 focus:w-32 text-[10px] pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-300 transition-all shadow-sm"
+                    value={newAttachmentUrl}
+                    onPaste={handlePaste}
+                    onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addAttachmentManually()}
+                  />
+                  <button onClick={addAttachmentManually} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-indigo-500"><Plus size={12} /></button>
+                </div>
+              </div>
+
+              {attachments.map(item => (
+                <div key={item.id} className={cn(
+                  "flex items-center gap-2 px-2 py-1.5 rounded-xl border transition-all shrink-0 cursor-pointer",
+                  item.selected ? "bg-white border-indigo-200 shadow-sm" : "bg-slate-100/50 border-transparent opacity-50"
+                )} onClick={() => toggleAttachment(item.id)}>
+                  {item.type === 'image' ? (
+                    <div className="w-6 h-6 rounded-lg overflow-hidden border border-slate-200"><img src={item.url} alt="" className="w-full h-full object-cover" /></div>
+                  ) : (
+                    <Link size={12} className="text-indigo-500" />
+                  )}
+                  <span className="text-[9px] font-bold text-slate-600 max-w-[60px] truncate uppercase tracking-tighter">{item.label || 'Item'}</span>
+                  {!item.isDefault && (
+                    <button onClick={(e) => { e.stopPropagation(); removeAttachment(item.id); }} className="p-0.5 text-slate-300 hover:text-rose-500"><X size={10} /></button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Style Presets */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-1">
