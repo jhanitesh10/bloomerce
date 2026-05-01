@@ -283,7 +283,7 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
         <div className="p-4 sm:p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
           
           {/* Omni-Input Box */}
-          <div className="flex flex-col gap-0 bg-white rounded-3xl border border-indigo-500/20 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/5 focus-within:border-indigo-500/40 transition-all overflow-hidden">
+          <div className="shrink-0 flex flex-col gap-0 bg-white rounded-3xl border border-indigo-500/20 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/5 focus-within:border-indigo-500/40 transition-all overflow-hidden">
             <div className="relative group/inputbox">
               <textarea 
                 value={message}
@@ -351,7 +351,7 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
           </div>
 
           {/* Style Presets */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-1">
+          <div className="shrink-0 flex flex-col sm:flex-row sm:items-center gap-2 px-1">
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 shrink-0">Style:</span>
             <div className="flex flex-wrap items-center gap-2">
             {PRESETS.map(p => {
@@ -441,7 +441,7 @@ export default function BloomAIConsole({ initialData, currentForm, references, i
           </div>
 
           {/* Action Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between pt-4 gap-4 border-t border-slate-100">
+          <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between pt-4 gap-4 border-t border-slate-100">
             <div className="flex items-center gap-3 text-center sm:text-left">
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-inner shrink-0">
                 <BrainCircuit size={20} />
