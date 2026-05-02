@@ -305,7 +305,8 @@ const STATUS_GROUPS = {
 };
 
 const FILTER_TABS = [
-  { key: 'active',            icon: LayoutGrid, label: c => `Active (${Object.entries(c).reduce((sum, [l, count]) => STATUS_GROUPS.active.includes(l) ? sum + count : sum, 0)})` },
+  { key: 'all',               icon: LayoutGrid, label: (c, t) => `All (${t})` },
+  { key: 'active',            icon: Check,      label: c => `Active (${Object.entries(c).reduce((sum, [l, count]) => STATUS_GROUPS.active.includes(l) ? sum + count : sum, 0)})` },
   { key: 'upcoming launches', icon: Rocket,     label: c => `Upcoming Launches (${Object.entries(c).reduce((sum, [l, count]) => STATUS_GROUPS['upcoming launches'].includes(l) ? sum + count : sum, 0)})` },
   { key: 'archived',          icon: FileEdit,   label: c => `Archived (${Object.entries(c).reduce((sum, [l, count]) => STATUS_GROUPS.archived.includes(l) ? sum + count : sum, 0)})` },
 ];
@@ -615,7 +616,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState(() => searchParams.get('q') || '');
-  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'active');
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'all');
   const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1);
   const [filters, setFilters] = useState(() => ({
     brandIds: searchParams.get('brands')?.split(',').filter(Boolean).map(Number) || [],
@@ -633,7 +634,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     const handler = setTimeout(() => {
       const p = new URLSearchParams();
       if (search) p.set('q', search);
-      if (statusFilter !== 'active') p.set('status', statusFilter);
+      if (statusFilter !== 'all') p.set('status', statusFilter);
       if (page > 1) p.set('page', String(page));
 
       if (filters.brandIds.length) p.set('brands', filters.brandIds.join(','));
@@ -778,7 +779,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     return count;
   }, [filters]);
 
-  const isFilterActive = activeAdvancedFiltersCount > 0 || search.trim() !== '' || statusFilter !== 'active';
+  const isFilterActive = activeAdvancedFiltersCount > 0 || search.trim() !== '' || statusFilter !== 'all';
 
   const [editingSku,     setEditingSku]     = useState(null);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
@@ -1362,9 +1363,11 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     if (!matchSearch) return false;
 
     // 2. Status Tab
-    const statusLabel = (references.STATUS?.[s.status_reference_id] || '').toLowerCase();
-    const allowed = STATUS_GROUPS[statusFilter] || [statusFilter];
-    if (!allowed.includes(statusLabel)) return false;
+    if (statusFilter !== 'all') {
+      const statusLabel = (references.STATUS?.[s.status_reference_id] || '').toLowerCase();
+      const allowed = STATUS_GROUPS[statusFilter] || [statusFilter];
+      if (!allowed.includes(statusLabel)) return false;
+    }
 
     // 3. Multi-Select Status
     if (filters.statusIds.length > 0 && !filters.statusIds.includes(s.status_reference_id)) return false;
