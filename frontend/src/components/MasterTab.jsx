@@ -42,7 +42,14 @@ const STATUS_VARIANTS = {
 const StatusBadge = ({ label }) => {
   const key = label?.toLowerCase();
   const display = (key === 'in development' || key === 'development') ? 'Upcoming Launches' : label;
-  return <Badge variant={STATUS_VARIANTS[key] || 'secondary'} className="whitespace-nowrap">{display || 'Unknown'}</Badge>;
+  return (
+    <Badge 
+      variant={STATUS_VARIANTS[key] || 'secondary'} 
+      className="whitespace-nowrap flex items-center justify-center leading-none"
+    >
+      {display || 'Unknown'}
+    </Badge>
+  );
 }
 
 // ── Desktop Table Skeleton ────────────────────────────────────────────────────
@@ -533,9 +540,11 @@ function ReferenceCellRenderer({ value, references, referenceKey }) {
 
   if (referenceKey === 'STATUS') {
      return (
-       <div className="flex items-center justify-between w-full h-full px-2 group cursor-pointer">
-         <div className="flex-shrink-0 min-w-0 font-bold"><StatusBadge label={label} /></div>
-         <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0 ml-1 opacity-0 group-hover:opacity-100" />
+       <div className="flex items-center justify-center w-full h-full px-2 group cursor-pointer relative">
+         <div className="flex-shrink-0 min-w-0">
+           <StatusBadge label={label} />
+         </div>
+         <ChevronDown size={14} className="absolute right-2 text-slate-400 group-hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100" />
        </div>
      );
   }
