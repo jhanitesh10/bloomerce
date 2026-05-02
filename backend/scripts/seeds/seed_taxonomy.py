@@ -46,9 +46,8 @@ def seed_taxonomy(sections=None):
             print("Seeding Statuses...")
             statuses_data = [
                 ("Active", "status_active", 1),
-                ("Discontinued", "status_discontinued", 2),
-                ("Draft", "status_draft", 3),
-                ("Upcoming Launches", "status_upcoming", 4),
+                ("Archived", "status_archived", 2),
+                ("Upcoming Launches", "status_upcoming", 3),
             ]
             for label, key, order in statuses_data:
                 existing = db.query(models.ReferenceData).filter_by(reference_data_type="STATUS", key=key).first()

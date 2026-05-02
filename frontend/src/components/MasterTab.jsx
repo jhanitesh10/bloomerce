@@ -31,10 +31,17 @@ import { Badge } from '@/components/ui/badge';
 import { cn, getDirectImageUrl } from '@/lib/utils';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
-const STATUS_VARIANTS = { active:'success', inactive:'destructive', draft:'draft', development:'development', 'in development':'development' };
+const STATUS_VARIANTS = {
+  active: 'success',
+  archived: 'destructive',
+  upcoming: 'development',
+  'upcoming launches': 'development',
+  development: 'development',
+  'in development': 'development'
+};
 const StatusBadge = ({ label }) => {
   const key = label?.toLowerCase();
-  const display = (key === 'in development' || key === 'development') ? 'New Launch' : label;
+  const display = (key === 'in development' || key === 'development') ? 'Upcoming Launches' : label;
   return <Badge variant={STATUS_VARIANTS[key] || 'secondary'} className="whitespace-nowrap">{display || 'Unknown'}</Badge>;
 }
 
@@ -284,10 +291,16 @@ const REF_MAP    = {
   size_reference_id: 'SIZE',
   color: 'COLOR'
 };
+const STATUS_GROUPS = {
+  active:   ['active', 'live', 'published'],
+  archived: ['archived', 'discarted', 'discontinued', 'discarded', 'archive'],
+  'upcoming launches': ['upcoming launches', 'up-coming launch', 'upcoming launch', 'in development', 'upcoming', 'development']
+};
+
 const FILTER_TABS = [
-  { key: 'all',               icon: LayoutGrid, label: (c, t) => `All (${t})` },
-  { key: 'archived',          icon: FileEdit,   label: c => `Archived (${c['archived'] || 0})` },
-  { key: 'upcoming launches', icon: Rocket,     label: c => `Upcoming Launches (${c['upcoming launches'] || 0})` },
+  { key: 'active',            icon: LayoutGrid, label: c => `Active (${Object.entries(c).reduce((sum, [l, count]) => STATUS_GROUPS.active.includes(l) ? sum + count : sum, 0)})` },
+  { key: 'upcoming launches', icon: Rocket,     label: c => `Upcoming Launches (${Object.entries(c).reduce((sum, [l, count]) => STATUS_GROUPS['upcoming launches'].includes(l) ? sum + count : sum, 0)})` },
+  { key: 'archived',          icon: FileEdit,   label: c => `Archived (${Object.entries(c).reduce((sum, [l, count]) => STATUS_GROUPS.archived.includes(l) ? sum + count : sum, 0)})` },
 ];
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 80, 100];
 
@@ -520,9 +533,9 @@ function ReferenceCellRenderer({ value, references, referenceKey }) {
 
   if (referenceKey === 'STATUS') {
      return (
-       <div className="flex items-center justify-between w-[calc(100%-8px)] h-[34px] px-2.5 rounded-xl border border-slate-200 group cursor-pointer transition-colors bg-white hover:border-slate-300 shadow-sm mx-auto">
-         <div className="scale-90 origin-left flex-shrink-0 min-w-0"><StatusBadge label={label} /></div>
-         <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0 ml-2" />
+       <div className="flex items-center justify-between w-full h-full px-2 group cursor-pointer">
+         <div className="flex-shrink-0 min-w-0 font-bold"><StatusBadge label={label} /></div>
+         <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0 ml-1 opacity-0 group-hover:opacity-100" />
        </div>
      );
   }
@@ -593,7 +606,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState(() => searchParams.get('q') || '');
-  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'all');
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'active');
   const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1);
   const [filters, setFilters] = useState(() => ({
     brandIds: searchParams.get('brands')?.split(',').filter(Boolean).map(Number) || [],
@@ -611,7 +624,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     const handler = setTimeout(() => {
       const p = new URLSearchParams();
       if (search) p.set('q', search);
-      if (statusFilter !== 'all') p.set('status', statusFilter);
+      if (statusFilter !== 'active') p.set('status', statusFilter);
       if (page > 1) p.set('page', String(page));
 
       if (filters.brandIds.length) p.set('brands', filters.brandIds.join(','));
@@ -756,7 +769,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
     return count;
   }, [filters]);
 
-  const isFilterActive = activeAdvancedFiltersCount > 0 || search.trim() !== '' || statusFilter !== 'all';
+  const isFilterActive = activeAdvancedFiltersCount > 0 || search.trim() !== '' || statusFilter !== 'active';
 
   const [editingSku,     setEditingSku]     = useState(null);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
@@ -1341,7 +1354,8 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
 
     // 2. Status Tab
     const statusLabel = (references.STATUS?.[s.status_reference_id] || '').toLowerCase();
-    if (statusFilter !== 'all' && statusLabel !== statusFilter) return false;
+    const allowed = STATUS_GROUPS[statusFilter] || [statusFilter];
+    if (!allowed.includes(statusLabel)) return false;
 
     // 3. Multi-Select Status
     if (filters.statusIds.length > 0 && !filters.statusIds.includes(s.status_reference_id)) return false;
