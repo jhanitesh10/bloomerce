@@ -1490,7 +1490,7 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
             variant="outline"
             size="sm"
             className={cn("gap-1.5 h-[36px] bg-[var(--color-card)] border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)] shadow-sm font-semibold transition-all", isMobile && "w-full text-[11px] px-2 h-[38px] active:scale-95")}
-            onClick={() => navigate(`${APP_PATHS.CATALOG}/export`)}
+            onClick={() => navigate(`${APP_PATHS.CATALOG}/export${window.location.search}`)}
           >
             <Download size={13} className="text-[var(--color-muted-foreground)]" /> Export
             {selectedSkus.size > 0 && <span className="ml-0.5 bg-[var(--color-primary)] text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">{selectedSkus.size}</span>}
@@ -1742,8 +1742,6 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
                   icon: '<span class="lucide lucide-copy"></span>'
                 }
               ]}
-              rowSelection="multiple"
-              suppressRowClickSelection={false}
               gridOptions={{
                 suppressCellFocus: false,
                 ensureDomOrder: true,
@@ -1811,9 +1809,13 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
       )}
       {isExportCenterOpen && (
         <ExportCenterSlideOver
-          onClose={() => { setIsExportCenterOpen(false); if (forcedMode) navigate(APP_PATHS.CATALOG); }}
+          onClose={() => { 
+            setIsExportCenterOpen(false); 
+            if (forcedMode) navigate(`${APP_PATHS.CATALOG}${window.location.search}`); 
+          }}
           skus={skus}
           filtered={filtered}
+          paginated={paginated}
           selected={selectedSkus}
           references={references}
         />
@@ -1822,8 +1824,11 @@ export default function MasterTab({ isMobile, forcedMode, forcedSkuId }) {
         <ImportSlideOver
           skus={skus}
           refLists={refLists}
-          onClose={() => { setIsImportOpen(false); if (forcedMode) navigate(APP_PATHS.CATALOG); }}
-          onImportComplete={() => { setIsImportOpen(false); navigate(APP_PATHS.CATALOG); loadAll(); }}
+          onClose={() => { 
+            setIsImportOpen(false); 
+            if (forcedMode) navigate(`${APP_PATHS.CATALOG}${window.location.search}`); 
+          }}
+          onImportComplete={() => { setIsImportOpen(false); navigate(`${APP_PATHS.CATALOG}${window.location.search}`); loadAll(); }}
         />
       )}
 

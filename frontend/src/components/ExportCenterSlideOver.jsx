@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import ExportSlideOver from './ExportSlideOver';
 import ImageExportSlideOver from './ImageExportSlideOver';
 
-export default function ExportCenterSlideOver({ onClose, skus = [], filtered = [], selected = [], references = {} }) {
+export default function ExportCenterSlideOver({ onClose, skus = [], filtered = [], paginated = [], selected = [], references = {} }) {
   const [activeTab, setActiveTab] = useState('csv'); // 'csv' or 'media'
 
   const TABS = [
@@ -73,6 +73,7 @@ export default function ExportCenterSlideOver({ onClose, skus = [], filtered = [
                onClose={onClose} 
                skus={skus} 
                filtered={filtered} 
+               paginated={paginated}
                selected={selected} 
                references={references} 
              />
@@ -83,6 +84,7 @@ export default function ExportCenterSlideOver({ onClose, skus = [], filtered = [
                onClose={onClose} 
                skus={skus} 
                filtered={filtered} 
+               paginated={paginated}
                selected={selected} 
                references={references} 
              />

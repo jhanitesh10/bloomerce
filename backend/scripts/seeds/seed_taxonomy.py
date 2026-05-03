@@ -59,7 +59,7 @@ def seed_taxonomy(sections=None):
             print("Seeding Ecommerce Channels...")
             channels = [
                 ("Amazon", "chan_amazon", 1, "https://www.vectorlogo.zone/logos/amazon/amazon-icon.svg", {"base_url": "https://www.amazon.in/dp/"}),
-                ("Flipkart", "chan_flipkart", 2, "https://upload.wikimedia.org/wikipedia/commons/e/e5/Flipkart_logo_%282026%29.svg", {"base_url": "https://www.flipkart.com/product/"}),
+                ("Flipkart", "chan_flipkart", 2, "https://www.google.com/s2/favicons?sz=256&domain=flipkart.com", {"base_url": "https://www.flipkart.com/product/p/itme?pid={id}"}),
                 ("Meesho", "chan_meesho", 3, "https://www.google.com/s2/favicons?sz=256&domain=meesho.com", {"base_url": "https://www.meesho.com/s/p/"}),
                 ("Myntra", "chan_myntra", 4, "https://www.google.com/s2/favicons?sz=256&domain=myntra.com", {"base_url": "https://www.myntra.com/"}),
                 ("Nykaa", "chan_nykaa", 5, "https://www.google.com/s2/favicons?sz=256&domain=nykaa.com", {"base_url": "https://www.nykaa.com/"}),

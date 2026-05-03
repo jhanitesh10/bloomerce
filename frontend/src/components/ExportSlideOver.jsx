@@ -36,7 +36,7 @@ const GROUPS = [
 const PREFS_KEY = 'bloomerce_export_prefs';
 
 export default function ExportSlideOver({ onClose, skus = [], filtered = [], paginated = [], references = {}, isEmbedded = false }) {
-  const [scope, setScope] = useState(() => localStorage.getItem('bloomerce_export_csv_scope') || 'filtered'); // 'all', 'filtered', 'current_page'
+  const [scope, setScope] = useState('filtered'); // Default to filtered for every new session
   const [expandedGroups, setExpandedGroups] = useState(new Set(['identity']));
 
   // Sync scope to localStorage
