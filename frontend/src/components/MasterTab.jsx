@@ -540,21 +540,35 @@ function ReferenceCellRenderer({ value, references, referenceKey }) {
   const isEmpty = !value;
 
   if (referenceKey === 'STATUS') {
+     const key = label?.toLowerCase();
+     const display = (key === 'in development' || key === 'development') ? 'Upcoming Launches' : label;
+     const variant = STATUS_VARIANTS[key] || 'secondary';
+     
+     const textColor = {
+       success: "text-emerald-600",
+       destructive: "text-red-600",
+       development: "text-violet-600",
+       secondary: "text-slate-600"
+     }[variant] || "text-slate-600";
+
      return (
-       <div className="flex items-center justify-center w-full h-full px-2 group cursor-pointer relative">
-         <div className="flex-shrink-0 min-w-0">
-           <StatusBadge label={label} />
-         </div>
-         <ChevronDown size={14} className="absolute right-2 text-slate-400 group-hover:text-slate-600 transition-colors opacity-0 group-hover:opacity-100" />
+       <div className="flex items-center justify-between w-full h-[34px] px-3 rounded-xl border border-slate-200 bg-white group cursor-pointer transition-colors hover:border-slate-300 shadow-sm">
+         <span className={cn(
+           "truncate font-bold text-xs uppercase tracking-tight",
+           textColor
+         )}>
+           {display}
+         </span>
+         <ChevronDown size={14} className="text-slate-400 opacity-60 group-hover:opacity-100 transition-all flex-shrink-0 ml-1" />
        </div>
      );
   }
 
   if (referenceKey === 'BUNDLE_TYPE' || referenceKey === 'PACK_TYPE') {
      return (
-       <div className="flex items-center justify-between w-[95%] max-w-[180px] h-[34px] px-3 rounded-xl border border-amber-200 bg-amber-50/30 group cursor-pointer transition-colors hover:border-amber-300">
-         <span className="text-amber-600 font-bold italic flex items-center gap-1.5 text-xs">
-            <Info size={12} className="text-amber-500 opacity-80" /> {label}
+       <div className="flex items-center justify-between w-full h-[34px] px-3 rounded-xl border border-amber-200 bg-amber-50/30 group cursor-pointer transition-colors hover:border-amber-300">
+         <span className="text-amber-600 font-bold italic flex items-center gap-1.5 text-xs truncate mr-1">
+            <Info size={12} className="text-amber-500 opacity-80 flex-shrink-0" /> {label}
          </span>
          <ChevronDown size={14} className="text-amber-400 group-hover:text-amber-600 transition-colors flex-shrink-0" />
        </div>
@@ -563,14 +577,14 @@ function ReferenceCellRenderer({ value, references, referenceKey }) {
 
   // Default generic styled pill (e.g., Brand, Category)
   return (
-    <div className="flex items-center justify-between w-[95%] max-w-[180px] h-[34px] px-3 rounded-xl border border-slate-200 group cursor-pointer transition-colors bg-white hover:border-slate-300">
+    <div className="flex items-center justify-between w-full h-[34px] px-3 rounded-xl border border-slate-200 group cursor-pointer transition-colors bg-white hover:border-slate-300 shadow-sm">
       <span className={cn(
-        "truncate font-bold text-xs",
+        "truncate font-bold text-xs mr-1",
         isEmpty ? "text-slate-400 italic font-normal" : "text-slate-800"
       )}>
         {label}
       </span>
-      <ChevronDown size={14} className="text-slate-400 opacity-60 group-hover:opacity-100 transition-all flex-shrink-0 ml-2" />
+      <ChevronDown size={14} className="text-slate-400 opacity-60 group-hover:opacity-100 transition-all flex-shrink-0" />
     </div>
   );
 }
