@@ -53,24 +53,31 @@ async def integrity_exception_handler(request, exc):
     return JSONResponse(status_code=400, content={"detail": f"Database Integrity Error: {str(exc.orig)}"})
 
 # Handle uploads directory gracefully (Vercel has a read-only filesystem except for /tmp)
+UPLOAD_DIR = "uploads"
+if os.getenv("VERCEL"):
+    UPLOAD_DIR = "/tmp/uploads"
+
 try:
-    os.makedirs("uploads", exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+    logger.info(f"Mounted static files at /uploads from {UPLOAD_DIR}")
 except Exception as e:
-    print(f"Skipping local storage setup: {e}")
+    logger.error(f"Error setting up uploads directory: {e}")
 
 # CORS Configuration
 # We explicitly list the frontend origin to support allow_credentials=True,
 # which is often required for secure browser contexts and cross-origin persistence.
 env_origins = os.getenv("ALLOWED_ORIGINS", "")
-origins = [o.strip() for o in env_origins.split(",") if o.strip()] or [
+origins = [o.strip().rstrip('/') for o in env_origins.split(",") if o.strip()] or [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
     "http://localhost:3000",
     "https://bloomerce.vercel.app",
+    "https://bloomerce-backend-jha-niteshs-projects.vercel.app",
 ]
+logger.info(f"Allowed CORS origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -85,21 +92,23 @@ from fastapi import Request
 
 @app.post("/api/upload")
 async def upload_image(request: Request, file: UploadFile = File(...)):
-    # Ensure directory exists (useful for environments where it might be wiped)
-    os.makedirs("uploads", exist_ok=True)
-    
-    ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
-    filename = f"{uuid.uuid4()}.{ext}"
-    file_path = os.path.join("uploads", filename)
-    
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
+    try:
+        # Ensure directory exists
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
         
-    # Generate dynamic base URL from request
-    base_url = str(request.base_url).rstrip('/')
-    # If we are behind a proxy/Vercel, we might need to adjust this, 
-    # but request.base_url is usually the most reliable way.
-    return {"url": f"{base_url}/uploads/{filename}"}
+        ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
+        filename = f"{uuid.uuid4()}.{ext}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+            
+        # Generate dynamic base URL from request
+        base_url = str(request.base_url).rstrip('/')
+        return {"url": f"{base_url}/uploads/{filename}"}
+    except Exception as e:
+        logger.exception("Upload failed")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
 # ==========================================

@@ -192,22 +192,32 @@ class LiteLLMProvider(BaseAIProvider):
         return re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', text)
 
     def _handle_local_image(self, url: str) -> str:
-        """Converts localhost upload URLs to base64 data URLs for AI processing."""
+        """Converts local or internal upload URLs to base64 data URLs for AI processing."""
         if not url: return url
-        if "localhost" in url or "127.0.0.1" in url:
+        
+        # Detect if it's an internal upload URL (localhost or our Vercel domain)
+        # We look for the /uploads/ pattern which our backend uses
+        if "/uploads/" in url or "localhost" in url or "127.0.0.1" in url:
             try:
-                # Extract filename: http://localhost:8000/uploads/uuid.png -> uuid.png
+                # Extract filename: http://.../uploads/uuid.png -> uuid.png
                 filename = url.split('/')[-1]
-                # Try to find it in the uploads directory relative to this file's parent (backend/)
+                
+                # Check possible upload locations
                 base_dir = os.path.dirname(os.path.abspath(__file__))
-                path = os.path.join(base_dir, "uploads", filename)
+                possible_paths = [
+                    os.path.join(base_dir, "uploads", filename),      # Local dev
+                    os.path.join("/tmp/uploads", filename),           # Vercel / Serverless
+                ]
 
-                if os.path.exists(path):
-                    mime_type, _ = mimetypes.guess_type(path)
-                    with open(path, "rb") as f:
-                        encoded = base64.b64encode(f.read()).decode('utf-8')
-                        return f"data:{mime_type or 'image/png'};base64,{encoded}"
-                logger.warning(f"Local file not found for URL: {url} at {path}")
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        mime_type, _ = mimetypes.guess_type(path)
+                        with open(path, "rb") as f:
+                            encoded = base64.b64encode(f.read()).decode('utf-8')
+                            return f"data:{mime_type or 'image/png'};base64,{encoded}"
+                
+                if "localhost" in url or "127.0.0.1" in url:
+                    logger.warning(f"Local file not found for URL: {url}")
             except Exception as e:
                 logger.error(f"Failed to convert local image {url}: {e}")
         return url
