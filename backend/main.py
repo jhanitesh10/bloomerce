@@ -16,6 +16,10 @@ import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 import re
+from dotenv import load_dotenv
+
+# Load environment variables at the very beginning
+load_dotenv()
 
 import models
 import schemas
@@ -45,6 +49,106 @@ app = FastAPI(title="Bloomerce Relational API", lifespan=lifespan)
 @app.get("/")
 def health_check():
     return {"status": "ok", "message": "Backend is reached"}
+
+@app.post("/api/auth/sync", response_model=schemas.User)
+def sync_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+    """
+    Syncs user data from the authentication provider to our local database.
+    If the user exists, updates their info. If not, creates them.
+    """
+    db_user = db.query(models.User).filter(models.User.provider_id == user_data.provider_id).first()
+
+    if db_user:
+        # Update existing user info
+        db_user.email = user_data.email
+        db_user.name = user_data.name
+        db_user.is_active = user_data.is_active if user_data.is_active is not None else db_user.is_active
+    else:
+        # Create new user
+        db_user = models.User(
+            provider_id=user_data.provider_id,
+            email=user_data.email,
+            name=user_data.name,
+            is_active=True
+        )
+        db.add(db_user)
+
+    try:
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error syncing user: {e}")
+        raise HTTPException(status_code=500, detail=f"User sync failed: {str(e)}")
+
+@app.post("/api/auth/direct-login")
+async def direct_login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    """
+    Handles headless login via an abstraction layer (Adapter Pattern).
+    Automatically syncs the user to our local database upon successful auth.
+    """
+    import auth_service
+
+    auth_res = await auth_service.authenticate_and_sync_user(login_data, db)
+
+    if not auth_res.success:
+        raise HTTPException(
+            status_code=401,
+            detail=auth_res.error or "Authentication failed. Invalid email or password."
+        )
+
+    return {
+        "success": True,
+        "user": auth_res.user_data,
+        "tokens": auth_res.token_data
+    }
+
+@app.post("/api/auth/register")
+async def register_user(register_data: schemas.RegisterRequest, db: Session = Depends(get_db)):
+    """
+    Handles headless registration.
+    """
+    import auth_service
+    auth_res = await auth_service.register_and_sync_user(register_data, db)
+
+    if not auth_res.success:
+        raise HTTPException(status_code=400, detail=auth_res.error or "Registration failed")
+
+    return {"success": True, "user": auth_res.user_data}
+
+@app.get("/api/auth/google")
+async def google_login():
+    """
+    Redirects to Google OAuth flow.
+    """
+    import auth_service
+    adapter = auth_service.get_auth_adapter()
+    url = adapter.get_google_authorize_url()
+    if url:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url)
+    raise HTTPException(status_code=400, detail="Social login not supported or configured")
+
+@app.get("/api/auth/callback")
+async def auth_callback(code: str, db: Session = Depends(get_db)):
+    """
+    Handles the OAuth callback.
+    """
+    import auth_service
+    auth_res = await auth_service.handle_callback_and_sync(code, db)
+
+    if not auth_res.success:
+        raise HTTPException(status_code=401, detail=auth_res.error or "Callback failed")
+
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    import json
+    from urllib.parse import quote
+    user_str = quote(json.dumps(auth_res.user_data))
+    token_str = auth_res.token_data.get("access_token")
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(f"{frontend_url}/login?token={token_str}&user={user_str}")
 
 
 @app.exception_handler(IntegrityError)
@@ -95,14 +199,14 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
     try:
         # Ensure directory exists
         os.makedirs(UPLOAD_DIR, exist_ok=True)
-        
+
         ext = file.filename.split('.')[-1] if '.' in file.filename else 'png'
         filename = f"{uuid.uuid4()}.{ext}"
         file_path = os.path.join(UPLOAD_DIR, filename)
-        
+
         with open(file_path, "wb") as f:
             f.write(await file.read())
-            
+
         # Generate dynamic base URL from request
         base_url = str(request.base_url).rstrip('/')
         return {"url": f"{base_url}/uploads/{filename}"}
@@ -197,7 +301,7 @@ def get_sku(id: int, db: Session = Depends(get_db)):
 @app.post("/api/skus", response_model=schemas.SkuMaster)
 def create_sku(data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
     payload = data.model_dump()
-    
+
     # Resolve Ad-hoc references
     payload["brand_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("brand_reference_id"), "BRAND")
     payload["category_reference_id"] = _resolve_ad_hoc_ref(db, payload.get("category_reference_id"), "CATEGORY")
@@ -216,9 +320,9 @@ def create_sku(data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
 def update_sku(id: int, data: schemas.SkuMasterCreate, db: Session = Depends(get_db)):
     db_item = db.query(models.SkuMaster).filter(models.SkuMaster.id == id, models.SkuMaster.deleted_at == None).first()
     if not db_item: raise HTTPException(404, "Not Found")
-    
+
     payload = data.model_dump(exclude_unset=True)
-    
+
     # Resolve Ad-hoc references
     if "brand_reference_id" in payload:
         payload["brand_reference_id"] = _resolve_ad_hoc_ref(db, payload["brand_reference_id"], "BRAND")
@@ -261,7 +365,7 @@ def _resolve_ad_hoc_ref(db: Session, val: Any, ref_type: str, parent_id: Optiona
     """Resolves a value (ID or Label) to a reference ID. Creates if new label."""
     if val is None or val == "":
         return None
-        
+
     try:
         # Check if it's already an integer (ID)
         return int(val)
@@ -276,11 +380,11 @@ def _resolve_ad_hoc_ref(db: Session, val: Any, ref_type: str, parent_id: Optiona
         )
         if parent_id:
             existing = existing.filter(models.ReferenceData.parent_reference_id == parent_id)
-            
+
         found = existing.first()
         if found:
             return found.id
-            
+
         # Create new ad-hoc reference using our existing controller logic
         new_ref = create_reference(schemas.ReferenceDataCreate(
             reference_data_type=ref_type.upper(),
@@ -481,22 +585,22 @@ async def generate_ai_content(req: AIContentRequest, db: Session = Depends(get_d
     try:
         categories = db.query(models.ReferenceData).filter(models.ReferenceData.reference_data_type == "CATEGORY", models.ReferenceData.deleted_at == None).all()
         valid_categories = [r.label for r in categories]
-        
+
         # Try to filter sub-categories by parent if category is selected in existing_data
         cat_id = (req.existing_data or {}).get("category_reference_id")
-        
+
         # Ensure cat_id is an integer if it's a string from JSON
         if cat_id and isinstance(cat_id, str) and cat_id.isdigit():
             cat_id = int(cat_id)
-            
+
         if cat_id and isinstance(cat_id, (int, float)):
             logger.info(f"Fetching sub-categories for Category ID: {cat_id}")
             valid_sub_categories = [r.label for r in db.query(models.ReferenceData).filter(
-                models.ReferenceData.reference_data_type == "SUB_CATEGORY", 
+                models.ReferenceData.reference_data_type == "SUB_CATEGORY",
                 models.ReferenceData.parent_reference_id == int(cat_id),
                 models.ReferenceData.deleted_at == None
             ).all()]
-            
+
             # If no sub-categories found for this specific category, fall back to a reasonable sample
             if not valid_sub_categories:
                  logger.warning(f"No sub-categories found for Category ID {cat_id}, falling back to sample.")
@@ -768,9 +872,9 @@ def bulk_import_skus(data: schemas.BulkImportRequest, db: Session = Depends(get_
                             if k == "platform_identifiers" and v is not None:
                                 existing_ids = existing_sku.platform_identifiers or []
                                 if not isinstance(existing_ids, list): existing_ids = []
-                                
+
                                 merged_map = {
-                                    (p.get('channel_name', '').lower(), p.get('type', '').lower()): p 
+                                    (p.get('channel_name', '').lower(), p.get('type', '').lower()): p
                                     for p in existing_ids if isinstance(p, dict)
                                 }
                                 for nid in v:
@@ -1026,16 +1130,16 @@ class DriveImageRequest(BaseModel):
 def get_first_drive_image(data: DriveImageRequest):
     if not data.folder_url or not data.folder_url.strip():
         raise HTTPException(status_code=400, detail="Folder URL is required")
-        
+
     try:
         drive = DriveService()
         if not drive.service:
             raise HTTPException(status_code=500, detail="Drive service not initialized")
-            
+
         file_id = drive.get_first_image_in_folder(data.folder_url)
         if not file_id:
             return {"file_id": None, "image_url": None}
-            
+
         return {
             "file_id": file_id,
             "image_url": f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"

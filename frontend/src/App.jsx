@@ -13,7 +13,11 @@ import {
   X,
   Moon,
   Sun,
+  LogOut,
+  LogIn,
+  User as UserIcon
 } from 'lucide-react';
+import axios from 'axios';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import './index.css';
@@ -24,12 +28,17 @@ const NAV_ITEMS = [
   { key: 'sales', path: APP_PATHS.SALES, label: 'Sales Analysis', icon: BarChart3, description: 'Metrics & Insights' },
 ];
 
+import LoginPage from './components/LoginPage';
+
 function App() {
   const [theme, setTheme] = useState('light');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +46,29 @@ function App() {
   // Hover Intent Timers
   const hoverTimer = useRef(null);
   const leaveTimer = useRef(null);
+
+  // Sync user with backend when authenticated
+  useEffect(() => {
+    const token = localStorage.getItem('bloomerce_token');
+    const userData = localStorage.getItem('bloomerce_user');
+    
+    if (token && userData) {
+      setIsAuthenticated(true);
+      setUser(JSON.parse(userData));
+    } else {
+      setIsAuthenticated(false);
+      setUser(null);
+    }
+    setIsLoading(false);
+  }, [location.pathname]); // Re-check on navigation (especially after login redirect)
+
+  const logout = () => {
+    localStorage.removeItem('bloomerce_token');
+    localStorage.removeItem('bloomerce_user');
+    setIsAuthenticated(false);
+    setUser(null);
+    navigate('/login');
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -67,6 +99,27 @@ function App() {
   // Determine active tab based on current path
   const currentNav = NAV_ITEMS.find(item => location.pathname.startsWith(item.path));
   const activeTab = currentNav ? currentNav.key : 'prompt';
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[var(--color-background)]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-[var(--color-muted-foreground)] font-medium animate-pulse">Initializing Bloom Intelligence...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-[var(--color-background)] font-sans antialiased text-[var(--color-foreground)] overflow-x-hidden">
@@ -213,6 +266,51 @@ function App() {
               {(isSidebarOpen || isHovered) ? <><ChevronLeft size={18} className={cn("transition-transform duration-300", !isSidebarOpen && "rotate-180")} /><span>{isSidebarOpen ? "Pinned" : "Pin Menu"}</span></> : <Menu size={18} />}
             </button>
           )}
+
+          <div className="pt-2">
+            {isAuthenticated ? (
+              <div className="space-y-1">
+                {(isSidebarOpen || isHovered || isMobile) && (
+                  <div className="flex items-center gap-3 px-4 py-2 mb-1">
+                    {user?.picture ? (
+                      <img src={user.picture} alt="" className="w-8 h-8 rounded-full border border-[var(--color-border)]" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[var(--color-muted)] flex items-center justify-center">
+                        <UserIcon size={16} />
+                      </div>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[12px] font-bold truncate">{user?.name || 'User'}</span>
+                      <span className="text-[10px] opacity-50 truncate">{user?.email}</span>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => logout()}
+                  className={cn(
+                    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 w-full",
+                    "text-red-500 hover:bg-red-500/10",
+                    (!isSidebarOpen && !isHovered && !isMobile) && "justify-center"
+                  )}
+                >
+                  <LogOut size={18} />
+                  {(isSidebarOpen || isHovered || isMobile) && <span>Logout</span>}
+                </button>
+              </div>
+            ) : (
+                <button
+                  onClick={() => navigate('/login')}
+                  className={cn(
+                    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 w-full",
+                    "bg-[var(--color-primary)] text-white hover:opacity-90 shadow-sm",
+                    (!isSidebarOpen && !isHovered && !isMobile) && "justify-center"
+                  )}
+                >
+                  <LogIn size={18} />
+                  {(isSidebarOpen || isHovered || isMobile) && <span>Login</span>}
+                </button>
+            )}
+          </div>
         </div>
       </aside>
 

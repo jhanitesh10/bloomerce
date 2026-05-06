@@ -1,7 +1,21 @@
+import datetime
 from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from database import Base
-import datetime
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String(255), primary_key=True, index=True)
+    provider_id = Column(String(255), unique=True, index=True, nullable=True)
+    email = Column(String(255), unique=True, index=True)
+    name = Column(String(255), nullable=True)
+    
+    is_active = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)
 
 class ReferenceData(Base):
     __tablename__ = "reference_data"

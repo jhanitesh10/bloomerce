@@ -1,6 +1,36 @@
+from datetime import datetime
 from pydantic import BaseModel, model_validator, field_validator
 from typing import Optional, Dict, Any, Union, List
-from datetime import datetime
+
+# --- User Schemas ---
+class UserBase(BaseModel):
+    provider_id: str
+    email: str
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    is_active: Optional[bool] = True
+
+class UserCreate(UserBase):
+    pass
+
+class User(UserBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    first_name: str
+    last_name: str
 
 # --- Reference Data Schemas ---
 class ReferenceDataBase(BaseModel):
@@ -85,7 +115,7 @@ class SkuMasterBase(BaseModel):
     product_component_group_code: Optional[Union[Dict[str, Any], List[Any], str]] = None
     tax_rule_code: Optional[str] = None
     tax_percent: Optional[float] = None
-    
+
     platform_identifiers: Optional[List[PlatformIdentifier]] = None
 
     @field_validator('platform_identifiers', mode='before')
@@ -150,7 +180,7 @@ class SalesOrderBase(BaseModel):
     total_amount: Optional[float] = None
     currency: Optional[str] = 'INR'
     status: Optional[str] = 'PENDING'
-    
+
     metadata_json: Optional[Union[Dict[str, Any], List[Any]]] = None
     order_journey: Optional[Union[Dict[str, Any], List[Any]]] = None
     remark: Optional[str] = None
